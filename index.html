@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>声で野帳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=BIZ+UDPGothic:wght@400;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* 屋外で読める野帳：紙に近い明るい地、入力中セルは黄色マーカー、操作は大きな親指ボタン */
+:root{
+  --bg:#eef2ef; --surface:#ffffff; --ink:#15231d; --muted:#5b6b63; --line:#cfd8d2;
+  --accent:#0f6b4c; --accent-ink:#ffffff; --mark:#ffd84a; --mark-ink:#1b1600;
+  --rec:#c62f2f; --warn:#a85a00;
+  --f-ui:"BIZ UDPGothic","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --f-num:"BIZ UDGothic","Hiragino Sans","Noto Sans JP",ui-monospace,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101714; --surface:#18221d; --ink:#e6eee9; --muted:#9db0a6; --line:#2d3b34;
+  --accent:#3fb88a; --accent-ink:#06150f; --mark:#e8c234; --mark-ink:#1b1600;
+  --rec:#ff6b6b; --warn:#f0a845; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101714; --surface:#18221d; --ink:#e6eee9; --muted:#9db0a6; --line:#2d3b34;
+  --accent:#3fb88a; --accent-ink:#06150f; --mark:#e8c234; --mark-ink:#1b1600;
+  --rec:#ff6b6b; --warn:#f0a845; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-ui);
+  padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:960px;margin:0 auto;padding-inline:16px;padding-block:12px 32px;display:flex;flex-direction:column;gap:12px}
+
+header{display:flex;align-items:center;gap:12px;justify-content:space-between}
+header h1{margin:0;font-size:1.15rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+header small{display:block;color:var(--muted);font-size:.8rem;font-weight:400}
+.ghost{background:transparent;border:1.5px solid var(--line);border-radius:10px;padding:8px 14px;flex:none}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:12px}
+.status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.where{min-width:0}
+.where .lbl{font-size:.78rem;color:var(--muted);letter-spacing:.05em}
+.where .cell{font-size:1.5rem;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+.where .cell b{background:var(--mark);color:var(--mark-ink);padding:0 .3em;border-radius:4px;font-family:var(--f-num)}
+.heard{font-family:var(--f-num);font-size:.95rem;min-height:1.5em;color:var(--muted);overflow-wrap:anywhere}
+.heard.ok{color:var(--accent)} .heard.ng{color:var(--warn)}
+
+.mic{width:96px;height:96px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);
+  display:grid;place-items:center;font-weight:700;font-size:.85rem;box-shadow:0 2px 0 rgba(0,0,0,.15);touch-action:manipulation}
+.mic svg{width:34px;height:34px;display:block;margin:0 auto 2px}
+.mic.on{background:var(--rec);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--rec) 45%,transparent)}50%{box-shadow:0 0 0 14px color-mix(in srgb,var(--rec) 0%,transparent)}}
+@media (prefers-reduced-motion:reduce){.mic.on{animation:none}}
+
+.cmds{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cmds button{border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 4px;font-weight:700;touch-action:manipulation}
+.cmds button span{display:block;font-size:.7rem;color:var(--muted);font-weight:400}
+.manual{display:flex;gap:8px}
+.manual input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);font-family:var(--f-num);font-size:1.1rem}
+.manual button{border:0;background:var(--ink);color:var(--surface);border-radius:10px;padding:0 18px;font-weight:700}
+
+.tablebox{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:auto;max-height:52vh}
+table{border-collapse:collapse;width:100%;font-family:var(--f-num);font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:9px 10px;text-align:right;white-space:nowrap}
+th{position:sticky;top:0;background:var(--surface);font-family:var(--f-ui);font-size:.85rem;text-align:center;z-index:1}
+th small{display:block;color:var(--muted);font-weight:400;font-size:.7rem}
+td.no,th.no{color:var(--muted);text-align:center;width:3.5em}
+td.v{cursor:pointer;min-width:5em}
+td.cur{background:var(--mark);color:var(--mark-ink);font-weight:700;box-shadow:inset 0 0 0 2px var(--mark-ink)}
+td.flash{animation:flash .6s ease-out}
+@keyframes flash{from{background:color-mix(in srgb,var(--accent) 35%,transparent)}}
+tr.currow td.no{color:var(--ink);font-weight:700}
+
+.out{display:flex;gap:8px;flex-wrap:wrap}
+.out button{flex:1 1 140px;border:0;border-radius:10px;padding:12px;font-weight:700;background:var(--accent);color:var(--accent-ink)}
+.out button.sec{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.log{font-size:.8rem;color:var(--muted);font-family:var(--f-num);display:grid;gap:2px}
+.note{font-size:.8rem;color:var(--warn)}
+
+/* 設定 */
+dialog{border:0;padding:0;width:min(640px,100%);max-height:100%;background:var(--surface);color:var(--ink);border-radius:16px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.sheet{padding:16px;display:grid;gap:18px}
+.sheet h2{margin:0;font-size:1.1rem}
+fieldset{border:0;margin:0;padding:0;display:grid;gap:8px}
+legend{font-weight:700;font-size:.9rem;margin-bottom:6px}
+.field{display:grid;gap:4px}
+.field input[type=text]{border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.items{display:grid;gap:8px}
+.item{display:grid;grid-template-columns:1fr auto auto auto auto;gap:6px;align-items:center}
+.item input{min-width:0;border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg)}
+.item select{border:1.5px solid var(--line);border-radius:8px;padding:8px 4px;background:var(--bg)}
+.item button{width:36px;height:38px;border:1.5px solid var(--line);border-radius:8px;background:var(--bg)}
+.add{border:1.5px dashed var(--line);background:transparent;border-radius:10px;padding:10px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.seg label{border:1.5px solid var(--line);border-radius:10px;padding:10px;display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.seg label:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.seg small{display:block;color:var(--muted);font-size:.75rem}
+.toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding-block:6px}
+.toggle input{width:22px;height:22px}
+.actions{display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--surface);padding-block:10px 4px}
+.actions button{border-radius:10px;padding:10px 18px;font-weight:700;border:1.5px solid var(--line);background:transparent}
+.actions .primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.danger{border:1.5px solid var(--rec);color:var(--rec);background:transparent;border-radius:10px;padding:10px}
+.help{font-size:.82rem;color:var(--muted);margin:0}
+.help code{font-family:var(--f-num);background:var(--bg);padding:0 .3em;border-radius:4px}
+@media (max-width:420px){.mic{width:84px;height:84px}.where .cell{font-size:1.3rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="title">調査<small id="subtitle"></small></h1>
+    <button class="ghost" id="btnSettings" type="button">設定</button>
+  </header>
+
+  <section class="panel" aria-live="polite">
+    <div class="status">
+      <div class="where">
+        <div class="lbl">次に入るセル</div>
+        <div class="cell" id="where">–</div>
+        <div class="heard" id="heard">マイクを押して話してください</div>
+      </div>
+      <button class="mic" id="mic" type="button" aria-pressed="false">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span id="micLbl">開始</span></span>
+      </button>
+    </div>
+    <div class="cmds">
+      <button type="button" data-cmd="undo">取り消し<span>直前を消す</span></button>
+      <button type="button" data-cmd="skip">スキップ<span>空欄で進む</span></button>
+      <button type="button" data-cmd="next">次<span id="nextHint">次の行へ</span></button>
+      <button type="button" data-cmd="back">戻る<span>1つ前へ</span></button>
+    </div>
+    <form class="manual" id="manual">
+      <input id="manualIn" type="text" inputmode="decimal" autocomplete="off" placeholder="手入力（例 32.5）" aria-label="手入力">
+      <button type="submit">入力</button>
+    </form>
+    <div class="note" id="note" hidden></div>
+  </section>
+
+  <div class="tablebox" id="tablebox"><table id="tbl"></table></div>
+
+  <div class="out">
+    <button type="button" id="btnXlsx">Excelで保存</button>
+    <button type="button" id="btnCsv" class="sec">CSVで保存</button>
+  </div>
+  <div class="log" id="log"></div>
+</div>
+
+<dialog id="dlg">
+  <form class="sheet" id="setForm" method="dialog">
+    <h2>調査の設定</h2>
+    <div class="field">
+      <label for="sName"><b>調査名</b>（ファイル名に使います）</label>
+      <input type="text" id="sName" placeholder="例 にっこり果実肥大調査">
+    </div>
+    <fieldset>
+      <legend>調査項目（左の列から順）</legend>
+      <div class="items" id="sItems"></div>
+      <button type="button" class="add" id="sAdd">＋ 項目を追加</button>
+    </fieldset>
+    <fieldset>
+      <legend>入力の進む順番</legend>
+      <div class="seg">
+        <label><input type="radio" name="dir" value="row"><span>行単位<small>1個体の全項目 → 次の個体</small></span></label>
+        <label><input type="radio" name="dir" value="col"><span>列単位<small>1項目を全個体 → 次の項目</small></span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>聞き取り方</legend>
+      <div class="seg">
+        <label><input type="radio" name="mode" value="cont"><span>連続認識<small>停止するまで聞き続ける</small></span></label>
+        <label><input type="radio" name="mode" value="ptt"><span>1回ずつ<small>押すたびに1回聞く</small></span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>その他</legend>
+      <label class="toggle" for="sRead"><span>認識した値を読み上げる</span><input type="checkbox" id="sRead"></label>
+      <label class="toggle" for="sSerial"><span>左端に通し番号（No.）を付ける</span><input type="checkbox" id="sSerial"></label>
+    </fieldset>
+    <p class="help">音声コマンド：<code>取り消し</code> 直前を消す／<code>スキップ</code> 空欄で進む／<code>次</code> 次の行・列へ／<code>戻る</code> 1つ前へ。小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。表のセルをタップすると、そこから入力を再開します。</p>
+    <button type="button" class="danger" id="sClear">データを全消去して新しい調査を始める</button>
+    <div class="actions">
+      <button type="button" id="sCancel">キャンセル</button>
+      <button type="button" class="primary" id="sSave">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+/* ========= 数値変換 ========= */
+const KD = {"〇":0,"零":0,"一":1,"二":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9};
+const KU = {"十":10,"百":100,"千":1000};
+const KANA = {"ぜろ":0,"ゼロ":0,"れい":0,"まる":0,"いち":1,"いっ":1,"に":2,"にい":2,"さん":3,"よん":4,"し":4,"ご":5,"ごう":5,"ろく":6,"なな":7,"しち":7,"はち":8,"きゅう":9,"く":9,"じゅう":10};
+function kanjiInt(s){
+  if(/^\d+$/.test(s)) return parseInt(s,10);
+  if(s in KANA) return KANA[s];
+  if(!/^[〇零一二三四五六七八九十百千万\d]+$/.test(s)) return NaN;
+  if(!/[十百千万]/.test(s)) return parseInt([...s].map(c=>c in KD?KD[c]:c).join(""),10);
+  let total=0, sec=0, num=null;
+  for(const c of s){
+    if(c in KD) num=(num??0)*10+KD[c];
+    else if(/\d/.test(c)) num=(num??0)*10+Number(c);
+    else if(c in KU){ sec+=(num??1)*KU[c]; num=null; }
+    else if(c==="万"){ total+=(sec+(num??0))*10000; sec=0; num=null; }
+  }
+  return total+sec+(num??0);
+}
+function kanjiFrac(s){
+  if(/^\d+$/.test(s)) return s;
+  if(s in KANA && KANA[s]<10) return String(KANA[s]);
+  if(/^[〇零一二三四五六七八九\d]+$/.test(s)) return [...s].map(c=>c in KD?KD[c]:c).join("");
+  return null;
+}
+/* ひらがな・カタカナの数詞（さんじゅうにてんご 等）を漢数字へ */
+const KMAP=[["きゅう","九"],["じゅう","十"],["ひゃく","百"],["びゃく","百"],["ぴゃく","百"],["せん","千"],["ぜん","千"],["まん","万"],
+  ["なな","七"],["しち","七"],["はち","八"],["はっ","八"],["ろく","六"],["ろっ","六"],["よん","四"],["さん","三"],["いち","一"],["いっ","一"],
+  ["ぜろ","〇"],["れい","〇"],["まる","〇"],["てん","点"],["に","二"],["ご","五"],["し","四"],["く","九"]];
+function kana2kanji(t){
+  let s=t.replace(/[ァ-ン]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60));
+  if(!/^[ぁ-んー]+$/.test(s) || s in KANA) return t;
+  let out="";
+  while(s){ const m=KMAP.find(([k])=>s.startsWith(k)); if(!m) return t; out+=m[1]; s=s.slice(m[0].length); }
+  return out;
+}
+/* 1語を数値に。失敗時は null */
+function parseNumber(tok){
+  let t=tok.normalize("NFKC").trim();
+  t=t.replace(/(ミリメートル|ミリ|mm|センチ|cm|グラム|g|キロ|kg|度|°|パーセント|%|ブリックス|brix|個|本)$/i,"");
+  let neg=false;
+  if(/^(マイナス|まいなす|-|−)/.test(t)){ neg=true; t=t.replace(/^(マイナス|まいなす|-|−)/,""); }
+  t=kana2kanji(t);
+  t=t.replace(/(てん|テン|ポイント|ドット|点)/g,".");
+  if(/^\d+(\.\d+)?$/.test(t)) return (neg?-1:1)*parseFloat(t);
+  if(/^\.\d+$/.test(t)) return (neg?-1:1)*parseFloat("0"+t);
+  const parts=t.split(".");
+  if(parts.length>2) return null;
+  const ip=parts[0]===""?0:kanjiInt(parts[0]);
+  if(!Number.isFinite(ip)) return null;
+  if(parts.length===1) return (neg?-1:1)*ip;
+  const fp=kanjiFrac(parts[1]);
+  if(fp===null) return null;
+  return (neg?-1:1)*parseFloat(ip+"."+fp);
+}
+function parseCommand(tok){
+  const t=tok.normalize("NFKC").replace(/[。、.,!！?？\s]/g,"");
+  if(/^(取り?消し|取消|とりけし|トリケシ|キャンセル|削除)$/.test(t)) return "undo";
+  if(/^(スキップ|すきっぷ|飛ばし|とばし|パス|ぱす|欠測|けっそく)$/.test(t)) return "skip";
+  if(/^(次|つぎ|ツギ|次へ|つぎへ|ネクスト)$/.test(t)) return "next";
+  if(/^(戻る|もどる|モドル|戻って|もどって|バック)$/.test(t)) return "back";
+  return null;
+}
+/* 発話全体を語に分割 */
+function tokenize(raw){
+  let t=raw.normalize("NFKC").trim().replace(/[。]+$/,"");
+  t=t.replace(/\s*(点|てん|テン|ポイント|\.)\s*/g,"$1");
+  return t.split(/[\s、,，。]+/).filter(Boolean);
+}
+
+/* ========= 状態 ========= */
+const KEY="koe-yacho-v1";
+const uid=()=>Math.random().toString(36).slice(2,9);
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+let S={
+  name:"果実調査",
+  items:[{id:uid(),name:"果径",dec:1},{id:uid(),name:"果重",dec:0},{id:uid(),name:"糖度",dec:1}],
+  dir:"row", mode:"cont", readback:true, serial:true
+};
+let D=[]; let cur={r:0,c:0}; let logs=[];
+try{ const j=JSON.parse(localStorage.getItem(KEY)||"null"); if(j){ S=Object.assign(S,j.S); D=j.D||[]; cur=j.cur||cur; logs=j.logs||[]; } }catch(e){}
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify({S,D,cur,logs})); }catch(e){} }
+
+const n=()=>S.items.length;
+function ensureRow(r){ while(D.length<=r) D.push({}); }
+function fmt(v,dec){ return (v===null||v===undefined||v==="")?"":Number(v).toFixed(dec); }
+function nextPos(p){
+  if(S.dir==="row"){ return p.c+1<n()?{r:p.r,c:p.c+1}:{r:p.r+1,c:0}; }
+  return {r:p.r+1,c:p.c};
+}
+function lastFilledRow(c){
+  const id=S.items[c]?.id; let last=-1;
+  D.forEach((row,i)=>{ if(row[id]!==undefined&&row[id]!=="") last=i; });
+  return last;
+}
+function prevPos(p){
+  if(S.dir==="row"){
+    if(p.c>0) return {r:p.r,c:p.c-1};
+    if(p.r>0) return {r:p.r-1,c:n()-1};
+    return null;
+  }
+  if(p.r>0) return {r:p.r-1,c:p.c};
+  if(p.c>0){ return {r:Math.max(0,lastFilledRow(p.c-1)),c:p.c-1}; }
+  return null;
+}
+function cellName(p){ return `No.${p.r+1} ${S.items[p.c]?.name??""}`; }
+
+/* ========= 入力処理 ========= */
+const flashCells=new Set();
+function addLog(text){ const d=new Date(); logs.unshift(`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}  ${text}`); logs=logs.slice(0,6); }
+function putValue(v){
+  if(!n()) return null;
+  const it=S.items[cur.c]; const m=Math.pow(10,it.dec);
+  const val=Math.round(v*m)/m;
+  ensureRow(cur.r); D[cur.r][it.id]=val;
+  flashCells.add(cur.r+":"+cur.c);
+  addLog(`${cellName(cur)} ← ${fmt(val,it.dec)}`);
+  const said=fmt(val,it.dec).replace(/^-/,"マイナス");
+  cur=nextPos(cur);
+  return said;
+}
+function doCommand(cmd){
+  if(!n()) return null;
+  if(cmd==="skip"){ addLog(`${cellName(cur)} スキップ`); cur=nextPos(cur); return "スキップ"; }
+  if(cmd==="next"){
+    if(S.dir==="row"){ cur={r:cur.r+1,c:0}; }
+    else { if(cur.c+1<n()) cur={r:0,c:cur.c+1}; else { note("最後の列です"); return "最後の列です"; } }
+    addLog(`次へ → ${cellName(cur)}`); return "次";
+  }
+  if(cmd==="back"){ const p=prevPos(cur); if(p){ cur=p; } return "戻る"; }
+  if(cmd==="undo"){
+    const p=prevPos(cur); if(!p) return "取り消し";
+    const id=S.items[p.c].id; ensureRow(p.r); delete D[p.r][id];
+    addLog(`${cellName(p)} 取り消し`); cur=p; return "取り消し";
+  }
+  return null;
+}
+function handleText(raw, fromVoice){
+  const toks=tokenize(raw); const say=[]; const bad=[];
+  const whole=parseCommand(raw);
+  if(whole){ const s=doCommand(whole); if(s) say.push(s); }
+  else for(const t of toks){
+    const c=parseCommand(t);
+    if(c){ const s=doCommand(c); if(s) say.push(s); continue; }
+    const v=parseNumber(t);
+    if(v===null||Number.isNaN(v)) bad.push(t); else { const s=putValue(v); if(s) say.push(s); }
+  }
+  const h=$("#heard");
+  if(bad.length){ h.className="heard ng"; h.textContent=`「${raw}」→ 数値にできない語：${bad.join(" ")}`; if(fromVoice) say.push("聞き取れません"); }
+  else { h.className="heard ok"; h.textContent=`「${raw}」`; }
+  save(); render();
+  if(fromVoice && say.length) speak(say.join("、"));
+}
+
+/* ========= 音声 ========= */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null;
+function makeRec(){
+  const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
+  r.continuous=(S.mode==="cont");
+  r.onresult=e=>{
+    let interim="";
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const res=e.results[i];
+      if(res.isFinal){ if(!processed.has(i)){ processed.add(i); handleText(res[0].transcript,true); } }
+      else interim+=res[0].transcript;
+    }
+    if(interim){ const h=$("#heard"); h.className="heard"; h.textContent="… "+interim; }
+  };
+  r.onerror=e=>{
+    if(e.error==="not-allowed"||e.error==="service-not-allowed"){ listening=false; note("マイクの使用が許可されていません。ブラウザのサイト設定でマイクを許可してください。"); updateMic(); }
+    else if(e.error==="network"){ note("音声認識の通信に失敗しました。電波を確認するか、手入力欄を使ってください。"); }
+    else if(e.error==="audio-capture"){ listening=false; note("マイクが見つかりません。"); updateMic(); }
+  };
+  r.onend=()=>{
+    processed=new Set();
+    if(ttsPause) return;
+    if(listening && S.mode==="cont"){ setTimeout(()=>{ if(listening&&!ttsPause) startRec(); },200); }
+    else { listening=false; updateMic(); }
+  };
+  return r;
+}
+function startRec(){ try{ rec=makeRec(); processed=new Set(); rec.start(); }catch(e){ setTimeout(()=>{ if(listening&&!ttsPause){ try{rec.start();}catch(_){} } },400); } }
+function stopRec(){ listening=false; try{ rec&&rec.abort(); }catch(e){} updateMic(); releaseWake(); }
+async function holdWake(){ try{ if("wakeLock" in navigator) wake=await navigator.wakeLock.request("screen"); }catch(e){} }
+function releaseWake(){ try{ wake&&wake.release(); }catch(e){} wake=null; }
+function speak(text){
+  if(!S.readback||!("speechSynthesis" in window)) return;
+  const u=new SpeechSynthesisUtterance(text); u.lang="ja-JP"; u.rate=1.2;
+  if(listening && S.mode==="cont"){
+    ttsPause=true; try{ rec.abort(); }catch(e){}
+    let done=false;
+    const resume=()=>{ if(done) return; done=true; ttsPause=false; if(listening) setTimeout(startRec,150); };
+    u.onend=resume; u.onerror=resume; setTimeout(resume,1500+text.length*250);
+  }
+  speechSynthesis.cancel(); speechSynthesis.speak(u);
+}
+function updateMic(){
+  const b=$("#mic"); b.classList.toggle("on",listening); b.setAttribute("aria-pressed",String(listening));
+  $("#micLbl").textContent=listening?(S.mode==="cont"?"停止":"聞き取り中"):(S.mode==="cont"?"開始":"話す");
+}
+
+/* ========= 表示 ========= */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let noteTimer=null;
+function note(msg){ const el=$("#note"); el.textContent=msg; el.hidden=false; clearTimeout(noteTimer); noteTimer=setTimeout(()=>el.hidden=true,6000); }
+function render(){
+  $("#title").firstChild.nodeValue=S.name||"調査";
+  $("#subtitle").textContent=`${today()}・${S.dir==="row"?"行単位":"列単位"}・${S.mode==="cont"?"連続認識":"1回ずつ"}`;
+  $("#nextHint").textContent=S.dir==="row"?"次の行へ":"次の列へ";
+  if(cur.c>=n()) cur.c=Math.max(0,n()-1);
+  $("#where").innerHTML=n()?`No.${cur.r+1}　${esc(S.items[cur.c].name)} <b>${S.items[cur.c].dec===0?"整数":"小数"+S.items[cur.c].dec+"桁"}</b>`:"設定で項目を追加してください";
+  const rows=Math.max(D.length,cur.r+1)+1;
+  let h="<thead><tr>"+(S.serial?'<th class="no">No.</th>':"")+S.items.map(it=>`<th>${esc(it.name)}<small>${it.dec===0?"整数":"小数"+it.dec}</small></th>`).join("")+"</tr></thead><tbody>";
+  for(let r=0;r<rows;r++){
+    h+=`<tr class="${r===cur.r?"currow":""}">`+(S.serial?`<td class="no">${r+1}</td>`:"");
+    S.items.forEach((it,c)=>{
+      const v=D[r]?.[it.id]; const k=r+":"+c;
+      const cls=["v"]; if(r===cur.r&&c===cur.c) cls.push("cur"); if(flashCells.has(k)) cls.push("flash");
+      h+=`<td class="${cls.join(" ")}" data-r="${r}" data-c="${c}">${fmt(v,it.dec)}</td>`;
+    });
+    h+="</tr>";
+  }
+  $("#tbl").innerHTML=h+"</tbody>"; flashCells.clear();
+  const cc=$("#tbl td.cur"); if(cc) cc.scrollIntoView({block:"nearest",inline:"nearest"});
+  $("#log").innerHTML=logs.map(esc).join("<br>");
+  updateMic();
+}
+
+/* ========= 出力 ========= */
+function lastRow(){ let last=-1; D.forEach((row,i)=>{ if(S.items.some(it=>row[it.id]!==undefined&&row[it.id]!=="")) last=i; }); return last; }
+function fileBase(){ return (S.name||"調査").replace(/[\\/:*?"<>|]/g,"_")+"_"+today(); }
+function aoa(asText){
+  const head=(S.serial?["No."]:[]).concat(S.items.map(it=>it.name));
+  const out=[head];
+  for(let r=0;r<=lastRow();r++){
+    const row=S.serial?[r+1]:[];
+    S.items.forEach(it=>{ const v=D[r]?.[it.id]; row.push(v===undefined||v===""?"":(asText?fmt(v,it.dec):v)); });
+    out.push(row);
+  }
+  return out;
+}
+function download(blob,name){
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
+}
+$("#btnXlsx").onclick=()=>{
+  if(typeof XLSX==="undefined"){ note("Excel出力の部品を読み込めませんでした。通信を確認するか、CSVで保存してください。"); return; }
+  const ws=XLSX.utils.aoa_to_sheet(aoa(false));
+  const off=S.serial?1:0;
+  S.items.forEach((it,c)=>{
+    for(let r=1;r<=lastRow()+1;r++){ const ref=XLSX.utils.encode_cell({r,c:c+off}); if(ws[ref]&&ws[ref].t==="n") ws[ref].z=it.dec?("0."+"0".repeat(it.dec)):"0"; }
+  });
+  ws["!cols"]=(S.serial?[{wch:6}]:[]).concat(S.items.map(it=>({wch:Math.max(8,it.name.length*2+2)})));
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,(S.name||"調査").replace(/[\\\/?*\[\]:]/g,"_").slice(0,31));
+  const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  download(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),fileBase()+".xlsx");
+};
+$("#btnCsv").onclick=()=>{
+  const csv=aoa(true).map(r=>r.map(v=>{ const s=String(v); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(",")).join("\r\n");
+  download(new Blob(["﻿"+csv],{type:"text/csv"}),fileBase()+".csv");
+};
+
+/* ========= 操作 ========= */
+$("#mic").onclick=()=>{
+  if(!SR){ note("このブラウザは音声認識に対応していません。AndroidはChrome、iPhoneはSafariで開いてください。手入力欄は使えます。"); return; }
+  if("speechSynthesis" in window){ const u=new SpeechSynthesisUtterance(""); speechSynthesis.speak(u); } // iOSの読み上げ解禁
+  if(listening){ stopRec(); return; }
+  listening=true; updateMic(); holdWake(); startRec();
+};
+document.querySelectorAll("[data-cmd]").forEach(b=>b.onclick=()=>{ doCommand(b.dataset.cmd); save(); render(); });
+$("#manual").onsubmit=e=>{ e.preventDefault(); const v=$("#manualIn").value.trim(); if(v){ handleText(v,false); $("#manualIn").value=""; } };
+$("#tbl").onclick=e=>{ const td=e.target.closest("td.v"); if(!td) return; cur={r:+td.dataset.r,c:+td.dataset.c}; save(); render(); };
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&listening) holdWake(); });
+
+/* ========= 設定 ========= */
+let draft=null;
+function drawItems(){
+  $("#sItems").innerHTML=draft.items.map((it,i)=>`
+    <div class="item" data-i="${i}">
+      <input type="text" value="${esc(it.name)}" data-k="name" aria-label="項目名${i+1}">
+      <select data-k="dec" aria-label="小数桁数">${[0,1,2,3,4].map(d=>`<option value="${d}" ${d===it.dec?"selected":""}>${d===0?"整数":"小数"+d}</option>`).join("")}</select>
+      <button type="button" data-a="up" aria-label="上へ">↑</button>
+      <button type="button" data-a="down" aria-label="下へ">↓</button>
+      <button type="button" data-a="del" aria-label="削除">✕</button>
+    </div>`).join("");
+}
+$("#sItems").addEventListener("input",e=>{ const row=e.target.closest(".item"); if(!row) return; const it=draft.items[+row.dataset.i]; if(e.target.dataset.k==="name") it.name=e.target.value; if(e.target.dataset.k==="dec") it.dec=+e.target.value; });
+$("#sItems").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return; const i=+b.closest(".item").dataset.i; const a=draft.items;
+  if(b.dataset.a==="up"&&i>0) [a[i-1],a[i]]=[a[i],a[i-1]];
+  if(b.dataset.a==="down"&&i<a.length-1) [a[i+1],a[i]]=[a[i],a[i+1]];
+  if(b.dataset.a==="del"){ if(a.length<=1){ note("項目は1つ以上必要です"); return; } a.splice(i,1); }
+  drawItems();
+});
+$("#sAdd").onclick=()=>{ draft.items.push({id:uid(),name:"項目"+(draft.items.length+1),dec:0}); drawItems(); const ins=$("#sItems").querySelectorAll("input"); ins[ins.length-1].focus(); };
+$("#btnSettings").onclick=()=>{
+  if(listening) stopRec();
+  draft=JSON.parse(JSON.stringify(S));
+  $("#sName").value=draft.name;
+  document.querySelector(`input[name=dir][value=${draft.dir}]`).checked=true;
+  document.querySelector(`input[name=mode][value=${draft.mode}]`).checked=true;
+  $("#sRead").checked=draft.readback; $("#sSerial").checked=draft.serial;
+  drawItems(); $("#dlg").showModal();
+};
+$("#sCancel").onclick=()=>$("#dlg").close();
+$("#sSave").onclick=()=>{
+  draft.name=$("#sName").value.trim()||"調査";
+  draft.dir=document.querySelector("input[name=dir]:checked").value;
+  draft.mode=document.querySelector("input[name=mode]:checked").value;
+  draft.readback=$("#sRead").checked; draft.serial=$("#sSerial").checked;
+  draft.items.forEach((it,i)=>{ if(!it.name.trim()) it.name="項目"+(i+1); });
+  const curId=S.items[cur.c]?.id; S=draft;
+  const ni=S.items.findIndex(it=>it.id===curId); cur.c=ni<0?0:ni;
+  save(); render(); $("#dlg").close();
+};
+$("#sClear").onclick=()=>{
+  if(!confirm("入力済みのデータをすべて消去します。先にExcelかCSVで保存しましたか？")) return;
+  D=[]; cur={r:0,c:0}; logs=[]; save(); render(); $("#dlg").close(); note("データを消去しました。設定はそのまま残っています。");
+};
+
+if(!SR) note("このブラウザは音声認識に対応していません。AndroidはChrome、iPhoneはSafariで開いてください。");
+render();
+</script>
+</body>
+</html>
