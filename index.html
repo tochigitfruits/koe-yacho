@@ -191,6 +191,7 @@ legend{font-weight:700;font-size:.9rem;margin-bottom:6px}
       <legend>その他</legend>
       <label class="toggle" for="sRead"><span>認識した値を読み上げる</span><input type="checkbox" id="sRead"></label>
       <div class="toggle"><button type="button" class="ghost" id="sTest">読み上げテスト</button><span class="ver" id="sTestOut"></span></div>
+      <label class="toggle" for="sAuto"><span>キーボード音声入力モード<small class="ver" style="display:block">手入力欄に Win+H やキーボードのマイクで話すと、1.2秒の間で自動確定</small></span><input type="checkbox" id="sAuto"></label>
       <label class="toggle" for="sSerial"><span>左端に通し番号（No.）を付ける</span><input type="checkbox" id="sSerial"></label>
     </fieldset>
     <p class="help">音声コマンド：<code>取り消し</code> 直前を消す／<code>スキップ</code> 空欄で進む／<code>次</code> 次の行・列へ／<code>戻る</code> 1つ前へ。小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。表のセルをタップすると、そこから入力を再開します。</p>
@@ -360,12 +361,13 @@ function handleText(raw, fromVoice){
 /* ========= 音声 ========= */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, gestureStart=false;
-const APP_VER="v1.3（2026-10-14）";
+const APP_VER="v1.5（2026-10-14）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
   r.onresult=e=>{
     let interim="";
+    if(Date.now()<ignoreUntil){ for(let i=e.resultIndex;i<e.results.length;i++) if(e.results[i].isFinal) processed.add(i); return; }
     for(let i=e.resultIndex;i<e.results.length;i++){
       const res=e.results[i];
       if(res.isFinal){ if(!processed.has(i)){ processed.add(i); handleText(res[0].transcript,true); } }
@@ -408,9 +410,18 @@ function say(u){
 }
 function unlockTTS(){ if(!HAS_TTS||ttsUnlocked) return; try{ speechSynthesis.speak(utter(" ",0)); ttsUnlocked=true; }catch(_){} }
 function flushSpeak(){ if(pendingUtter){ const u=pendingUtter; pendingUtter=null; say(u); } }
+const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+let ignoreUntil=0;
 function speak(text){
   if(!S.readback||!HAS_TTS) return;
   const u=utter(text);
+  if(listening && rec && !IS_IOS){
+    /* PC・Android：認識は止めずに、読み上げ中に聞こえた声だけを無視する（止めると再開のたびに許可を聞かれるため） */
+    ignoreUntil=Infinity;
+    const fin=()=>{ ignoreUntil=Date.now()+500; };
+    u.onend=fin; u.onerror=fin; setTimeout(()=>{ if(ignoreUntil===Infinity) fin(); },3000+text.length*300);
+    say(u); return;
+  }
   if(listening && rec){
     ttsPause=true;
     let done=false;
@@ -521,7 +532,14 @@ $("#diag").onclick=async()=>{
 $("#ver").textContent=APP_VER;
 if(!window.isSecureContext) note("https で開かれていないため、マイクが使えません。GitHub Pages の https のURLで開いてください。");
 document.querySelectorAll("[data-cmd]").forEach(b=>b.onclick=()=>{ doCommand(b.dataset.cmd); save(); render(); });
-$("#manual").onsubmit=e=>{ e.preventDefault(); const v=$("#manualIn").value.trim(); if(v){ handleText(v,false); $("#manualIn").value=""; } };
+$("#manual").onsubmit=e=>{ e.preventDefault(); clearTimeout(autoTimer); const v=$("#manualIn").value.trim(); if(v){ handleText(v,false); $("#manualIn").value=""; } $("#manualIn").focus(); };
+/* キーボード音声入力モード：Windowsの音声入力（Win+H）やスマホのキーボードのマイクで手入力欄に話すと、間が空いた時点で自動確定 */
+let autoTimer=null;
+$("#manualIn").addEventListener("input",()=>{
+  if(!S.autoCommit) return;
+  clearTimeout(autoTimer);
+  if($("#manualIn").value.trim()) autoTimer=setTimeout(()=>$("#manual").requestSubmit(),1200);
+});
 $("#tbl").onclick=e=>{ const td=e.target.closest("td.v"); if(!td) return; cur={r:+td.dataset.r,c:+td.dataset.c}; save(); render(); };
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&listening) holdWake(); });
 
@@ -552,7 +570,7 @@ $("#btnSettings").onclick=()=>{
   $("#sName").value=draft.name;
   document.querySelector(`input[name=dir][value=${draft.dir}]`).checked=true;
   document.querySelector(`input[name=mode][value=${draft.mode}]`).checked=true;
-  $("#sRead").checked=draft.readback; $("#sSerial").checked=draft.serial;
+  $("#sRead").checked=draft.readback; $("#sSerial").checked=draft.serial; $("#sAuto").checked=!!draft.autoCommit;
   drawItems(); $("#dlg").showModal();
 };
 $("#sCancel").onclick=()=>$("#dlg").close();
@@ -560,7 +578,7 @@ $("#sSave").onclick=()=>{
   draft.name=$("#sName").value.trim()||"調査";
   draft.dir=document.querySelector("input[name=dir]:checked").value;
   draft.mode=document.querySelector("input[name=mode]:checked").value;
-  draft.readback=$("#sRead").checked; draft.serial=$("#sSerial").checked;
+  draft.readback=$("#sRead").checked; draft.serial=$("#sSerial").checked; draft.autoCommit=$("#sAuto").checked;
   draft.items.forEach((it,i)=>{ if(!it.name.trim()) it.name="項目"+(i+1); });
   const curId=S.items[cur.c]?.id; S=draft;
   const ni=S.items.findIndex(it=>it.id===curId); cur.c=ni<0?0:ni;
