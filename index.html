@@ -81,7 +81,10 @@ tr.currow td.no{color:var(--ink);font-weight:700}
 .out button{flex:1 1 140px;border:0;border-radius:10px;padding:12px;font-weight:700;background:var(--accent);color:var(--accent-ink)}
 .out button.sec{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
 .log{font-size:.8rem;color:var(--muted);font-family:var(--f-num);display:grid;gap:2px}
-.note{font-size:.8rem;color:var(--warn)}
+.note{font-size:.85rem;color:var(--warn)}
+.diag{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.ver{font-size:.75rem;color:var(--muted)}
+.diagout{white-space:pre-wrap;font-family:var(--f-num);font-size:.82rem;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;margin:0;overflow-wrap:anywhere}
 
 /* 設定 */
 dialog{border:0;padding:0;width:min(640px,100%);max-height:100%;background:var(--surface);color:var(--ink);border-radius:16px}
@@ -151,6 +154,11 @@ legend{font-weight:700;font-size:.9rem;margin-bottom:6px}
     <button type="button" id="btnCsv" class="sec">CSVで保存</button>
   </div>
   <div class="log" id="log"></div>
+  <div class="diag">
+    <button type="button" id="diag" class="ghost">マイク診断</button>
+    <span class="ver" id="ver"></span>
+  </div>
+  <pre class="diagout" id="diagOut" hidden></pre>
 </div>
 
 <dialog id="dlg">
@@ -350,7 +358,8 @@ function handleText(raw, fromVoice){
 
 /* ========= 音声 ========= */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null;
+let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, gestureStart=false;
+const APP_VER="v1.2（2026-10-14）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -363,9 +372,14 @@ function makeRec(){
     }
     if(interim){ const h=$("#heard"); h.className="heard"; h.textContent="… "+interim; }
   };
+  r.onstart=()=>{ gestureStart=false; };
   r.onerror=e=>{
-    if(e.error==="not-allowed"){ listening=false; note("マイクが許可されていません。Safariのアドレスバー左の「ぁあ」→「Webサイトの設定」→「マイク」を「許可」にしてください。"); updateMic(); }
-    else if(e.error==="service-not-allowed"){ listening=false; note("音声認識サービスが使えません。iPhoneの「設定」→「一般」→「キーボード」→「音声入力」をオンにしてください。ホーム画面から開いている場合は、Safariで直接開いてください。"); updateMic(); }
+    const when=gestureStart?"ボタン操作時":"自動再開時";
+    if(e.error==="not-allowed"||e.error==="service-not-allowed"){
+      listening=false; updateMic(); releaseWake();
+      if(!gestureStart){ note(`聞き取りが途切れました。もう一度マイクを押してください。（${e.error}／${when}）`); return; }
+      note(`音声認識を開始できませんでした（コード：${e.error}／${when}）。下の「マイク診断」で原因を確認できます。`, true);
+    }
     else if(e.error==="network"){ note("音声認識の通信に失敗しました。電波を確認するか、手入力欄を使ってください。"); }
     else if(e.error==="audio-capture"){ listening=false; note("マイクが見つかりません。"); updateMic(); }
   };
@@ -401,7 +415,7 @@ function updateMic(){
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let noteTimer=null;
-function note(msg){ const el=$("#note"); el.textContent=msg; el.hidden=false; clearTimeout(noteTimer); noteTimer=setTimeout(()=>el.hidden=true,6000); }
+function note(msg,sticky){ const el=$("#note"); el.textContent=msg; el.hidden=false; clearTimeout(noteTimer); if(!sticky) noteTimer=setTimeout(()=>el.hidden=true,8000); }
 function render(){
   $("#title").firstChild.nodeValue=S.name||"調査";
   $("#subtitle").textContent=`${today()}・${S.dir==="row"?"行単位":"列単位"}・${S.mode==="cont"?"連続認識":"1回ずつ"}`;
@@ -462,10 +476,28 @@ $("#btnCsv").onclick=()=>{
 /* ========= 操作 ========= */
 $("#mic").onclick=()=>{
   if(!SR){ note("このブラウザは音声認識に対応していません。AndroidはChrome、iPhoneはSafariで開いてください。手入力欄は使えます。"); return; }
-  if("speechSynthesis" in window){ const u=new SpeechSynthesisUtterance(""); speechSynthesis.speak(u); } // iOSの読み上げ解禁
   if(listening){ stopRec(); return; }
-  listening=true; updateMic(); holdWake(); startRec();
+  gestureStart=true; listening=true; updateMic(); startRec(); holdWake();
 };
+/* 読み上げの解禁（iOS）：マイク以外の最初のタップで行い、音声認識の開始とぶつけない */
+let ttsUnlocked=false;
+document.addEventListener("pointerdown",e=>{
+  if(ttsUnlocked||e.target.closest("#mic")||!("speechSynthesis" in window)) return;
+  try{ const u=new SpeechSynthesisUtterance(" "); u.volume=0; speechSynthesis.speak(u); ttsUnlocked=true; }catch(_){}
+},true);
+/* マイク診断 */
+$("#diag").onclick=async()=>{
+  const lines=[`アプリ版：${APP_VER}`,`URL：${location.protocol}//${location.host}`,`安全な接続（https）：${window.isSecureContext?"はい":"いいえ"}`,
+    `音声認識の機能：${SR?"あり":"なし"}`,`ホーム画面から起動：${(navigator.standalone||matchMedia("(display-mode: standalone)").matches)?"はい":"いいえ"}`];
+  if(!navigator.mediaDevices?.getUserMedia){ lines.push("マイク：確認できません（httpsで開いていない可能性）"); }
+  else{
+    try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); st.getTracks().forEach(t=>t.stop()); lines.push("マイク：使えます → 止められているのは音声認識（Siri・音声入力）側です"); }
+    catch(err){ lines.push(`マイク：使えません（${err.name}）→ マイク自体の許可が拒否されています`); }
+  }
+  $("#diagOut").textContent=lines.join("\n"); $("#diagOut").hidden=false;
+};
+$("#ver").textContent=APP_VER;
+if(!window.isSecureContext) note("https で開かれていないため、マイクが使えません。GitHub Pages の https のURLで開いてください。");
 document.querySelectorAll("[data-cmd]").forEach(b=>b.onclick=()=>{ doCommand(b.dataset.cmd); save(); render(); });
 $("#manual").onsubmit=e=>{ e.preventDefault(); const v=$("#manualIn").value.trim(); if(v){ handleText(v,false); $("#manualIn").value=""; } };
 $("#tbl").onclick=e=>{ const td=e.target.closest("td.v"); if(!td) return; cur={r:+td.dataset.r,c:+td.dataset.c}; save(); render(); };
