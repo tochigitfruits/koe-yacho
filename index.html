@@ -190,6 +190,7 @@ legend{font-weight:700;font-size:.9rem;margin-bottom:6px}
     <fieldset>
       <legend>その他</legend>
       <label class="toggle" for="sRead"><span>認識した値を読み上げる</span><input type="checkbox" id="sRead"></label>
+      <div class="toggle"><button type="button" class="ghost" id="sTest">読み上げテスト</button><span class="ver" id="sTestOut"></span></div>
       <label class="toggle" for="sSerial"><span>左端に通し番号（No.）を付ける</span><input type="checkbox" id="sSerial"></label>
     </fieldset>
     <p class="help">音声コマンド：<code>取り消し</code> 直前を消す／<code>スキップ</code> 空欄で進む／<code>次</code> 次の行・列へ／<code>戻る</code> 1つ前へ。小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。表のセルをタップすると、そこから入力を再開します。</p>
@@ -359,7 +360,7 @@ function handleText(raw, fromVoice){
 /* ========= 音声 ========= */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, gestureStart=false;
-const APP_VER="v1.2（2026-10-14）";
+const APP_VER="v1.3（2026-10-14）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -385,7 +386,7 @@ function makeRec(){
   };
   r.onend=()=>{
     processed=new Set();
-    if(ttsPause) return;
+    if(ttsPause){ setTimeout(flushSpeak,150); return; }
     if(listening && S.mode==="cont"){ setTimeout(()=>{ if(listening&&!ttsPause) startRec(); },200); }
     else { listening=false; updateMic(); }
   };
@@ -395,16 +396,31 @@ function startRec(){ try{ rec=makeRec(); processed=new Set(); rec.start(); }catc
 function stopRec(){ listening=false; try{ rec&&rec.abort(); }catch(e){} updateMic(); releaseWake(); }
 async function holdWake(){ try{ if("wakeLock" in navigator) wake=await navigator.wakeLock.request("screen"); }catch(e){} }
 function releaseWake(){ try{ wake&&wake.release(); }catch(e){} wake=null; }
+/* 読み上げ：iPhoneでは認識を完全に止めてから話す（録音中は音が出ない／小さくなるため） */
+const HAS_TTS="speechSynthesis" in window;
+let jaVoice=null, pendingUtter=null, ttsUnlocked=false;
+function pickVoice(){ try{ const vs=speechSynthesis.getVoices(); jaVoice=vs.find(v=>/^ja(-|_|$)/i.test(v.lang))||null; }catch(_){} }
+if(HAS_TTS){ pickVoice(); try{ speechSynthesis.addEventListener("voiceschanged",pickVoice); }catch(_){} }
+function utter(text,vol=1){ const u=new SpeechSynthesisUtterance(text); u.lang="ja-JP"; if(jaVoice) u.voice=jaVoice; u.rate=1.1; u.volume=vol; return u; }
+function say(u){
+  if(speechSynthesis.speaking||speechSynthesis.pending){ speechSynthesis.cancel(); setTimeout(()=>speechSynthesis.speak(u),150); }
+  else speechSynthesis.speak(u);
+}
+function unlockTTS(){ if(!HAS_TTS||ttsUnlocked) return; try{ speechSynthesis.speak(utter(" ",0)); ttsUnlocked=true; }catch(_){} }
+function flushSpeak(){ if(pendingUtter){ const u=pendingUtter; pendingUtter=null; say(u); } }
 function speak(text){
-  if(!S.readback||!("speechSynthesis" in window)) return;
-  const u=new SpeechSynthesisUtterance(text); u.lang="ja-JP"; u.rate=1.2;
-  if(listening && S.mode==="cont"){
-    ttsPause=true; try{ rec.abort(); }catch(e){}
+  if(!S.readback||!HAS_TTS) return;
+  const u=utter(text);
+  if(listening && rec){
+    ttsPause=true;
     let done=false;
-    const resume=()=>{ if(done) return; done=true; ttsPause=false; if(listening) setTimeout(startRec,150); };
-    u.onend=resume; u.onerror=resume; setTimeout(resume,1500+text.length*250);
-  }
-  speechSynthesis.cancel(); speechSynthesis.speak(u);
+    const resume=()=>{ if(done) return; done=true; ttsPause=false;
+      if(!listening) return;
+      if(S.mode==="cont") setTimeout(startRec,200); else { listening=false; updateMic(); } };
+    u.onend=resume; u.onerror=resume; setTimeout(resume,3000+text.length*300);
+    pendingUtter=u; try{ rec.abort(); }catch(e){}
+    setTimeout(flushSpeak,500); // onend が来ない場合の保険
+  } else say(u);
 }
 function updateMic(){
   const b=$("#mic"); b.classList.toggle("on",listening); b.setAttribute("aria-pressed",String(listening));
@@ -477,14 +493,20 @@ $("#btnCsv").onclick=()=>{
 $("#mic").onclick=()=>{
   if(!SR){ note("このブラウザは音声認識に対応していません。AndroidはChrome、iPhoneはSafariで開いてください。手入力欄は使えます。"); return; }
   if(listening){ stopRec(); return; }
+  if(S.readback) unlockTTS();
   gestureStart=true; listening=true; updateMic(); startRec(); holdWake();
 };
-/* 読み上げの解禁（iOS）：マイク以外の最初のタップで行い、音声認識の開始とぶつけない */
-let ttsUnlocked=false;
-document.addEventListener("pointerdown",e=>{
-  if(ttsUnlocked||e.target.closest("#mic")||!("speechSynthesis" in window)) return;
-  try{ const u=new SpeechSynthesisUtterance(" "); u.volume=0; speechSynthesis.speak(u); ttsUnlocked=true; }catch(_){}
-},true);
+/* 読み上げの解禁（iOS）：ページ上の最初のタップで行う */
+document.addEventListener("pointerdown",e=>{ if(!e.target.closest("#mic")) unlockTTS(); },true);
+$("#sTest").onclick=()=>{
+  if(!HAS_TTS){ $("#sTestOut").textContent="このブラウザは読み上げに対応していません"; return; }
+  pickVoice(); ttsUnlocked=true;
+  const u=utter("さんじゅうにてんご");
+  u.onstart=()=>{ $("#sTestOut").textContent="読み上げ中… 聞こえない場合は消音スイッチと音量を確認"; };
+  u.onend=()=>{ $("#sTestOut").textContent=`読み上げ完了（音声：${jaVoice?jaVoice.name:"既定"}）`; };
+  u.onerror=ev=>{ $("#sTestOut").textContent=`読み上げエラー：${ev.error||"不明"}`; };
+  say(u);
+};
 /* マイク診断 */
 $("#diag").onclick=async()=>{
   const lines=[`アプリ版：${APP_VER}`,`URL：${location.protocol}//${location.host}`,`安全な接続（https）：${window.isSecureContext?"はい":"いいえ"}`,
