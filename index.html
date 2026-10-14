@@ -364,7 +364,8 @@ function makeRec(){
     if(interim){ const h=$("#heard"); h.className="heard"; h.textContent="… "+interim; }
   };
   r.onerror=e=>{
-    if(e.error==="not-allowed"||e.error==="service-not-allowed"){ listening=false; note("マイクの使用が許可されていません。ブラウザのサイト設定でマイクを許可してください。"); updateMic(); }
+    if(e.error==="not-allowed"){ listening=false; note("マイクが許可されていません。Safariのアドレスバー左の「ぁあ」→「Webサイトの設定」→「マイク」を「許可」にしてください。"); updateMic(); }
+    else if(e.error==="service-not-allowed"){ listening=false; note("音声認識サービスが使えません。iPhoneの「設定」→「一般」→「キーボード」→「音声入力」をオンにしてください。ホーム画面から開いている場合は、Safariで直接開いてください。"); updateMic(); }
     else if(e.error==="network"){ note("音声認識の通信に失敗しました。電波を確認するか、手入力欄を使ってください。"); }
     else if(e.error==="audio-capture"){ listening=false; note("マイクが見つかりません。"); updateMic(); }
   };
