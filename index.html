@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="robots" content="noindex, nofollow, noarchive">
 <title>声で野帳</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -361,7 +362,7 @@ function handleText(raw, fromVoice){
 /* ========= 音声 ========= */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, gestureStart=false;
-const APP_VER="v1.5（2026-10-14）";
+const APP_VER="v1.5.1（2026-10-14）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
