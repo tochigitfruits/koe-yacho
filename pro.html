@@ -1,0 +1,1527 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<!--
+  声で野帳 (Koe de Yacho)
+  Copyright (c) 2026 tochigitfruits. All rights reserved.
+  本プログラムの無断での複製・改変・再配布・販売を禁じます。
+-->
+<meta name="author" content="tochigitfruits">
+<meta name="copyright" content="© 2026 tochigitfruits">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>声で野帳 Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=BIZ+UDPGothic:wght@400;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* 屋外で読める野帳：紙に近い明るい地、入力中セルは黄色マーカー、操作は大きな親指ボタン */
+:root{
+  --bg:#eef2ef; --surface:#ffffff; --ink:#15231d; --muted:#5b6b63; --line:#cfd8d2;
+  --accent:#0f6b4c; --accent-ink:#ffffff; --mark:#ffd84a; --mark-ink:#1b1600;
+  --rec:#c62f2f; --warn:#a85a00;
+  --f-ui:"BIZ UDPGothic","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --f-num:"BIZ UDGothic","Hiragino Sans","Noto Sans JP",ui-monospace,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101714; --surface:#18221d; --ink:#e6eee9; --muted:#9db0a6; --line:#2d3b34;
+  --accent:#3fb88a; --accent-ink:#06150f; --mark:#e8c234; --mark-ink:#1b1600;
+  --rec:#ff6b6b; --warn:#f0a845; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101714; --surface:#18221d; --ink:#e6eee9; --muted:#9db0a6; --line:#2d3b34;
+  --accent:#3fb88a; --accent-ink:#06150f; --mark:#e8c234; --mark-ink:#1b1600;
+  --rec:#ff6b6b; --warn:#f0a845; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-ui);
+  padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:960px;margin:0 auto;padding-inline:16px;padding-block:12px 32px;display:flex;flex-direction:column;gap:12px}
+
+header{display:flex;align-items:center;gap:12px;justify-content:space-between}
+header h1{margin:0;font-size:1.15rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+header small{display:block;color:var(--muted);font-size:.8rem;font-weight:400}
+.ghost{background:transparent;border:1.5px solid var(--line);border-radius:10px;padding:8px 14px;flex:none}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:12px}
+.status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.where{min-width:0}
+.where .lbl{font-size:.78rem;color:var(--muted);letter-spacing:.05em}
+.where .cell{font-size:1.5rem;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+.where .cell b{background:var(--mark);color:var(--mark-ink);padding:0 .3em;border-radius:4px;font-family:var(--f-num)}
+.prev{font-family:var(--f-num);font-size:.88rem;color:var(--muted)}
+.heard{font-family:var(--f-num);font-size:.95rem;min-height:1.5em;color:var(--muted);overflow-wrap:anywhere}
+.heard.ok{color:var(--accent)} .heard.ng{color:var(--warn)}
+
+.micbox{display:grid;gap:8px;justify-items:center}
+.mic{width:96px;height:96px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);
+  display:grid;place-items:center;font-weight:700;font-size:.85rem;box-shadow:0 2px 0 rgba(0,0,0,.15);touch-action:manipulation}
+.mic svg{width:34px;height:34px;display:block;margin:0 auto 2px}
+.mic.on{background:var(--rec);animation:pulse 1.4s ease-in-out infinite}
+.mic.standby{background:var(--warn);color:#fff;animation:none}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--rec) 45%,transparent)}50%{box-shadow:0 0 0 14px color-mix(in srgb,var(--rec) 0%,transparent)}}
+@media (prefers-reduced-motion:reduce){.mic.on{animation:none}}
+.sbbtn{min-width:96px;min-height:40px;border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-weight:700;font-size:.9rem;touch-action:manipulation}
+.sbbtn:disabled{opacity:.4;cursor:default}
+.sbbtn.on{background:var(--warn);color:#fff;border-color:var(--warn)}
+.standbybar{border:2px dashed var(--warn);border-radius:10px;padding:10px 12px;font-weight:700;color:var(--warn);text-align:center;line-height:1.5}
+
+.alertbar{border-radius:10px;padding:10px 12px;display:grid;gap:8px;font-weight:700;line-height:1.5}
+.alertbar.info{background:color-mix(in srgb,var(--accent) 12%,transparent);border:1.5px solid var(--accent);color:var(--ink)}
+.alertbar.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);border:2px solid var(--warn);color:var(--ink)}
+.alertbar.block{background:color-mix(in srgb,var(--rec) 14%,transparent);border:2px solid var(--rec);color:var(--rec)}
+.albtns{display:flex;gap:8px;flex-wrap:wrap}
+.albtns button{min-height:44px;flex:1 1 9em;border-radius:10px;border:0;background:var(--warn);color:#fff;font-weight:700}
+.albtns button.sec{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+
+.cmds{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.cmds button{padding:10px 2px!important;font-size:.88rem;white-space:nowrap}
+.cmds button span{font-size:.62rem!important}
+.cmds button{border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 4px;font-weight:700;touch-action:manipulation}
+.cmds button span{display:block;font-size:.7rem;color:var(--muted);font-weight:400}
+.manual{display:flex;gap:8px}
+.manual input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);font-family:var(--f-num);font-size:1.1rem}
+.manual button{border:0;background:var(--ink);color:var(--surface);border-radius:10px;padding:0 18px;font-weight:700}
+
+.tablebox{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:auto;max-height:52vh}
+table{border-collapse:collapse;width:100%;font-family:var(--f-num);font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:9px 10px;text-align:right;white-space:nowrap}
+th{position:sticky;top:0;background:var(--surface);font-family:var(--f-ui);font-size:.85rem;text-align:center;z-index:1}
+th small{display:block;color:var(--muted);font-weight:400;font-size:.7rem}
+td.no,th.no{color:var(--muted);text-align:center;width:3.5em}
+td.v{cursor:pointer;min-width:5em}
+td.al-info{box-shadow:inset 4px 0 0 var(--accent)}
+td.al-warn{background:color-mix(in srgb,var(--warn) 20%,transparent)}
+td.al-block{background:color-mix(in srgb,var(--rec) 20%,transparent)}
+td.cur{background:var(--mark);color:var(--mark-ink);font-weight:700;box-shadow:inset 0 0 0 2px var(--mark-ink)}
+td.flash{animation:flash .6s ease-out}
+td.badflash{animation:badflash 1s ease-out}
+@keyframes flash{from{background:color-mix(in srgb,var(--accent) 35%,transparent)}}
+@keyframes badflash{from{background:color-mix(in srgb,var(--rec) 55%,transparent)}}
+tr.currow td.no{color:var(--ink);font-weight:700}
+
+.out{display:flex;gap:8px;flex-wrap:wrap}
+.out button{flex:1 1 140px;border:0;border-radius:10px;padding:12px;font-weight:700;background:var(--accent);color:var(--accent-ink)}
+.out button.sec{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.log{font-size:.8rem;color:var(--muted);font-family:var(--f-num);display:grid;gap:2px}
+.datebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.datebar label{font-weight:700;font-size:.9rem}
+.datebar select,.datebar input{border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface);font-family:var(--f-num)}
+tr.exrow td{color:var(--muted)}
+td.exc{background:repeating-linear-gradient(135deg,transparent 0 6px,color-mix(in srgb,var(--line) 45%,transparent) 6px 8px)}
+tr.exrow td.idc{text-decoration:line-through}
+.pastebtn{background:transparent!important;color:var(--ink)!important;border:1.5px solid var(--line)!important;padding:0 12px!important;font-weight:700}
+#pasteText{width:100%;font-family:var(--f-num);font-size:.95rem;border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);white-space:pre;overflow:auto}
+.note{font-size:.85rem;color:var(--warn)}
+.diag{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.ver{font-size:.75rem;color:var(--muted)}
+.diagout{white-space:pre-wrap;font-family:var(--f-num);font-size:.82rem;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;margin:0;overflow-wrap:anywhere}
+
+/* 設定 */
+dialog{border:0;padding:0;width:min(640px,100%);max-height:100%;background:var(--surface);color:var(--ink);border-radius:16px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.sheet{padding:16px;display:grid;gap:18px}
+.sheet h2{margin:0;font-size:1.1rem}
+fieldset{border:0;margin:0;padding:0;display:grid;gap:8px;min-width:0;min-inline-size:0}
+#sOutFmt{width:100%;min-width:0;text-overflow:ellipsis}
+legend{font-weight:700;font-size:.9rem;margin-bottom:6px}
+.field{display:grid;gap:4px}
+.field input[type=text],.field select{border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.items{display:grid;gap:8px}
+.item{display:grid;gap:6px;border:1px solid var(--line);border-radius:10px;padding:8px}
+.item.isid{background:color-mix(in srgb,var(--line) 30%,transparent)}
+.irow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.item input,.gens input,#sList{min-width:0;border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg)}
+.iname{flex:1 1 8em}.iopts{flex:1 1 100%}
+.item select{border:1.5px solid var(--line);border-radius:8px;padding:8px 4px;background:var(--bg);max-width:100%}
+.item button{width:36px;height:38px;border:1.5px solid var(--line);border-radius:8px;background:var(--bg)}
+.cmp{font-size:.8rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:6px}
+.cmp label{display:flex;gap:4px;align-items:center}
+.cmp select{padding:6px 2px!important;font-size:.82rem}
+.cmp input{width:4.5em;padding:6px 8px!important}
+.cmpl{font-weight:700;color:var(--ink)}
+.addrow{display:flex;gap:8px;flex-wrap:wrap}.addrow .add{flex:1 1 10em}
+.filebtn{display:grid;place-items:center;cursor:pointer;text-align:center}
+.gens{display:grid;grid-template-columns:repeat(auto-fit,minmax(9em,1fr));gap:6px}
+.gen{display:grid;gap:2px;font-size:.8rem;color:var(--muted)}
+#sList{width:100%;font-family:var(--f-num);font-size:.9rem}
+td.idc{background:color-mix(in srgb,var(--line) 35%,transparent);color:var(--muted)}
+th.idh{color:var(--muted)}
+td.txt{text-align:left;font-family:var(--f-ui)}
+.add{border:1.5px dashed var(--line);background:transparent;border-radius:10px;padding:10px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.seg label{border:1.5px solid var(--line);border-radius:10px;padding:10px;display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.seg label:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.seg small{display:block;color:var(--muted);font-size:.75rem}
+.toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding-block:6px}
+.toggle input{width:22px;height:22px}
+.actions{display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--surface);padding-block:10px 4px}
+.actions button{border-radius:10px;padding:10px 18px;font-weight:700;border:1.5px solid var(--line);background:transparent}
+.actions .primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.danger{border:1.5px solid var(--rec);color:var(--rec);background:transparent;border-radius:10px;padding:10px}
+.help{font-size:.82rem;color:var(--muted);margin:0}
+.help code{font-family:var(--f-num);background:var(--bg);padding:0 .3em;border-radius:4px}
+@media (max-width:420px){.mic{width:84px;height:84px}.sbbtn{min-width:84px}.where .cell{font-size:1.3rem}}
+.terms{font-size:.78rem;color:var(--muted)}
+.terms summary{cursor:pointer;padding-block:4px}
+.termsbody{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);line-height:1.6}
+.termsbody p{margin:0}
+.termsbody ol,.termsbody ul{margin:0;padding-left:1.4em;display:grid;gap:4px}
+#sRate{width:9em;height:auto}
+th.gstart,td.gstart{border-left:3px solid var(--accent)}
+.grp{display:block;font-size:.8rem;font-weight:400;color:var(--muted)}
+.seg{grid-template-columns:repeat(auto-fit,minmax(9em,1fr))!important}
+.manual{gap:6px}.manual button{padding:0 12px!important;flex:none}
+
+#gate{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:flex-start;justify-content:center;padding:max(24px,6vh) 16px 24px;overflow:auto}
+.gatebox{width:100%;max-width:540px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:14px}
+.gatebox h2{margin:0;font-size:1.5rem}.gatebox h2 small{font-size:.85rem;color:var(--muted);font-weight:400;margin-left:8px}
+.gatebox p{margin:0;line-height:1.7}
+#gateCode{width:100%;min-height:7.5em;font:600 15px/1.6 var(--f-num);padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);resize:vertical;word-break:break-all}
+#gateTerms{max-height:36vh;overflow:auto;font-size:.82rem;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);line-height:1.6;display:grid;gap:6px}
+#gateTerms p{margin:0;line-height:1.6}
+#gateTerms ol,#gateTerms ul{margin:0;padding-left:1.4em;display:grid;gap:4px}
+.agree{display:flex;gap:10px;align-items:flex-start;font-weight:700;cursor:pointer}
+.agree input{width:22px;height:22px;flex:none;margin-top:2px}
+.gatebtns{display:flex;gap:8px;flex-wrap:wrap}
+.gatebtns button{min-height:48px;padding:0 20px;border-radius:12px;border:0;background:var(--accent);color:var(--accent-ink);font:700 1rem var(--f-ui);cursor:pointer}
+.gatebtns button.sec{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+#gateErr{color:var(--rec);font-weight:700}
+#gateData{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px}
+.gatesmall{font-size:.85rem;color:var(--muted)}
+#licInfo{margin-left:8px}
+</style>
+</head>
+<body>
+<div id="gate">
+  <div class="gatebox" role="dialog" aria-labelledby="gateTitle">
+    <h2 id="gateTitle">声で野帳 Pro<small>利用コードの確認</small></h2>
+    <p id="gateMsg">利用コードを確認しています…</p>
+    <textarea id="gateCode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="KOE-XXXX-XXXX-…（受け取ったコードをそのまま貼り付け）" aria-label="利用コード"></textarea>
+    <div id="gateTerms" aria-label="利用条件と免責事項"></div>
+    <label class="agree" for="gateAgree"><input type="checkbox" id="gateAgree"><span>利用条件と免責事項を読み、同意します</span></label>
+    <div class="gatebtns">
+      <button type="button" id="gateGo">同意して利用を開始</button>
+      <button type="button" id="gateClose" class="sec" hidden>閉じる</button>
+    </div>
+    <p id="gateErr" hidden></p>
+    <div id="gateData" hidden>
+      <p>これまでに入力したデータは、この端末に残っています。コードがなくても保存できます。</p>
+      <div class="gatebtns"><button type="button" id="gateXlsx" class="sec">Excelで保存</button><button type="button" id="gateBk" class="sec">バックアップを保存</button></div>
+    </div>
+    <p class="gatesmall">利用コードは3か月用と1年用があります。期限が切れても、入力したデータは消えません。</p>
+  </div>
+</div>
+<div class="wrap">
+  <header>
+    <h1 id="title">調査<small id="subtitle"></small></h1>
+    <button class="ghost" id="btnSettings" type="button">設定</button>
+  </header>
+
+  <section class="panel" aria-live="polite">
+    <div class="status">
+      <div class="where">
+        <div class="lbl">次に入るセル</div>
+        <div class="cell" id="where">–</div>
+        <div class="prev" id="prevInfo" hidden></div>
+        <div class="heard" id="heard">マイクを押して話してください</div>
+      </div>
+      <div class="micbox">
+        <button class="mic" id="mic" type="button" aria-pressed="false">
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span id="micLbl">開始</span></span>
+        </button>
+        <button type="button" class="sbbtn" id="btnStandby" aria-pressed="false" disabled>待機</button>
+      </div>
+    </div>
+    <div class="standbybar" id="standbyBar" hidden></div>
+    <div class="alertbar" id="alertBar" role="alert" hidden>
+      <div id="alertMsg"></div>
+      <div class="albtns" id="alBtns" hidden>
+        <button type="button" id="alYes">このまま確定（はい）</button>
+        <button type="button" id="alNo" class="sec">入力し直す（いいえ）</button>
+      </div>
+    </div>
+    <div class="cmds">
+      <button type="button" data-cmd="undo">取り消し<span>直前を消す</span></button>
+      <button type="button" data-cmd="skip">スキップ<span>空欄で進む</span></button>
+      <button type="button" data-cmd="next">次<span id="nextHint">次の行へ</span></button>
+      <button type="button" data-cmd="back">戻る<span>1つ前へ</span></button>
+      <button type="button" id="btnEx">除外<span>以後飛ばす</span></button>
+    </div>
+    <form class="manual" id="manual">
+      <input id="manualIn" type="text" inputmode="decimal" autocomplete="off" placeholder="手入力（例 32.5）" aria-label="手入力">
+      <button type="submit">入力</button>
+      <button type="button" id="pasteOpen" class="pastebtn" aria-label="表に貼り付け">貼付</button>
+    </form>
+    <div class="note" id="note" hidden></div>
+  </section>
+
+  <div class="datebar" id="dateBar">
+    <label for="dateSel">調査日</label>
+    <select id="dateSel"></select>
+    <button type="button" class="ghost" id="dateAdd">＋ 新しい調査日</button>
+    <span class="ver" id="dateInfo"></span>
+  </div>
+  <div class="datebar" id="newDateBox" hidden>
+    <input type="date" id="newDate" aria-label="新しい調査日">
+    <button type="button" class="ghost" id="newDateGo">この日の調査を始める</button>
+    <button type="button" class="ghost" id="newDateCancel">やめる</button>
+  </div>
+  <div class="tablebox" id="tablebox"><table id="tbl"></table></div>
+
+  <div class="out">
+    <button type="button" id="btnXlsx">Excelで保存</button>
+    <button type="button" id="btnCsv" class="sec">この日のCSV</button>
+    <button type="button" id="btnCsvWide" class="sec">全調査日CSV（野帳型）</button>
+    <button type="button" id="btnCsvLong" class="sec">全調査日CSV（縦持ち）</button>
+  </div>
+  <div class="log" id="log"></div>
+  <div class="diag">
+    <button type="button" id="diag" class="ghost">マイク診断</button>
+    <span class="ver" id="ver"></span><span class="ver" id="licInfo"></span> <button type="button" id="licChange" class="ghost">利用コードを変更</button>
+  </div>
+  <pre class="diagout" id="diagOut" hidden></pre>
+  <details class="terms">
+    <summary>© 2026 tochigitfruits　利用条件・免責事項</summary>
+    <div class="termsbody" id="termsBody">
+      <p><b>利用条件</b></p>
+      <p>「声で野帳 Pro」は、調査記録の補助を目的として、利用コードをお持ちの方に提供しています。</p>
+      <p>本アプリのプログラム、画面のデザイン、名称「声で野帳」の無断での複製・改変・再配布・販売を禁じます。利用コードを第三者に譲り渡したり、公開したりすることも禁じます。</p>
+      <p>入力したデータは、お使いの端末の中にだけ保存されます。開発者が収集することはありません。話した音声は、文字に変換するためにApple・Google・Microsoftの音声認識サービスへ送られます。</p>
+      <p><b>免責事項</b></p>
+      <ol>
+        <li>本アプリは現状のまま提供します。動作の正確さ・完全さ、特定の目的に合うことを保証しません。</li>
+        <li>次のことによって生じた損害について、開発者の故意または重大な過失による場合を除き、開発者は責任を負いません。
+          <ul>
+            <li>データの消失・破損（ブラウザの閲覧データの削除、端末の故障・紛失・初期化、OSやブラウザの更新によるものを含む）</li>
+            <li>パソコン・スマートフォン・タブレットなど端末の不具合、通信の障害</li>
+            <li>音声認識・読み上げの誤り、前回比アラートの見落としや誤った判定</li>
+            <li>その他、本アプリを使用したこと、または使用できなかったこと</li>
+          </ul>
+        </li>
+        <li>記録した値は必ず確認し、調査の後はExcel・CSV・バックアップで保存してください。データの保管は利用者の責任で行ってください。</li>
+        <li>本アプリの内容は、予告なく変更し、または提供を終了することがあります。</li>
+      </ol>
+      <p>本アプリを利用した時点で、上記に同意したものとします。（2026-10-15 改定）</p>
+    </div>
+  </details>
+</div>
+
+<dialog id="pasteDlg">
+  <div class="sheet">
+    <h2>数値をまとめて貼り付け</h2>
+    <p class="help" id="pasteWhere"></p>
+    <p class="help">Excelなどで数値のセル範囲をコピーし、下の欄に貼り付けます。<b>今のセルを左上</b>として、右へ「音声で入力」の列、下へ個体の順に入ります（事前入力の列は飛ばします）。空のセルは、今の値をそのまま残します。前回比のアラートは貼り付けでは働きません（表の色で確認できます）。</p>
+    <textarea id="pasteText" rows="8" spellcheck="false" aria-label="貼り付ける数値" placeholder="30.2	31.0	250&#10;29.5	30.4	241"></textarea>
+    <span class="ver" id="pasteInfo"></span>
+    <div class="actions">
+      <button type="button" id="pasteCancel">キャンセル</button>
+      <button type="button" class="primary" id="pasteGo">貼り付ける</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlg">
+  <form class="sheet" id="setForm" method="dialog">
+    <h2>調査の設定</h2>
+    <div class="field">
+      <label for="sName"><b>調査名</b>（ファイル名に使います）</label>
+      <input type="text" id="sName" placeholder="例 にっこり果実肥大調査">
+    </div>
+    <fieldset>
+      <legend>調査の種類</legend>
+      <div class="seg">
+        <label><input type="radio" name="ts" value="0"><span>1回の調査<small>調査日を分けずに記録</small></span></label>
+        <label><input type="radio" name="ts" value="1"><span>経時調査<small>調査日ごとに記録し、前回の値と比べる</small></span></label>
+      </div>
+      <div class="field" id="sTsBox">
+        <label for="sOutFmt"><b>全調査日の出力形式</b></label>
+        <select id="sOutFmt">
+          <option value="wide">野帳型（1行＝1個体、調査日ごとに項目を横に並べる）</option>
+          <option value="long">縦持ち（1行＝1個体×1調査日、R・統計向け）</option>
+          <option value="both">両方</option>
+        </select>
+        <p class="help">前回比のアラートは、下の各項目（数値・音声で入力）の「前回比」で設定します。例：肥大調査なら、横径・縦径・果実重の「減った」を「注意」か「禁止」にします。「許容±」は測定誤差の幅で、この幅以内の差は「同じ」とみなします。</p>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>調査項目（左の列から順）</legend>
+      <div class="items" id="sItems"></div>
+      <div class="addrow"><button type="button" class="add" id="sAdd">＋ 項目を追加</button><button type="button" class="add" id="sPreset">果実品質調査のひな形</button></div>
+      <p class="help">「事前入力」の列（樹番号・処理区など）は、下の個体リストで先に入れておきます。音声では「音声で入力」の列だけを順に入力します。</p>
+    </fieldset>
+    <fieldset id="sListBox">
+      <legend>個体リスト（事前入力の列）</legend>
+      <p class="help">組み合わせで作るか、Excelから事前入力の列を並べてコピーし、貼り付けます（1行が1個体、列の順は <b id="sListHead"></b>）。</p>
+      <div class="gens" id="sGen"></div>
+      <button type="button" class="add" id="sMake">組み合わせで個体リストを作る</button>
+      <textarea id="sList" rows="6" aria-label="個体リスト" spellcheck="false"></textarea>
+      <span class="ver" id="sListInfo"></span>
+    </fieldset>
+    <fieldset>
+      <legend>入力の進む順番</legend>
+      <div class="seg">
+        <label><input type="radio" name="dir" value="row"><span>行単位<small>1個体の全項目 → 次の個体</small></span></label>
+        <label><input type="radio" name="dir" value="col"><span>列単位<small>1項目を全個体 → 次の項目</small></span></label>
+        <label><input type="radio" name="dir" value="group"><span>グループ単位<small>まとまりごとに 横 → 次の個体</small></span></label>
+      </div>
+      <div class="field" id="sGroupBox">
+        <label for="sGroups"><b>横に進む列数</b>（左から順に、まとまりごとの列数。例 <code>2,1,2</code>）</label>
+        <input type="text" id="sGroups" inputmode="numeric" placeholder="例 2,1,2,1">
+        <span class="ver" id="sGroupPrev"></span>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>聞き取り方</legend>
+      <div class="seg">
+        <label><input type="radio" name="mode" value="cont"><span>連続認識<small>停止するまで聞き続ける</small></span></label>
+        <label><input type="radio" name="mode" value="ptt"><span>1回ずつ<small>押すたびに1回聞く</small></span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>待機のしかた</legend>
+      <div class="seg">
+        <label><input type="radio" name="sbm" value="voice"><span>声で再開できる<small>聞き取りは続け、「再開」以外は無視する</small></span></label>
+        <label><input type="radio" name="sbm" value="stop"><span>完全に止める<small>マイクを切る。再開はボタンで</small></span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>その他</legend>
+      <label class="toggle" for="sRead"><span>認識した値を読み上げる</span><input type="checkbox" id="sRead"></label>
+      <label class="toggle" for="sRate"><span>読み上げの速さ <b id="sRateVal"></b><small class="ver" style="display:block">遅い 0.6 〜 2.0 速い（標準 1.1）</small></span><input type="range" id="sRate" min="0.6" max="2" step="0.1"></label>
+      <div class="toggle"><button type="button" class="ghost" id="sTest">読み上げテスト</button><span class="ver" id="sTestOut"></span></div>
+      <label class="toggle" for="sSound"><span>アラート・待機の音を鳴らす<small class="ver" style="display:block">Androidでは振動もします</small></span><input type="checkbox" id="sSound"></label>
+      <div class="toggle"><button type="button" class="ghost" id="sSoundTest">音のテスト</button><span class="ver">表示 → 注意 → 禁止 の順に鳴ります</span></div>
+      <label class="toggle" for="sAuto"><span>キーボード音声入力モード<small class="ver" style="display:block">手入力欄に Win+H やキーボードのマイクで話すと、1.2秒の間で自動確定</small></span><input type="checkbox" id="sAuto"></label>
+      <label class="toggle" for="sSerial"><span>左端に通し番号（No.）を付ける</span><input type="checkbox" id="sSerial"></label>
+    </fieldset>
+    <p class="help">音声コマンド：<code>取り消し</code> 直前を消す／<code>スキップ</code> 空欄で進む／<code>次</code> 次の行・列へ／<code>戻る</code> 1つ前へ。<code>待機</code>（<code>一時停止</code>・<code>休憩</code>）聞き取りを休む／<code>再開</code> 待機から戻る。<code>除外</code>（<code>落果</code>・<code>枯死</code>・<code>欠株</code>）その個体をこの調査日以降は飛ばす／<code>復帰</code> 除外を取り消す。前回比の「注意」が出たら <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）、または正しい値を言い直します。文字の列は話した言葉がそのまま入り、選択肢の列は登録した候補から一番近いものが入ります。小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。表のセルをタップすると、そこから入力を再開します。</p>
+    <fieldset>
+      <legend>データの保存と読み込み</legend>
+      <p class="help">「バックアップを保存」は、設定・個体リスト・全調査日・除外の記録をまるごと1つのファイルに保存します。別の端末で「ファイルを読み込む」と、そのまま続きから使えます。このアプリで保存したExcel（縦持ちシート）やCSVも読み込めます。</p>
+      <div class="addrow">
+        <button type="button" class="add" id="ioBackup">バックアップを保存（.json）</button>
+        <label class="add filebtn" for="ioFile">ファイルを読み込む<input type="file" id="ioFile" accept=".json,.csv,.xlsx,.xls,.txt" hidden></label>
+      </div>
+      <span class="ver" id="ioOut"></span>
+    </fieldset>
+    <button type="button" class="danger" id="sClear">データを全消去して新しい調査を始める</button>
+    <div class="actions">
+      <button type="button" id="sCancel">キャンセル</button>
+      <button type="button" class="primary" id="sSave">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+/* ========= 数値変換 ========= */
+const KD = {"〇":0,"零":0,"一":1,"二":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9};
+const KU = {"十":10,"百":100,"千":1000};
+const KANA = {"ぜろ":0,"ゼロ":0,"れい":0,"まる":0,"いち":1,"いっ":1,"に":2,"にい":2,"さん":3,"よん":4,"し":4,"ご":5,"ごう":5,"ろく":6,"なな":7,"しち":7,"はち":8,"きゅう":9,"く":9,"じゅう":10};
+function kanjiInt(s){
+  if(/^\d+$/.test(s)) return parseInt(s,10);
+  if(s in KANA) return KANA[s];
+  if(!/^[〇零一二三四五六七八九十百千万\d]+$/.test(s)) return NaN;
+  if(!/[十百千万]/.test(s)) return parseInt([...s].map(c=>c in KD?KD[c]:c).join(""),10);
+  let total=0, sec=0, num=null;
+  for(const c of s){
+    if(c in KD) num=(num??0)*10+KD[c];
+    else if(/\d/.test(c)) num=(num??0)*10+Number(c);
+    else if(c in KU){ sec+=(num??1)*KU[c]; num=null; }
+    else if(c==="万"){ total+=(sec+(num??0))*10000; sec=0; num=null; }
+  }
+  return total+sec+(num??0);
+}
+function kanjiFrac(s){
+  if(/^\d+$/.test(s)) return s;
+  if(s in KANA && KANA[s]<10) return String(KANA[s]);
+  if(/^[〇零一二三四五六七八九\d]+$/.test(s)) return [...s].map(c=>c in KD?KD[c]:c).join("");
+  return null;
+}
+/* ひらがな・カタカナの数詞（さんじゅうにてんご 等）を漢数字へ */
+const KMAP=[["きゅう","九"],["じゅう","十"],["ひゃく","百"],["びゃく","百"],["ぴゃく","百"],["せん","千"],["ぜん","千"],["まん","万"],
+  ["なな","七"],["しち","七"],["はち","八"],["はっ","八"],["ろく","六"],["ろっ","六"],["よん","四"],["さん","三"],["いち","一"],["いっ","一"],
+  ["ぜろ","〇"],["れい","〇"],["まる","〇"],["てん","点"],["に","二"],["ご","五"],["し","四"],["く","九"]];
+function kana2kanji(t){
+  let s=t.replace(/[ァ-ン]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60));
+  if(!/^[ぁ-んー]+$/.test(s) || s in KANA) return t;
+  let out="";
+  while(s){ const m=KMAP.find(([k])=>s.startsWith(k)); if(!m) return t; out+=m[1]; s=s.slice(m[0].length); }
+  return out;
+}
+/* 1語を数値に。失敗時は null */
+function parseNumber(tok){
+  let t=tok.normalize("NFKC").trim();
+  t=t.replace(/(ミリメートル|ミリ|mm|センチ|cm|グラム|g|キロ|kg|度|°|パーセント|%|ブリックス|brix|個|本)$/i,"");
+  let neg=false;
+  if(/^(マイナス|まいなす|-|−)/.test(t)){ neg=true; t=t.replace(/^(マイナス|まいなす|-|−)/,""); }
+  t=kana2kanji(t);
+  t=t.replace(/(てん|テン|ポイント|ドット|点)/g,".");
+  if(/^\d+(\.\d+)?$/.test(t)) return (neg?-1:1)*parseFloat(t);
+  if(/^\.\d+$/.test(t)) return (neg?-1:1)*parseFloat("0"+t);
+  const parts=t.split(".");
+  if(parts.length>2) return null;
+  const ip=parts[0]===""?0:kanjiInt(parts[0]);
+  if(!Number.isFinite(ip)) return null;
+  if(parts.length===1) return (neg?-1:1)*ip;
+  const fp=kanjiFrac(parts[1]);
+  if(fp===null) return null;
+  return (neg?-1:1)*parseFloat(ip+"."+fp);
+}
+function parseCommand(tok){
+  const t=tok.normalize("NFKC").replace(/[。、.,!！?？\s]/g,"");
+  if(/^(取り?消し|取消|とりけし|トリケシ|キャンセル|削除|undo|delete|cancel)$/i.test(t)) return "undo";
+  if(/^(スキップ|すきっぷ|飛ばし|とばし|パス|ぱす|欠測|けっそく|skip|pass)$/i.test(t)) return "skip";
+  if(/^(次|つぎ|ツギ|次へ|つぎへ|ネクスト|next)$/i.test(t)) return "next";
+  if(/^(戻る|もどる|モドル|戻って|もどって|バック|back|previous)$/i.test(t)) return "back";
+  if(/^(除外|じょがい|ジョガイ)$/.test(t)) return "ex:除外";
+  if(/^(落果|落下|らっか|ラッカ)$/.test(t)) return "ex:落果";
+  if(/^(枯死|こし)$/.test(t)) return "ex:枯死";
+  if(/^(欠株|けっかぶ)$/.test(t)) return "ex:欠株";
+  if(/^(復帰|ふっき|フッキ|除外取り?消し)$/.test(t)) return "restore";
+  if(/^(待機|たいき|タイキ|待機して|一時停止|いちじていし|休憩|きゅうけい|キュウケイ|ポーズ|pause|standby)$/i.test(t)) return "standby";
+  if(isResumeWord(t)) return "resume";
+  return null;
+}
+/* 待機中に受け付ける「再開」（言い換え・誤変換も含む） */
+function isResumeWord(s){
+  const t=String(s).normalize("NFKC").replace(/[。、.,!！?？\s]/g,"");
+  return /^(再開|さいかい|サイカイ|再会|最下位|再開して|再開します|resume|restart)$/i.test(t);
+}
+/* 前回比「注意」の確認に使う はい／いいえ */
+function parseYesNo(s){
+  const t=String(s).normalize("NFKC").replace(/[。、.,!！?？\s]/g,"");
+  if(/^(はい|ハイ|はーい|はい確定|確定|かくてい|このまま|このままで|オーケー|ok|okay|いいよ|大丈夫|だいじょうぶ|yes)$/i.test(t)) return "yes";
+  if(/^(いいえ|いえ|イイエ|やり直し|やりなおし|ヤリナオシ|やり直す|だめ|ダメ|違う|ちがう|no)$/i.test(t)) return "no";
+  return null;
+}
+/* 発話全体を語に分割 */
+function tokenize(raw){
+  let t=raw.normalize("NFKC").trim().replace(/[。.]+$/,"");
+  t=t.replace(/\s*(点|てん|テン|ポイント|\.)\s*/g,"$1");
+  return t.split(/[\s、,，。]+/).filter(Boolean);
+}
+
+/* ========= 状態 ========= */
+const KEY="koe-yacho-v2";
+const uid=()=>Math.random().toString(36).slice(2,9);
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+/* 前回比の判定：dec 減った／inc 増えた／same 同じ（±tol以内）。level = none | info（表示）| warn（注意）| block（禁止） */
+const LEVELS=[["none","何もしない"],["info","表示"],["warn","注意（確認）"],["block","禁止（入力し直し）"]];
+function normCmp(c){ c=c||{}; const ok=v=>LEVELS.some(([k])=>k===v)?v:"none"; return {dec:ok(c.dec),inc:ok(c.inc),same:ok(c.same),tol:Math.abs(+c.tol||0)}; }
+/* 項目：type = num（数値）| text（文字）| choice（選択肢）、role = meas（音声で入力）| id（事前入力：個体の識別） */
+function normItem(it){ return {id:it.id||uid(), name:it.name||"項目", type:it.type||"num", dec:it.dec??0, step:+it.step||0, role:it.role||"meas", options:Array.isArray(it.options)?it.options:[], cmp:normCmp(it.cmp)}; }
+const PRESET_FRUIT=()=>[
+  {name:"樹番号",type:"num",dec:0,role:"id"},
+  {name:"処理区名",type:"text",role:"id"},
+  {name:"果実番号",type:"num",dec:0,role:"id"},
+  {name:"横径",type:"num",dec:1},
+  {name:"縦径",type:"num",dec:1},
+  {name:"果実重",type:"num",dec:0},
+  {name:"表面色",type:"num",dec:1,step:0.5},
+  {name:"地色",type:"num",dec:1,step:0.5},
+  {name:"硬度",type:"num",dec:1},
+  {name:"水浸状障害",type:"num",dec:0},
+  {name:"備考",type:"text"}
+].map(normItem);
+let S={ name:"果実品質調査", items:PRESET_FRUIT(), dir:"row", mode:"cont", readback:true, serial:true, autoCommit:false };
+let D=[]; let cur={r:0,c:0}; let logs=[];
+try{ const j=JSON.parse(localStorage.getItem(KEY)||"null"); if(j){ S=Object.assign(S,j.S); D=j.D||[]; cur=j.cur||cur; logs=j.logs||[]; } }catch(e){}
+function normS(){
+  S.items=S.items.map(normItem);
+  S.sessions=S.sessions||{}; S.curDate=S.curDate||today();
+  /* 経時調査：未設定なら、すでに複数の調査日がある場合だけ「経時」にする（3.0からの引き継ぎ） */
+  if(typeof S.ts!=="boolean") S.ts=Object.keys(S.sessions).length>0;
+  if(!["wide","long","both"].includes(S.outFmt)) S.outFmt="both";
+  if(typeof S.alertSound!=="boolean") S.alertSound=true;
+  if(!["voice","stop"].includes(S.standbyMode)) S.standbyMode="voice";
+}
+normS();
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify({S,D,cur,logs})); }catch(e){} }
+
+const n=()=>S.items.length;
+const meas=()=>S.items.map((it,i)=>it.role==="id"?-1:i).filter(i=>i>=0);
+const idItems=()=>S.items.filter(it=>it.role==="id");
+const hasVal=v=>v!==undefined&&v!==null&&v!=="";
+function listLen(){ const ids=idItems(); if(!ids.length) return 0; let L=0; D.forEach((row,i)=>{ if(ids.some(it=>hasVal(row[it.id]))) L=i+1; }); return L; }
+function ensureRow(r){ while(D.length<=r) D.push({}); }
+function fmt(v,it){ if(!hasVal(v)) return ""; if(it&&it.type==="num"&&typeof v==="number") return v.toFixed(it.dec); return String(v); }
+function typeLabel(it){
+  let b = it.type==="text"?"文字": it.type==="choice"?"選択肢": (it.dec===0?"整数":"小数"+it.dec)+(it.step?`・${it.step}刻み`:"");
+  return (it.role==="id"?"事前入力・":"")+b;
+}
+function rowLabel(r){
+  const parts=idItems().map(it=>{ const v=D[r]?.[it.id]; if(!hasVal(v)) return ""; return it.type==="num"?`${it.name}${fmt(v,it)}`:fmt(v,it); }).filter(Boolean);
+  return parts.length?parts.join(" "):`No.${r+1}`;
+}
+function firstMeas(){ const M=meas(); return M.length?M[0]:0; }
+/* 除外：D[r]._ex（除外した調査日）以降の調査日では、その個体を自動で飛ばす */
+const isEx=r=>{ const e=D[r]?._ex; return !!e && e<=S.curDate; };
+function nextRow(r){ let x=r+1; while(isEx(x)) x++; return x; }
+function firstRow(){ let x=0; while(isEx(x)) x++; return x; }
+function prevRow(r){ let x=r-1; while(x>=0&&isEx(x)) x--; return x; }
+function lastLiveRow(L){ let x=L-1; while(x>=0&&isEx(x)) x--; return Math.max(0,x); }
+/* 調査日：現在の調査日の測定値は D に、それ以外の日は S.sessions[日付] に保存 */
+const allDates=()=>[...new Set([...Object.keys(S.sessions),S.curDate])].sort();
+function measIds(){ return meas().map(i=>S.items[i].id); }
+function measOnly(row){ const o={}; measIds().forEach(id=>{ if(hasVal(row?.[id])) o[id]=row[id]; }); return o; }
+function switchDate(d){
+  if(d===S.curDate) return;
+  S.sessions[S.curDate]=D.map(measOnly);
+  const rows=S.sessions[d]||[]; delete S.sessions[d];
+  const ids=measIds();
+  D.forEach(row=>ids.forEach(id=>delete row[id]));
+  rows.forEach((m,r)=>{ ensureRow(r); Object.assign(D[r],m); });
+  S.curDate=d;
+  cur={r:firstRow(),c:firstMeas()};
+}
+if(S.items[cur.c]?.role==="id") cur.c=firstMeas();
+/* 入力の進み方：グループ（横に進む列のまとまり）ごとに「横→次の個体」、リストの最後で次のグループへ。
+   行単位＝全列で1グループ、列単位＝1列ずつのグループ */
+function groupsFrom(items,dir,spec){
+  const M=items.map((it,i)=>it.role==="id"?-1:i).filter(i=>i>=0);
+  if(!M.length) return [];
+  if(dir==="row") return [M];
+  if(dir==="col") return M.map(c=>[c]);
+  const sizes=String(spec||"").normalize("NFKC").split(/[^0-9]+/).map(Number).filter(n=>n>0);
+  const out=[]; let i=0;
+  for(const k of sizes){ if(i>=M.length) break; out.push(M.slice(i,i+k)); i+=k; }
+  if(i<M.length) out.push(M.slice(i));
+  return out;
+}
+const groupsOf=()=>groupsFrom(S.items,S.dir,S.groups);
+const groupIdx=c=>groupsOf().findIndex(g=>g.includes(c));
+const groupLabel=c=>{ const g=groupsOf()[groupIdx(c)]||[]; return g.map(i=>S.items[i].name).join("・"); };
+function nextPos(p){
+  const G=groupsOf(); if(!G.length) return p;
+  const gi=groupIdx(p.c); if(gi<0) return {r:p.r,c:G[0][0]};
+  const g=G[gi], k=g.indexOf(p.c);
+  if(k+1<g.length) return {r:p.r,c:g[k+1]};
+  const nr=nextRow(p.r), L=listLen();
+  if(L && nr>=L && gi+1<G.length) return {r:firstRow(),c:G[gi+1][0]};
+  return {r:nr,c:g[0]};
+}
+function lastFilledRow(c){ const id=S.items[c]?.id; let last=-1; D.forEach((row,i)=>{ if(hasVal(row[id])) last=i; }); return last; }
+function prevPos(p){
+  const G=groupsOf(); if(!G.length) return null;
+  const gi=groupIdx(p.c); if(gi<0) return null;
+  const g=G[gi], k=g.indexOf(p.c);
+  if(k>0) return {r:p.r,c:g[k-1]};
+  const pr=prevRow(p.r); if(pr>=0) return {r:pr,c:g[g.length-1]};
+  if(gi>0){ const pg=G[gi-1], c=pg[pg.length-1], L=listLen(); return {r:L?lastLiveRow(L):Math.max(0,lastFilledRow(c)),c}; }
+  return null;
+}
+function cellName(p){ return `${rowLabel(p.r)} ${S.items[p.c]?.name??""}`; }
+
+/* ========= 前回比（経時調査） ========= */
+const KIND={dec:"減っています",inc:"増えています",same:"変わっていません"};
+const KIND_S={dec:"減少",inc:"増加",same:"同じ"};
+/* 「前回 50.0（日付）より減っています」「前回 50.0（日付）と変わっていません」 */
+const vsPrev=(pv,d,kind,short)=>`前回 ${pv}${d?`（${d}）`:""}`+(kind==="same"?(short?"と同じ":"と変わっていません"):("より"+(short?KIND_S[kind]:KIND[kind])));
+/* 今の調査日より前で、その個体・項目に値がある直近の調査日 */
+function prevOf(r,it){
+  const ds=allDates().filter(d=>d<S.curDate);
+  for(let i=ds.length-1;i>=0;i--){ const v=(S.sessions[ds[i]]||[])[r]?.[it.id]; if(typeof v==="number") return {v,d:ds[i]}; }
+  return null;
+}
+function checkCmp(r,it,val){
+  if(!S.ts||!it||it.type!=="num"||it.role==="id"||typeof val!=="number") return null;
+  const c=it.cmp; if(!c||(c.dec==="none"&&c.inc==="none"&&c.same==="none")) return null;
+  const p=prevOf(r,it); if(!p) return null;
+  const diff=val-p.v, tol=Math.abs(+c.tol||0)+1e-9;
+  const kind=Math.abs(diff)<=tol?"same":diff<0?"dec":"inc";
+  const level=c[kind]||"none"; if(level==="none") return null;
+  return {level,kind,prev:p.v,date:p.d,diff};
+}
+
+/* ========= 音（アラート・待機） ========= */
+let actx=null;
+function audioUnlock(){
+  try{ if(!actx){ const AC=window.AudioContext||window.webkitAudioContext; if(AC) actx=new AC(); } if(actx&&actx.state==="suspended") actx.resume(); }catch(e){}
+}
+function beep(seq){
+  if(!actx) return;
+  try{
+    let t=actx.currentTime+0.03;
+    seq.forEach(([f,d,g,type])=>{
+      const o=actx.createOscillator(), gn=actx.createGain();
+      o.type=type||"sine"; o.frequency.value=f; g=g||0.22;
+      gn.gain.setValueAtTime(0.0001,t); gn.gain.linearRampToValueAtTime(g,t+0.012);
+      gn.gain.setValueAtTime(g,t+Math.max(0.02,d-0.03)); gn.gain.linearRampToValueAtTime(0.0001,t+d);
+      o.connect(gn); gn.connect(actx.destination); o.start(t); o.stop(t+d+0.02); t+=d+0.07;
+    });
+  }catch(e){}
+}
+const SND={
+  info:[[1046,.14]],
+  warn:[[740,.16,.25],[740,.16,.25]],
+  block:[[196,.2,.16,"square"],[196,.2,.16,"square"],[196,.32,.16,"square"]],
+  standby:[[784,.12],[523,.2]],
+  resume:[[523,.12],[784,.2]]
+};
+const VIB={warn:[120,80,120],block:[160,80,160,80,160]};
+function sound(k){
+  if(!S.alertSound) return;
+  audioUnlock(); beep(SND[k]||[]);
+  try{ if(VIB[k]&&navigator.vibrate) navigator.vibrate(VIB[k]); }catch(e){}
+}
+
+/* ========= アラート表示 ========= */
+let pend=null, halt=false, alertTimer=null;
+function showAlert(level,msg){
+  const b=$("#alertBar"); b.className="alertbar "+level; b.hidden=false;
+  $("#alertMsg").textContent=msg; $("#alBtns").hidden=level!=="warn";
+  clearTimeout(alertTimer);
+  if(level==="info") alertTimer=setTimeout(()=>{ if(!pend) hideAlert(); },8000);
+}
+function hideAlert(){ clearTimeout(alertTimer); $("#alertBar").hidden=true; }
+function clearPend(){ if(pend){ pend=null; hideAlert(); } }
+function confirmPend(){
+  const p=pend; pend=null; hideAlert(); if(!p) return null;
+  cur={r:p.r,c:p.c}; addLog(`${cellName(cur)} 確認して確定`);
+  return "確定"+advance();
+}
+function rejectPend(){
+  const p=pend; pend=null; hideAlert(); if(!p) return null;
+  cur={r:p.r,c:p.c}; const id=S.items[p.c].id; if(D[p.r]) delete D[p.r][id];
+  addLog(`${cellName(cur)} 入力し直し`);
+  return "入力し直してください、"+S.items[p.c].name;
+}
+
+/* ========= 入力処理 ========= */
+const flashCells=new Set(), badCells=new Set();
+function addLog(text){ const d=new Date(); logs.unshift(`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}  ${text}`); logs=logs.slice(0,6); }
+/* 次のセルへ進み、読み上げに足す言葉を返す */
+function advance(){
+  const prevR=cur.r, prevC=cur.c; cur=nextPos(cur); const L=listLen();
+  if(L && prevR<L && cur.r>=L){ note("最後の個体まで入力しました"); return "、最後の個体です"; }
+  if(groupIdx(cur.c)!==groupIdx(prevC)) return "、次は "+groupLabel(cur.c)+(S.dir==="col"?"":"、"+rowLabel(cur.r));
+  if(S.dir!=="col" && cur.r!==prevR && idItems().length) return "、次は "+rowLabel(cur.r);
+  return "";
+}
+function putValue(v){
+  const it=S.items[cur.c]; if(!it) return null;
+  let val, said;
+  if(it.type==="num"){
+    let x=v; if(it.step>0) x=Math.round(x/it.step)*it.step;
+    const m=Math.pow(10,it.dec); val=Math.round(x*m)/m; said=fmt(val,it).replace(/^-/,"マイナス");
+  } else { val=String(v).trim(); if(!val) return null; said=val; }
+  const a=checkCmp(cur.r,it,val);
+  if(a){
+    sound(a.level);
+    const pv=fmt(a.prev,it), what=vsPrev(pv,a.date,a.kind), spv=pv.replace(/^-/,"マイナス");
+    if(a.level==="block"){
+      halt=true; badCells.add(cur.r+":"+cur.c);
+      addLog(`${cellName(cur)} ${fmt(val,it)} は入力しない（前回比 ${KIND_S[a.kind]}・禁止）`);
+      showAlert("block",`${cellName(cur)}：${fmt(val,it)} は入力できません。${what}。正しい値を入力し直してください。`);
+      return `${said}、${vsPrev(spv,"",a.kind)}、入力し直してください`;
+    }
+    ensureRow(cur.r); D[cur.r][it.id]=val; flashCells.add(cur.r+":"+cur.c);
+    if(a.level==="warn"){
+      halt=true; pend={r:cur.r,c:cur.c};
+      addLog(`${cellName(cur)} ← ${fmt(val,it)}（前回比 ${KIND_S[a.kind]}・確認待ち）`);
+      showAlert("warn",`${cellName(cur)}：${fmt(val,it)}。${what}。このままでよいですか？（「はい」で確定、「いいえ」か正しい値で入力し直し）`);
+      return `${said}、${vsPrev(spv,"",a.kind)}、よければ はい`;
+    }
+    addLog(`${cellName(cur)} ← ${fmt(val,it)}（前回比 ${KIND_S[a.kind]}）`);
+    showAlert("info",`${cellName(cur)}：${fmt(val,it)}。${what}（入力はそのまま残しました）`);
+    return `${said}、${a.kind==="same"?"前回と同じ":"前回より"+KIND_S[a.kind]}`+advance();
+  }
+  ensureRow(cur.r); D[cur.r][it.id]=val;
+  flashCells.add(cur.r+":"+cur.c);
+  addLog(`${cellName(cur)} ← ${fmt(val,it)}`);
+  return said+advance();
+}
+function doCommand(cmd){
+  if(cmd==="standby") return enterStandby();
+  if(cmd==="resume") return standby?leaveStandby():null;
+  const M=meas(); if(!M.length) return null;
+  if(cmd==="skip"){ addLog(`${cellName(cur)} スキップ`); return "スキップ"+advance(); }
+  if(cmd==="next"){
+    if(S.dir==="col"){ const nx=M.find(i=>i>cur.c); if(nx!==undefined) cur={r:firstRow(),c:nx}; else { note("最後の列です"); return "最後の列です"; } }
+    else { const g=groupsOf()[Math.max(0,groupIdx(cur.c))]; const gi0=groupIdx(cur.c); cur=nextPos({r:cur.r,c:g[g.length-1]});
+      if(groupIdx(cur.c)!==gi0){ addLog(`次のグループへ → ${cellName(cur)}`); return "次、"+groupLabel(cur.c); } }
+    addLog(`次へ → ${cellName(cur)}`); return "次、"+(S.dir==="col"?S.items[cur.c].name:rowLabel(cur.r));
+  }
+  if(cmd==="back"){ const p=prevPos(cur); if(p){ cur=p; } return "戻る"; }
+  if(cmd.startsWith("ex:")){
+    const why=cmd.slice(3);
+    if(!listLen()){ note("除外は個体リストがあるときに使えます"); return null; }
+    ensureRow(cur.r);
+    D[cur.r]._ex=S.curDate; D[cur.r]._why=why; measIds().forEach(id=>delete D[cur.r][id]);
+    addLog(`${rowLabel(cur.r)} ${why}（${S.curDate}以降は飛ばす）`);
+    const was=rowLabel(cur.r);
+    if(S.dir==="col") cur=nextPos(cur);
+    else { const g=groupsOf()[Math.max(0,groupIdx(cur.c))]; cur=nextPos({r:cur.r,c:g[g.length-1]}); }
+    return `${was} ${why}`+(S.dir==="col"?"":"、次は "+rowLabel(cur.r));
+  }
+  if(cmd==="restore"){
+    if(!D[cur.r]?._ex) return null;
+    delete D[cur.r]._ex; delete D[cur.r]._why; addLog(`${rowLabel(cur.r)} 復帰`); return "復帰";
+  }
+  if(cmd==="undo"){
+    const p=prevPos(cur); if(!p) return "取り消し";
+    const id=S.items[p.c].id; ensureRow(p.r); delete D[p.r][id];
+    addLog(`${cellName(p)} 取り消し`); cur=p; return "取り消し";
+  }
+  return null;
+}
+/* 選択肢：ひらがな・カタカナ・全角半角の違いを無視して一番近い候補を選ぶ */
+const normJ=s=>String(s).normalize("NFKC").replace(/[。、.,\s]/g,"").replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)).toLowerCase();
+function matchChoice(raw,opts){
+  const t=normJ(raw); if(!t) return null;
+  return opts.find(o=>normJ(o)===t)||opts.find(o=>t.includes(normJ(o)))||opts.find(o=>normJ(o).includes(t))||null;
+}
+function handleText(raw, fromVoice){
+  const say=[], bad=[];
+  const clean=raw.normalize("NFKC").trim().replace(/[。.]+$/,"");
+  const h=$("#heard");
+  /* 待機中（声で再開できる方式）：「再開」以外の声はすべて無視する */
+  if(standby && fromVoice){
+    if(isResumeWord(clean)||parseCommand(clean)==="resume"){ const s=leaveStandby(); save(); render(); if(s) speak(s); }
+    else { h.className="heard"; h.textContent=`待機中のため無視しました：「${raw}」`; }
+    return;
+  }
+  halt=false;
+  const whole=parseCommand(clean);
+  let done=false;
+  if(pend){
+    const yn=parseYesNo(clean);
+    if(yn==="yes"){ const s=confirmPend(); if(s) say.push(s); done=true; }
+    else if(yn==="no"||whole==="undo"){ const s=rejectPend(); if(s) say.push(s); done=true; }
+    else { pend=null; hideAlert(); /* 値を言い直した・別の操作をした → 確認待ちを解き、続けて処理 */ }
+  }
+  if(!done){
+    if(whole){ const s=doCommand(whole); if(s) say.push(s); }
+    else {
+      const toks=tokenize(raw);
+      for(let i=0;i<toks.length;i++){
+        if(halt) break;
+        const it=S.items[cur.c]; if(!it) break;
+        if(it.type==="text"){ const s=putValue(i===0?clean:toks.slice(i).join(" ")); if(s) say.push(s); break; }
+        const t=toks[i];
+        const c=parseCommand(t); if(c){ const s=doCommand(c); if(s) say.push(s); continue; }
+        if(it.type==="choice"){
+          const m=(i===0&&toks.length>1?matchChoice(clean,it.options):null)||matchChoice(t,it.options);
+          if(m===null) bad.push(t); else { const s=putValue(m); if(s) say.push(s); if(i===0&&toks.length>1&&normJ(m)===normJ(clean)) break; }
+          continue;
+        }
+        const v=parseNumber(t);
+        if(v===null||Number.isNaN(v)) bad.push(t); else { const s=putValue(v); if(s) say.push(s); }
+      }
+    }
+  }
+  if(bad.length){ h.className="heard ng"; h.textContent=`「${raw}」→ 入力できない語：${bad.join(" ")}`; if(fromVoice) say.push("聞き取れません"); }
+  else { h.className="heard ok"; h.textContent=`「${raw}」`; }
+  save(); render();
+  if(fromVoice && say.length) speak(say.join("、"));
+}
+
+/* ========= 音声 ========= */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, gestureStart=false, standby=false;
+const APP_VER="Pro 3.1（2026-10-15）";
+function makeRec(){
+  const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
+  r.continuous=(S.mode==="cont");
+  r.onresult=e=>{
+    let interim="";
+    if(Date.now()<ignoreUntil){ for(let i=e.resultIndex;i<e.results.length;i++) if(e.results[i].isFinal) processed.add(i); return; }
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const res=e.results[i];
+      if(res.isFinal){ if(!processed.has(i)){ processed.add(i); handleText(res[0].transcript,true); } }
+      else interim+=res[0].transcript;
+    }
+    if(interim && !standby){ const h=$("#heard"); h.className="heard"; h.textContent="… "+interim; }
+  };
+  r.onstart=()=>{ gestureStart=false; };
+  r.onerror=e=>{
+    const when=gestureStart?"ボタン操作時":"自動再開時";
+    if(e.error==="not-allowed"||e.error==="service-not-allowed"){
+      listening=false; standby=false; updateMic(); releaseWake();
+      if(!gestureStart){ note(`聞き取りが途切れました。もう一度マイクを押してください。（${e.error}／${when}）`); return; }
+      note(`音声認識を開始できませんでした（コード：${e.error}／${when}）。下の「マイク診断」で原因を確認できます。`, true);
+    }
+    else if(e.error==="network"){ note("音声認識の通信に失敗しました。電波を確認するか、手入力欄を使ってください。"); }
+    else if(e.error==="audio-capture"){ listening=false; standby=false; note("マイクが見つかりません。"); updateMic(); }
+  };
+  r.onend=()=>{
+    processed=new Set();
+    if(ttsPause){ setTimeout(flushSpeak,150); return; }
+    if(listening && (S.mode==="cont"||standby)){ setTimeout(()=>{ if(listening&&!ttsPause) startRec(); },200); }
+    else { listening=false; updateMic(); }
+  };
+  return r;
+}
+function startRec(){ try{ rec=makeRec(); if(standby) rec.continuous=true; processed=new Set(); rec.start(); }catch(e){ setTimeout(()=>{ if(listening&&!ttsPause){ try{rec.start();}catch(_){} } },400); } }
+function stopRec(){ listening=false; standby=false; try{ rec&&rec.abort(); }catch(e){} updateMic(); releaseWake(); }
+/* 待機：声で再開できる方式は聞き取りを続け「再開」だけを受け付ける。完全に止める方式はマイクを切る */
+function enterStandby(){
+  if(standby) return null;
+  if(!listening){ note("待機は、聞き取り中に使えます"); return null; }
+  sound("standby"); addLog("待機");
+  if(S.standbyMode==="stop"){ stopRec(); standby=true; }
+  else { standby=true; if(S.mode!=="cont"){ /* 1回ずつ方式でも「再開」を待てるよう聞き続ける */ try{ rec&&rec.abort(); }catch(e){} } }
+  const h=$("#heard"); h.className="heard"; h.textContent=S.standbyMode==="stop"?"待機中（マイクは止めています）":"待機中：「再開」と言うと戻ります";
+  updateMic(); renderStandby();
+  return "待機します";
+}
+function leaveStandby(){
+  if(!standby) return null;
+  standby=false; sound("resume"); addLog("再開");
+  if(!listening && SR){ if(S.readback) unlockTTS(); gestureStart=true; listening=true; startRec(); holdWake(); }
+  else if(listening && S.mode!=="cont"){ try{ rec&&rec.abort(); }catch(e){} }
+  const h=$("#heard"); h.className="heard ok"; h.textContent="再開しました";
+  updateMic(); renderStandby();
+  return "再開、"+cellName(cur);
+}
+function renderStandby(){
+  const b=$("#standbyBar"); b.hidden=!standby;
+  if(standby) b.textContent=S.standbyMode==="stop"
+    ? "待機中（マイクは止めています）。「再開」ボタンかマイクのボタンで戻ります。"
+    : "待機中：声は記録しません。「再開」と言うか、「再開」ボタンを押すと戻ります。";
+}
+async function holdWake(){ try{ if("wakeLock" in navigator) wake=await navigator.wakeLock.request("screen"); }catch(e){} }
+function releaseWake(){ try{ wake&&wake.release(); }catch(e){} wake=null; }
+/* 読み上げ：iPhoneでは認識を完全に止めてから話す（録音中は音が出ない／小さくなるため） */
+const HAS_TTS="speechSynthesis" in window;
+let jaVoice=null, pendingUtter=null, ttsUnlocked=false;
+function pickVoice(){ try{ const vs=speechSynthesis.getVoices(); jaVoice=vs.find(v=>/^ja(-|_|$)/i.test(v.lang))||null; }catch(_){} }
+if(HAS_TTS){ pickVoice(); try{ speechSynthesis.addEventListener("voiceschanged",pickVoice); }catch(_){} }
+function utter(text,vol=1){ const u=new SpeechSynthesisUtterance(text); u.lang="ja-JP"; if(jaVoice) u.voice=jaVoice; u.rate=(+S.rate||1.1); u.volume=vol; return u; }
+function say(u){
+  if(speechSynthesis.speaking||speechSynthesis.pending){ speechSynthesis.cancel(); setTimeout(()=>speechSynthesis.speak(u),150); }
+  else speechSynthesis.speak(u);
+}
+function unlockTTS(){ if(!HAS_TTS||ttsUnlocked) return; try{ speechSynthesis.speak(utter(" ",0)); ttsUnlocked=true; }catch(_){} }
+function flushSpeak(){ if(pendingUtter){ const u=pendingUtter; pendingUtter=null; say(u); } }
+const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+let ignoreUntil=0;
+function speak(text){
+  if(!S.readback||!HAS_TTS) return;
+  const u=utter(text);
+  if(listening && rec && !IS_IOS){
+    /* PC・Android：認識は止めずに、読み上げ中に聞こえた声だけを無視する（止めると再開のたびに許可を聞かれるため） */
+    ignoreUntil=Infinity;
+    const fin=()=>{ ignoreUntil=Date.now()+500; };
+    u.onend=fin; u.onerror=fin; setTimeout(()=>{ if(ignoreUntil===Infinity) fin(); },3000+text.length*300);
+    say(u); return;
+  }
+  if(listening && rec){
+    ttsPause=true;
+    let done=false;
+    const resume=()=>{ if(done) return; done=true; ttsPause=false;
+      if(!listening) return;
+      if(S.mode==="cont"||standby) setTimeout(startRec,200); else { listening=false; updateMic(); } };
+    u.onend=resume; u.onerror=resume; setTimeout(resume,3000+text.length*300);
+    pendingUtter=u; try{ rec.abort(); }catch(e){}
+    setTimeout(flushSpeak,500); // onend が来ない場合の保険
+  } else say(u);
+}
+function updateMic(){
+  const b=$("#mic"); b.classList.toggle("on",listening&&!standby); b.classList.toggle("standby",standby); b.setAttribute("aria-pressed",String(listening));
+  $("#micLbl").textContent=standby?(listening?"停止":"再開"):listening?(S.mode==="cont"?"停止":"聞き取り中"):(S.mode==="cont"?"開始":"話す");
+  const sb=$("#btnStandby"); sb.disabled=!(listening||standby); sb.classList.toggle("on",standby);
+  sb.textContent=standby?"再開":"待機"; sb.setAttribute("aria-pressed",String(standby));
+}
+
+/* ========= 表示 ========= */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let noteTimer=null;
+function note(msg,sticky){ const el=$("#note"); el.textContent=msg; el.hidden=false; clearTimeout(noteTimer); if(!sticky) noteTimer=setTimeout(()=>el.hidden=true,8000); }
+function render(){
+  $("#title").firstChild.nodeValue=S.name||"調査";
+  $("#subtitle").textContent=`${S.ts?"経時調査・":""}${S.dir==="row"?"行単位":S.dir==="col"?"列単位":"グループ単位（"+groupsOf().map(g=>g.length).join("・")+"列）"}・${S.mode==="cont"?"連続認識":"1回ずつ"}`;
+  $("#nextHint").textContent=S.dir==="col"?"次の項目へ":"次の個体へ";
+  if(cur.c>=n()) cur.c=firstMeas();
+  const it=S.items[cur.c];
+  $("#where").innerHTML=it?`${esc(rowLabel(cur.r))}　${esc(it.name)} <b>${esc(typeLabel(it))}</b>`+(S.dir==="group"&&it.role!=="id"?`<span class="grp">グループ：${esc(groupLabel(cur.c))}</span>`:""):"設定で項目を追加してください";
+  const pv=(S.ts&&it&&it.type==="num"&&it.role!=="id")?prevOf(cur.r,it):null;
+  $("#prevInfo").hidden=!pv; if(pv) $("#prevInfo").textContent=`前回 ${fmt(pv.v,it)}（${pv.d}）`;
+  $("#manualIn").setAttribute("inputmode",it&&it.type==="num"?"decimal":"text");
+  $("#manualIn").placeholder=it&&it.type==="num"?"手入力（例 32.5）":it&&it.type==="choice"?`手入力（${it.options.slice(0,3).join("／")}…）`:"手入力（文字）";
+  const L=listLen();
+  const rows=L?Math.max(L,D.length,cur.r+1):Math.max(D.length,cur.r+1)+1;
+  const gStart=new Set(S.dir==="group"?groupsOf().slice(1).map(g=>g[0]):[]);
+  let h="<thead><tr>"+(S.serial?'<th class="no">No.</th>':"")+S.items.map((x,ci)=>`<th class="${x.role==="id"?"idh":""}${gStart.has(ci)?" gstart":""}">${esc(x.name)}<small>${esc(typeLabel(x).replace("事前入力・","事前・"))}</small></th>`).join("")+"</tr></thead><tbody>";
+  for(let r=0;r<rows;r++){
+    h+=`<tr class="${r===cur.r?"currow":""}${isEx(r)?" exrow":""}">`+(S.serial?`<td class="no">${isEx(r)?"✕":r+1}</td>`:"");
+    S.items.forEach((x,c)=>{
+      const v=D[r]?.[x.id]; const k=r+":"+c;
+      const cls=["v"]; if(gStart.has(c)) cls.push("gstart"); if(x.role==="id") cls.push("idc"); if(x.type!=="num") cls.push("txt"); if(isEx(r)) cls.push("exc");
+      let tip="";
+      if(S.ts&&hasVal(v)&&!isEx(r)){ const a=checkCmp(r,x,v); if(a){ cls.push("al-"+a.level); tip=` title="${esc(vsPrev(fmt(a.prev,x),a.date,a.kind,true))}"`; } }
+      if(r===cur.r&&c===cur.c) cls.push("cur"); if(flashCells.has(k)) cls.push("flash"); if(badCells.has(k)) cls.push("badflash");
+      const txt=isEx(r)&&x.role!=="id"?(c===firstMeas()?`${D[r]._why}（${D[r]._ex}〜）`:""):fmt(v,x);
+      h+=`<td class="${cls.join(" ")}" data-r="${r}" data-c="${c}"${tip}>${esc(txt)}</td>`;
+    });
+    h+="</tr>";
+  }
+  $("#tbl").innerHTML=h+"</tbody>"; flashCells.clear(); badCells.clear();
+  const cc=$("#tbl td.cur"); if(cc) cc.scrollIntoView({block:"nearest",inline:"nearest"});
+  $("#log").innerHTML=logs.map(esc).join("<br>");
+  $("#dateBar").hidden=!S.ts; if(!S.ts) $("#newDateBox").hidden=true;
+  $("#btnCsv").textContent=S.ts?"この日のCSV":"CSVで保存";
+  $("#btnCsvWide").hidden=!(S.ts&&(S.outFmt==="wide"||S.outFmt==="both"));
+  $("#btnCsvLong").hidden=!(S.ts&&(S.outFmt==="long"||S.outFmt==="both"));
+  renderDates(); renderStandby();
+  $("#btnEx").firstChild.nodeValue=isEx(cur.r)?"復帰":"除外";
+  updateMic();
+}
+function renderDates(){
+  const ds=allDates();
+  $("#dateSel").innerHTML=ds.map(d=>`<option value="${d}" ${d===S.curDate?"selected":""}>${d}</option>`).join("");
+  const i=ds.indexOf(S.curDate); const L=listLen(); const info=[];
+  if(i>0){ const days=Math.round((new Date(S.curDate)-new Date(ds[i-1]))/864e5); info.push(`前回 ${ds[i-1]} から${days}日`); }
+  if(L){ let ex=0; for(let r=0;r<L;r++) if(isEx(r)) ex++; info.push(`対象 ${L-ex}個体`+(ex?`（除外 ${ex}）`:"")); }
+  $("#dateInfo").textContent=info.join("　");
+}
+
+/* ========= 出力 ========= */
+function lastRow(){ let last=listLen()-1; D.forEach((row,i)=>{ if(S.items.some(it=>hasVal(row[it.id]))) last=Math.max(last,i); }); return last; }
+const safeName=()=>(S.name||"調査").replace(/[\\/:*?"<>|]/g,"_");
+function exState(r,date){ const e=D[r]?._ex; return (e && e<=date)?D[r]._why:""; }
+/* 調査日 date の r 行目の値（現在の調査日なら D、それ以外は保存済みの日） */
+function valAt(r,it,date){
+  if(it.role==="id"||date===S.curDate) return D[r]?.[it.id];
+  return (S.sessions[date]||[])[r]?.[it.id];
+}
+function lastRowAll(){ let last=lastRow(); Object.values(S.sessions).forEach(rows=>rows.forEach((m,i)=>{ if(Object.keys(m).length) last=Math.max(last,i); })); return last; }
+const cellOut=(v,it,asText)=>!hasVal(v)?"":(asText?fmt(v,it):v);
+/* その日の表 */
+function aoaDay(asText){
+  const head=["調査日"].concat(S.serial?["No."]:[],S.items.map(it=>it.name),["状態"]);
+  const out=[head];
+  for(let r=0;r<=lastRow();r++){
+    out.push([S.curDate].concat(S.serial?[r+1]:[],S.items.map(it=>cellOut(D[r]?.[it.id],it,asText)),[exState(r,S.curDate)]));
+  }
+  return out;
+}
+/* 縦持ち（R用）：1行＝1個体×1調査日 */
+function aoaLong(asText){
+  const ids=idItems(), ms=meas().map(i=>S.items[i]);
+  const out=[["調査日"].concat(ids.map(it=>it.name),ms.map(it=>it.name),["状態"])];
+  const R=lastRowAll();
+  allDates().forEach(d=>{
+    for(let r=0;r<=R;r++){
+      const st=exState(r,d);
+      const vals=ms.map(it=>cellOut(valAt(r,it,d),it,asText));
+      const idv=ids.map(it=>cellOut(D[r]?.[it.id],it,asText));
+      if(!st && vals.every(v=>v==="") && idv.every(v=>v==="")) continue;
+      out.push([d].concat(idv,vals,[st]));
+    }
+  });
+  return out;
+}
+/* 野帳型：1行＝1個体、列＝項目_調査日（調査日ごとにまとめて横に並べる） */
+function aoaWide(asText){
+  const ids=idItems(), ms=meas().map(i=>S.items[i]), ds=allDates();
+  const head=ids.map(it=>it.name); ds.forEach(d=>ms.forEach(it=>head.push(`${it.name}_${d}`))); head.push("除外日","理由");
+  const out=[head];
+  for(let r=0;r<=lastRowAll();r++){
+    const row=ids.map(it=>cellOut(D[r]?.[it.id],it,asText));
+    ds.forEach(d=>ms.forEach(it=>row.push(exState(r,d)?"":cellOut(valAt(r,it,d),it,asText))));
+    row.push(D[r]?._ex||"",D[r]?._why||""); out.push(row);
+  }
+  return out;
+}
+function download(blob,name){
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
+}
+function sheetFrom(rows){
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const head=rows[0];
+  head.forEach((h,c)=>{
+    const it=S.items.find(x=>h===x.name||String(h).startsWith(x.name+"_"));
+    if(!it||it.type!=="num") return;
+    for(let r=1;r<rows.length;r++){ const ref=XLSX.utils.encode_cell({r,c}); if(ws[ref]&&ws[ref].t==="n") ws[ref].z=it.dec?("0."+"0".repeat(it.dec)):"0"; }
+  });
+  ws["!cols"]=head.map(h=>({wch:Math.max(6,String(h).length*2)}));
+  return ws;
+}
+$("#btnXlsx").onclick=()=>{
+  if(typeof XLSX==="undefined"){ note("Excel出力の部品を読み込めませんでした。通信を確認するか、CSVで保存してください。"); return; }
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,sheetFrom(aoaDay(false)),S.curDate);
+  if(S.ts){
+    if(S.outFmt!=="long") XLSX.utils.book_append_sheet(wb,sheetFrom(aoaWide(false)),"野帳型");
+    if(S.outFmt!=="wide") XLSX.utils.book_append_sheet(wb,sheetFrom(aoaLong(false)),"縦持ち(R用)");
+  }
+  const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  download(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),`${safeName()}_${S.curDate}.xlsx`);
+};
+const toCsv=rows=>"﻿"+rows.map(r=>r.map(v=>{ const s=String(v); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(",")).join("\r\n");
+$("#btnCsv").onclick=()=>download(new Blob([toCsv(aoaDay(true))],{type:"text/csv"}),`${safeName()}_${S.curDate}.csv`);
+$("#btnCsvLong").onclick=()=>download(new Blob([toCsv(aoaLong(true))],{type:"text/csv"}),`${safeName()}_全調査日_縦持ち_${today()}.csv`);
+$("#btnCsvWide").onclick=()=>download(new Blob([toCsv(aoaWide(true))],{type:"text/csv"}),`${safeName()}_全調査日_野帳型_${today()}.csv`);
+
+/* ========= 操作 ========= */
+$("#mic").onclick=()=>{
+  if(!SR){ note("このブラウザは音声認識に対応していません。AndroidはChrome、iPhoneはSafariで開いてください。手入力欄は使えます。"); return; }
+  audioUnlock();
+  if(listening){ stopRec(); renderStandby(); return; }
+  if(standby){ const s=leaveStandby(); if(s) speak(s); return; }
+  if(S.readback) unlockTTS();
+  gestureStart=true; listening=true; updateMic(); startRec(); holdWake();
+};
+$("#btnStandby").onclick=()=>{
+  audioUnlock();
+  const s=standby?leaveStandby():enterStandby();
+  save(); render(); if(s) speak(s);
+};
+$("#alYes").onclick=()=>{ const s=confirmPend(); save(); render(); if(s) speak(s); };
+$("#alNo").onclick=()=>{ const s=rejectPend(); save(); render(); if(s) speak(s); $("#manualIn").focus(); };
+/* 読み上げ・音の解禁（iOS）：ページ上の最初のタップで行う */
+document.addEventListener("pointerdown",e=>{ audioUnlock(); if(!e.target.closest("#mic")) unlockTTS(); },true);
+$("#sRate").addEventListener("input",()=>{ $("#sRateVal").textContent="×"+(+$("#sRate").value).toFixed(1); });
+$("#sTest").onclick=()=>{
+  if(!HAS_TTS){ $("#sTestOut").textContent="このブラウザは読み上げに対応していません"; return; }
+  pickVoice(); ttsUnlocked=true;
+  const u=utter("さんじゅうにてんご、次は 樹番号1 無処理 果実番号3"); u.rate=+$("#sRate").value||1.1;
+  u.onstart=()=>{ $("#sTestOut").textContent="読み上げ中… 聞こえない場合は消音スイッチと音量を確認"; };
+  u.onend=()=>{ $("#sTestOut").textContent=`読み上げ完了（音声：${jaVoice?jaVoice.name:"既定"}）`; };
+  u.onerror=ev=>{ $("#sTestOut").textContent=`読み上げエラー：${ev.error||"不明"}`; };
+  say(u);
+};
+$("#sSoundTest").onclick=()=>{ audioUnlock(); beep(SND.info); setTimeout(()=>beep(SND.warn),700); setTimeout(()=>beep(SND.block),1700); };
+/* マイク診断 */
+$("#diag").onclick=async()=>{
+  const lines=[`アプリ版：${APP_VER}`,`URL：${location.protocol}//${location.host}`,`安全な接続（https）：${window.isSecureContext?"はい":"いいえ"}`,
+    `音声認識の機能：${SR?"あり":"なし"}`,`ホーム画面から起動：${(navigator.standalone||matchMedia("(display-mode: standalone)").matches)?"はい":"いいえ"}`];
+  if(!navigator.mediaDevices?.getUserMedia){ lines.push("マイク：確認できません（httpsで開いていない可能性）"); }
+  else{
+    try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); st.getTracks().forEach(t=>t.stop()); lines.push("マイク：使えます → 止められているのは音声認識（Siri・音声入力）側です"); }
+    catch(err){ lines.push(`マイク：使えません（${err.name}）→ マイク自体の許可が拒否されています`); }
+  }
+  $("#diagOut").textContent=lines.join("\n"); $("#diagOut").hidden=false;
+};
+$("#ver").textContent=APP_VER;
+if(!window.isSecureContext) note("https で開かれていないため、マイクが使えません。GitHub Pages の https のURLで開いてください。");
+$("#btnEx").onclick=()=>{ clearPend(); const s=doCommand(isEx(cur.r)?"restore":"ex:除外"); save(); render(); if(s&&S.readback) speak(s); };
+$("#dateSel").onchange=e=>{ if(listening) stopRec(); clearPend(); switchDate(e.target.value); save(); render(); note(`${S.curDate} の記録を表示しています`); };
+$("#dateAdd").onclick=()=>{ $("#newDate").value=today(); $("#newDateBox").hidden=false; };
+$("#newDateCancel").onclick=()=>{ $("#newDateBox").hidden=true; };
+$("#newDateGo").onclick=()=>{
+  const d=$("#newDate").value; if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ note("日付を選んでください"); return; }
+  if(listening) stopRec(); clearPend();
+  if(!allDates().includes(d)){ S.sessions[d]=[]; }
+  switchDate(d); $("#newDateBox").hidden=true; save(); render();
+  note(`${d} の調査を始めます。除外した個体は自動で飛ばします。`);
+};
+document.querySelectorAll("[data-cmd]").forEach(b=>b.onclick=()=>{
+  if(pend){ if(b.dataset.cmd==="undo"){ rejectPend(); save(); render(); return; } clearPend(); }
+  doCommand(b.dataset.cmd); save(); render();
+});
+$("#manual").onsubmit=e=>{ e.preventDefault(); clearTimeout(autoTimer); const v=$("#manualIn").value.trim(); if(v){ handleText(v,false); $("#manualIn").value=""; } $("#manualIn").focus(); };
+/* キーボード音声入力モード：Windowsの音声入力（Win+H）やスマホのキーボードのマイクで手入力欄に話すと、間が空いた時点で自動確定 */
+let autoTimer=null;
+$("#manualIn").addEventListener("input",()=>{
+  if(!S.autoCommit) return;
+  clearTimeout(autoTimer);
+  if($("#manualIn").value.trim()) autoTimer=setTimeout(()=>$("#manual").requestSubmit(),1200);
+});
+$("#tbl").onclick=e=>{ const td=e.target.closest("td.v"); if(!td) return; clearPend(); cur={r:+td.dataset.r,c:+td.dataset.c}; save(); render(); };
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&listening) holdWake(); });
+
+/* ========= 設定 ========= */
+let draft=null;
+const STEPS=[0,0.1,0.2,0.25,0.5,1,5,10];
+const lvSel=(k,v)=>`<select data-k="cmp.${k}" aria-label="前回比 ${KIND_S[k]}">${LEVELS.map(([x,l])=>`<option value="${x}" ${x===v?"selected":""}>${l}</option>`).join("")}</select>`;
+function drawItems(){
+  $("#sItems").innerHTML=draft.items.map((it,i)=>{ const c=normCmp(it.cmp); return `
+    <div class="item${it.role==="id"?" isid":""}" data-i="${i}">
+      <div class="irow">
+        <input type="text" value="${esc(it.name)}" data-k="name" aria-label="項目名${i+1}" class="iname">
+        <button type="button" data-a="up" aria-label="上へ">↑</button>
+        <button type="button" data-a="down" aria-label="下へ">↓</button>
+        <button type="button" data-a="del" aria-label="削除">✕</button>
+      </div>
+      <div class="irow">
+        <select data-k="role" aria-label="入力のしかた"><option value="meas" ${it.role!=="id"?"selected":""}>音声で入力</option><option value="id" ${it.role==="id"?"selected":""}>事前入力（個体の識別）</option></select>
+        <select data-k="type" aria-label="種類"><option value="num" ${it.type==="num"?"selected":""}>数値</option><option value="text" ${it.type==="text"?"selected":""}>文字</option><option value="choice" ${it.type==="choice"?"selected":""}>選択肢</option></select>
+        ${it.type==="num"?`<select data-k="dec" aria-label="小数桁数">${[0,1,2,3,4].map(d=>`<option value="${d}" ${d===it.dec?"selected":""}>${d===0?"整数":"小数"+d+"桁"}</option>`).join("")}</select>
+        <select data-k="step" aria-label="刻み">${STEPS.map(s=>`<option value="${s}" ${s===+it.step?"selected":""}>${s===0?"刻みなし":s+"刻み"}</option>`).join("")}</select>`:""}
+        ${it.type==="choice"?`<input type="text" data-k="options" value="${esc(it.options.join("、"))}" placeholder="候補を「、」区切りで（例 にっこり、幸水、豊水）" class="iopts">`:""}
+      </div>
+      ${draft.ts&&it.type==="num"&&it.role!=="id"?`<div class="irow cmp"><span class="cmpl">前回比</span>
+        <label>減った${lvSel("dec",c.dec)}</label><label>増えた${lvSel("inc",c.inc)}</label><label>同じ${lvSel("same",c.same)}</label>
+        <label>許容±<input type="text" inputmode="decimal" data-k="cmp.tol" value="${c.tol||""}" placeholder="0"></label></div>`:""}
+    </div>`; }).join("");
+  drawGen(); if(document.querySelector("input[name=dir]:checked")) drawGroupPrev();
+}
+function drawGen(){
+  const ids=draft.items.filter(it=>it.role==="id");
+  $("#sListBox").hidden=!ids.length;
+  $("#sGen").innerHTML=ids.map(it=>`<label class="gen"><span>${esc(it.name)}</span><input type="text" data-gid="${it.id}" placeholder="${it.type==="num"?"例 1-5":"例 無処理、遮光"}"></label>`).join("");
+  $("#sListHead").textContent=ids.map(it=>it.name).join(" ／ ")||"";
+}
+$("#sItems").addEventListener("input",e=>{
+  const row=e.target.closest(".item"); if(!row) return; const it=draft.items[+row.dataset.i]; const k=e.target.dataset.k;
+  if(k==="name"){ it.name=e.target.value; drawGenLabels(); }
+  if(k==="dec") it.dec=+e.target.value;
+  if(k==="step") it.step=+e.target.value;
+  if(k==="options") it.options=e.target.value.split(/[、,，]/).map(s=>s.trim()).filter(Boolean);
+  if(k&&k.startsWith("cmp.")){ it.cmp=normCmp(it.cmp); const sub=k.slice(4); it.cmp[sub]=sub==="tol"?Math.abs(+String(e.target.value).normalize("NFKC")||0):e.target.value; }
+});
+function drawGenLabels(){ const ids=draft.items.filter(it=>it.role==="id"); $("#sListHead").textContent=ids.map(it=>it.name).join(" ／ "); $("#sGen").querySelectorAll("label.gen").forEach((l,i)=>{ if(ids[i]) l.querySelector("span").textContent=ids[i].name; }); }
+$("#sItems").addEventListener("change",e=>{
+  const row=e.target.closest(".item"); if(!row) return; const it=draft.items[+row.dataset.i]; const k=e.target.dataset.k;
+  if(k==="role"){ it.role=e.target.value; drawItems(); }
+  if(k==="type"){ it.type=e.target.value; if(it.type!=="num") it.step=0; drawItems(); }
+});
+$("#sItems").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return; const i=+b.closest(".item").dataset.i; const a=draft.items;
+  if(b.dataset.a==="up"&&i>0) [a[i-1],a[i]]=[a[i],a[i-1]];
+  if(b.dataset.a==="down"&&i<a.length-1) [a[i+1],a[i]]=[a[i],a[i+1]];
+  if(b.dataset.a==="del"){ if(a.length<=1){ note("項目は1つ以上必要です"); return; } a.splice(i,1); }
+  drawItems();
+});
+$("#sAdd").onclick=()=>{ draft.items.push(normItem({name:"項目"+(draft.items.length+1)})); drawItems(); const ins=$("#sItems").querySelectorAll("input.iname"); ins[ins.length-1].focus(); };
+$("#sPreset").onclick=()=>{ draft.items=PRESET_FRUIT(); drawItems(); };
+document.querySelectorAll("input[name=ts]").forEach(r=>r.addEventListener("change",()=>{ draft.ts=document.querySelector("input[name=ts]:checked").value==="1"; $("#sTsBox").hidden=!draft.ts; drawItems(); }));
+/* 個体リスト：組み合わせで作る（例 樹 1-5 × 処理区 無処理、遮光 × 果実 1-10） */
+function expandSpec(s){
+  s=(s||"").normalize("NFKC").trim(); if(!s) return [""];
+  const m=s.match(/^(\d+)\s*[-~〜]\s*(\d+)$/); if(m){ const a=+m[1], b=+m[2], out=[]; for(let x=a; a<=b?x<=b:x>=b; x+=a<=b?1:-1) out.push(String(x)); return out; }
+  return s.split(/[、,，\s]+/).filter(Boolean);
+}
+$("#sMake").onclick=()=>{
+  const ids=draft.items.filter(it=>it.role==="id");
+  let rows=[[]];
+  ids.forEach(it=>{ const vals=expandSpec($(`#sGen input[data-gid="${it.id}"]`)?.value); rows=rows.flatMap(r=>vals.map(v=>r.concat(v))); });
+  $("#sList").value=rows.map(r=>r.join("\t")).join("\n");
+  $("#sListInfo").textContent=`${rows.length}個体を作りました。保存すると表に反映されます。`;
+};
+function listText(){
+  const ids=idItems(); const L=listLen(); const out=[];
+  for(let r=0;r<L;r++) out.push(ids.map(it=>fmt(D[r]?.[it.id],it)).join("\t"));
+  return out.join("\n");
+}
+let listOrig="";
+$("#btnSettings").onclick=()=>{
+  if(listening) stopRec(); clearPend();
+  draft=JSON.parse(JSON.stringify(S));
+  $("#sName").value=draft.name;
+  document.querySelector(`input[name=ts][value="${draft.ts?1:0}"]`).checked=true; $("#sTsBox").hidden=!draft.ts;
+  $("#sOutFmt").value=draft.outFmt;
+  document.querySelector(`input[name=dir][value=${draft.dir}]`).checked=true;
+  $("#sGroups").value=draft.groups||""; drawGroupPrev();
+  document.querySelector(`input[name=mode][value=${draft.mode}]`).checked=true;
+  document.querySelector(`input[name=sbm][value=${draft.standbyMode}]`).checked=true;
+  $("#sRead").checked=draft.readback; $("#sSerial").checked=draft.serial; $("#sAuto").checked=!!draft.autoCommit; $("#sSound").checked=!!draft.alertSound;
+  $("#sRate").value=draft.rate||1.1; $("#sRateVal").textContent="×"+(+$("#sRate").value).toFixed(1);
+  listOrig=listText(); $("#sList").value=listOrig; $("#sListInfo").textContent=listOrig?`現在 ${listOrig.split("\n").length}個体`:"";
+  drawItems(); $("#dlg").showModal();
+};
+function drawGroupPrev(){
+  const dir=document.querySelector("input[name=dir]:checked")?.value||"row";
+  $("#sGroupBox").hidden=dir!=="group";
+  const G=groupsFrom(draft.items.map(normItem),dir,$("#sGroups").value);
+  const mk="①②③④⑤⑥⑦⑧⑨⑩";
+  $("#sGroupPrev").textContent=G.length?G.map((g,i)=>(mk[i]||"・")+g.map(c=>draft.items[c].name).join("・")).join(" → "):"";
+}
+$("#sGroups").addEventListener("input",drawGroupPrev);
+document.querySelectorAll("input[name=dir]").forEach(r=>r.addEventListener("change",drawGroupPrev));
+$("#sCancel").onclick=()=>$("#dlg").close();
+$("#sSave").onclick=()=>{
+  draft.name=$("#sName").value.trim()||"調査";
+  draft.ts=document.querySelector("input[name=ts]:checked").value==="1"; draft.outFmt=$("#sOutFmt").value;
+  draft.dir=document.querySelector("input[name=dir]:checked").value; draft.groups=$("#sGroups").value.trim();
+  draft.mode=document.querySelector("input[name=mode]:checked").value;
+  draft.standbyMode=document.querySelector("input[name=sbm]:checked").value;
+  draft.readback=$("#sRead").checked; draft.serial=$("#sSerial").checked; draft.autoCommit=$("#sAuto").checked; draft.rate=+$("#sRate").value||1.1;
+  draft.alertSound=$("#sSound").checked;
+  draft.items.forEach((it,i)=>{ if(!it.name.trim()) it.name="項目"+(i+1); });
+  const curId=S.items[cur.c]?.id; S=draft; normS();
+  /* 個体リストを反映（事前入力の列だけを書き換え、測定値はそのまま） */
+  const txt=$("#sList").value.replace(/\r/g,"").replace(/\n+$/,"");
+  if(txt!==listOrig){
+    const ids=idItems(); const lines=txt?txt.split("\n"):[];
+    const L=Math.max(lines.length,listLen());
+    for(let r=0;r<L;r++){
+      ensureRow(r); const cells=r<lines.length?lines[r].split(/\t|,/):[];
+      ids.forEach((it,k)=>{ const s=(cells[k]??"").trim(); if(!s){ delete D[r][it.id]; return; }
+        const v=it.type==="num"?parseNumber(s):null; D[r][it.id]=(it.type==="num"&&v!==null&&!Number.isNaN(v))?v:s; });
+    }
+  }
+  const ni=S.items.findIndex(it=>it.id===curId); cur.c=(ni<0||S.items[ni].role==="id")?firstMeas():ni;
+  save(); render(); $("#dlg").close();
+};
+$("#sClear").onclick=()=>{
+  if(!confirm("すべての調査日の測定データと除外の記録を消去します（個体リストは残ります）。先にExcelかCSVで保存しましたか？")) return;
+  const ids=idItems();
+  D=D.map(row=>{ const o={}; ids.forEach(it=>{ if(hasVal(row[it.id])) o[it.id]=row[it.id]; }); return o; }).slice(0,listLen());
+  S.sessions={}; S.curDate=today(); draft.sessions={}; draft.curDate=S.curDate;
+  cur={r:0,c:firstMeas()}; logs=[]; save(); render(); $("#dlg").close(); note("測定データを消去しました。設定と個体リストは残っています。");
+};
+
+/* ========= 数値の貼り付け ========= */
+let pasteUndo=null;
+function parsePaste(txt){
+  const lines=txt.replace(/\r/g,"").replace(/\n+$/,"").split("\n");
+  return lines.map(l=>l.includes("\t")?l.split("\t"):l.split(/[,，]/));
+}
+function pastePlan(rows){
+  const M=meas(); const k0=Math.max(0,M.indexOf(cur.c)); const cols=M.slice(k0);
+  const width=Math.max(0,...rows.map(r=>r.length));
+  return {cols, width, over:Math.max(0,width-cols.length)};
+}
+function pasteInfo(){
+  const rows=parsePaste($("#pasteText").value); const txt=$("#pasteText").value.trim();
+  if(!txt){ $("#pasteInfo").textContent=""; return; }
+  const pl=pastePlan(rows);
+  const last=cur.r+rows.length-1;
+  $("#pasteInfo").textContent=`${rows.length}行 × ${pl.width}列 → ${rowLabel(cur.r)} 〜 ${rowLabel(last)}、${S.items[pl.cols[0]]?.name??""}〜${S.items[pl.cols[Math.min(pl.width,pl.cols.length)-1]]?.name??""}`+(pl.over?`（右の${pl.over}列は入りきらないので無視）`:"");
+}
+$("#pasteOpen").onclick=()=>{
+  if(listening) stopRec(); clearPend();
+  if(!meas().length){ note("音声で入力する列がありません"); return; }
+  if(!meas().includes(cur.c)) cur.c=firstMeas();
+  $("#pasteWhere").textContent=`貼り付け開始位置：${rowLabel(cur.r)}／${S.items[cur.c].name}（${S.curDate}）`;
+  $("#pasteText").value=""; $("#pasteInfo").textContent=""; $("#pasteDlg").showModal(); $("#pasteText").focus();
+};
+$("#pasteText").addEventListener("input",pasteInfo);
+$("#pasteCancel").onclick=()=>$("#pasteDlg").close();
+$("#pasteGo").onclick=()=>{
+  const rows=parsePaste($("#pasteText").value);
+  if(!$("#pasteText").value.trim()){ $("#pasteDlg").close(); return; }
+  const pl=pastePlan(rows); pasteUndo=JSON.stringify(D);
+  let n=0, bad=0;
+  rows.forEach((cells,i)=>{
+    const r=cur.r+i; ensureRow(r);
+    cells.slice(0,pl.cols.length).forEach((raw,j)=>{
+      const v=String(raw).trim(); if(!v) return;
+      const it=S.items[pl.cols[j]]; let val;
+      if(it.type==="num"){ const x=parseNumber(v); if(x===null||Number.isNaN(x)){ bad++; return; }
+        let y=x; if(it.step>0) y=Math.round(y/it.step)*it.step; const m=Math.pow(10,it.dec); val=Math.round(y*m)/m; }
+      else if(it.type==="choice"){ val=matchChoice(v,it.options); if(val===null){ bad++; return; } }
+      else val=v;
+      D[r][it.id]=val; flashCells.add(r+":"+pl.cols[j]); n++;
+    });
+  });
+  addLog(`${rowLabel(cur.r)} から ${rows.length}行を貼り付け（${n}件）`);
+  $("#pasteDlg").close(); save(); render();
+  note(`${n}件の値を貼り付けました`+(bad?`。数値にできない${bad}件は飛ばしました`:"")+"。間違えた場合は、すぐに「元に戻す」を押してください。",true);
+  $("#note").insertAdjacentHTML("beforeend",' <button type="button" class="ghost" id="pasteUndoBtn" style="padding:4px 10px">元に戻す</button>');
+  $("#pasteUndoBtn").onclick=()=>{ if(pasteUndo){ D=JSON.parse(pasteUndo); pasteUndo=null; save(); render(); note("貼り付けを取り消しました"); } };
+};
+
+/* ========= バックアップと読み込み ========= */
+$("#ioBackup").onclick=()=>{
+  if(listening) stopRec();
+  const data={app:"koe-yacho-v2",ver:APP_VER,saved:new Date().toISOString(),S,D,cur};
+  download(new Blob([JSON.stringify(data)],{type:"application/json"}),`${safeName()}_バックアップ_${today()}.json`);
+};
+$("#ioFile").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  try{
+    const name=f.name.toLowerCase();
+    if(name.endsWith(".json")){ importJson(JSON.parse(await f.text())); }
+    else if(name.endsWith(".csv")||name.endsWith(".txt")){ importTable(parseCsv(await f.text())); }
+    else if(name.endsWith(".xlsx")||name.endsWith(".xls")){
+      if(typeof XLSX==="undefined"){ ioMsg("Excelを読む部品を読み込めませんでした。CSVで読み込んでください。"); return; }
+      const wb=XLSX.read(await f.arrayBuffer(),{type:"array"});
+      const sh=["縦持ち(R用)","縦長(R用)"].find(s=>wb.SheetNames.includes(s))||wb.SheetNames[0];
+      importTable(XLSX.utils.sheet_to_json(wb.Sheets[sh],{header:1,raw:true,defval:""}));
+    } else ioMsg("読み込めるのは .json（バックアップ）、.csv、.xlsx です。");
+  }catch(err){ ioMsg("読み込みに失敗しました："+(err.message||err)); }
+};
+function ioMsg(t){ $("#ioOut").textContent=t; }
+function confirmReplace(){ return confirm("今の端末にあるデータ（全調査日）を、読み込んだ内容で置き換えます。よろしいですか？\n（念のため先に「バックアップを保存」しておくと元に戻せます）"); }
+function importJson(j){
+  if(!j||j.app!=="koe-yacho-v2"||!j.S||!Array.isArray(j.D)){ ioMsg("声で野帳 Pro（2）のバックアップファイルではありません。"); return; }
+  if(!confirmReplace()) return;
+  S=j.S; normS();
+  D=j.D; cur=j.cur||{r:firstRow(),c:firstMeas()}; logs=[]; clearPend();
+  save(); render(); $("#dlg").close();
+  note(`バックアップを読み込みました（調査日 ${allDates().length}回、${listLen()||D.length}個体）`);
+}
+function parseCsv(txt){
+  txt=txt.replace(/^﻿/,""); const rows=[]; let row=[], f="", q=false;
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i];
+    if(q){ if(c==='"'){ if(txt[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; continue; }
+    if(c==='"') q=true; else if(c===","){ row.push(f); f=""; }
+    else if(c==="\n"){ row.push(f); rows.push(row); row=[]; f=""; }
+    else if(c!=="\r") f+=c;
+  }
+  if(f!==""||row.length){ row.push(f); rows.push(row); }
+  return rows.filter(r=>r.some(v=>String(v).trim()!==""));
+}
+/* 表を読み込む：「調査日」の列があれば調査日ごとに振り分け、「状態」の列は除外として扱う */
+function toDateStr(v){
+  if(typeof v==="number"&&v>20000&&v<80000){ const d=new Date(Math.round((v-25569)*864e5)); return d.toISOString().slice(0,10); }
+  const s=String(v).trim().replace(/\//g,"-"); const m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  return m?`${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`:"";
+}
+function importTable(rows){
+  if(rows.length<2){ ioMsg("データの行が見つかりません。"); return; }
+  const head=rows[0].map(h=>String(h).trim());
+  const iDate=head.indexOf("調査日"), iState=head.indexOf("状態");
+  const skip=new Set([iDate,iState,head.indexOf("No.")].filter(i=>i>=0));
+  /* 列と項目の対応（同じ名前の項目がなければ、値から種類を推定して項目を追加） */
+  const items=S.items.map(normItem), colItem={}; const added=[];
+  head.forEach((h,c)=>{
+    if(skip.has(c)||!h) return;
+    let it=items.find(x=>x.name===h);
+    if(!it){
+      const vals=rows.slice(1).map(r=>r[c]).filter(v=>String(v).trim()!=="");
+      const nums=vals.every(v=>!isNaN(Number(v)));
+      const dec=nums?Math.min(4,Math.max(0,...vals.map(v=>(String(v).split(".")[1]||"").length))):0;
+      it=normItem({name:h,type:nums?"num":"text",dec}); items.push(it); added.push(h);
+    }
+    colItem[c]=it;
+  });
+  const ids=items.filter(it=>it.role==="id");
+  if(!confirmReplace()) return;
+  const conv=(v,it)=>{ if(String(v).trim()==="") return undefined; if(it.type==="num"){ const n=Number(v); return isNaN(n)?String(v):n; } return String(v).trim(); };
+  const ND=[], keyIdx=new Map(), sessions={};
+  rows.slice(1).forEach((r,k)=>{
+    const date=iDate>=0?(toDateStr(r[iDate])||today()):today();
+    let idx;
+    if(ids.length){
+      const key=ids.map(it=>{ const c=Object.keys(colItem).find(c=>colItem[c]===it); return c===undefined?"":String(r[c]); }).join("\u0001");
+      if(!keyIdx.has(key)){ keyIdx.set(key,ND.length); ND.push({}); }
+      idx=keyIdx.get(key);
+    } else { sessions[date]=sessions[date]||[]; idx=sessions[date].length; while(ND.length<=idx) ND.push({}); }
+    const row=ND[idx]; sessions[date]=sessions[date]||[]; const m=sessions[date][idx]||(sessions[date][idx]={});
+    Object.entries(colItem).forEach(([c,it])=>{ const v=conv(r[c],it); if(v===undefined) return; if(it.role==="id") row[it.id]=v; else m[it.id]=v; });
+    if(iState>=0&&String(r[iState]).trim()){ if(!row._ex||date<row._ex){ row._ex=date; row._why=String(r[iState]).trim(); } }
+  });
+  const ds=Object.keys(sessions).sort(); const last=ds[ds.length-1]||today();
+  S.items=items; S.sessions={}; ds.forEach(d=>{ if(d!==last) S.sessions[d]=Array.from({length:ND.length},(_,i)=>sessions[d][i]||{}); });
+  (sessions[last]||[]).forEach((m,i)=>{ if(m) Object.assign(ND[i],m); });
+  D=ND; S.curDate=last; if(ds.length>1) S.ts=true; cur={r:firstRow(),c:firstMeas()}; logs=[]; clearPend();
+  save(); render(); $("#dlg").close();
+  note(`読み込みました：${ds.length}調査日、${ND.length}個体`+(added.length?`。新しい項目「${added.join("・")}」を追加しました（設定で種類を確認してください）`:""));
+}
+
+if(!SR) note("このブラウザは音声認識に対応していません。AndroidはChrome、iPhoneはSafariで開いてください。");
+render();
+/* ========= 利用コード（共通） ========= */
+const LIC_PUB="BOudjzCP+kKh6CRo+2Yw+Mykv1uIt2ldgk/MJ5qxg5h6CSIhuvlVN7AZpuX34RgGsuDDqberT1hGfTlg0hsD2x4=";
+const LIC_TYPES={1:"3か月",2:"1年",9:"開発者（無期限）"};
+const B32="0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const DAY0=Date.UTC(2026,0,1);
+function dayNum(s){ const [y,m,d]=s.split("-").map(Number); return Math.round((Date.UTC(y,m-1,d)-DAY0)/864e5); }
+function dayStr(n){ const t=new Date(DAY0+n*864e5); return t.getUTCFullYear()+"-"+String(t.getUTCMonth()+1).padStart(2,"0")+"-"+String(t.getUTCDate()).padStart(2,"0"); }
+function localToday(){ const t=new Date(); return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0"); }
+function b32enc(u8){ let bits=0,val=0,s=""; for(const b of u8){ val=(val<<8)|b; bits+=8; while(bits>=5){ bits-=5; s+=B32[(val>>bits)&31]; } val&=(1<<bits)-1; } if(bits) s+=B32[(val<<(5-bits))&31]; return s; }
+function b32dec(s){ let bits=0,val=0; const out=[]; for(const ch of s){ const i=B32.indexOf(ch); if(i<0) return null; val=(val<<5)|i; bits+=5; if(bits>=8){ bits-=8; out.push((val>>bits)&255); } val&=(1<<bits)-1; } return new Uint8Array(out); }
+function fmtCode(u8){ return "KOE-"+b32enc(u8).match(/.{1,4}/g).join("-"); }
+function normCode(s){ return String(s||"").toUpperCase().replace(/\s/g,"").replace(/^KOE-?/,"").replace(/[^0-9A-Z]/g,"").replace(/O/g,"0").replace(/[IL]/g,"1").replace(/U/g,"V"); }
+async function licPubKey(){ const raw=Uint8Array.from(atob(LIC_PUB),c=>c.charCodeAt(0)); return crypto.subtle.importKey("raw",raw,{name:"ECDSA",namedCurve:"P-256"},false,["verify"]); }
+/* コードを読み、署名を確かめる。戻り値 {type,start,exp,serial}（exp=null は無期限） */
+async function licDecode(str){
+  if(!window.crypto||!crypto.subtle) throw new Error("このブラウザでは利用コードを確認できません。ChromeかEdge、Safariの新しい版で開いてください。");
+  const u8=b32dec(normCode(str));
+  if(!u8||u8.length<72) throw new Error("利用コードが短すぎます。コード全体を貼り付けてください。");
+  const data=u8.slice(0,8), sig=u8.slice(8,72);
+  const ok=await crypto.subtle.verify({name:"ECDSA",hash:"SHA-256"},await licPubKey(),sig,data);
+  if(!ok||data[0]!==1||!LIC_TYPES[data[1]]) throw new Error("利用コードが正しくありません。コピーし損ねていないか確かめてください。");
+  const dv=new DataView(data.buffer); const e=dv.getUint16(4);
+  return {type:data[1],start:dayStr(dv.getUint16(2)),exp:e===0xFFFF?null:dayStr(e),serial:dv.getUint16(6)};
+}
+/* ========= 利用コードの確認（Pro） ========= */
+const LIC_KEY="koe-yacho-pro-license";
+/* 利用条件・免責事項の版。文面を改定したら日付を変える → 次回起動時に同意を取り直す */
+const TERMS_VER="2026-10-15";
+let licNow=null, gateMode="code";
+$("#gateTerms").innerHTML=$("#termsBody").innerHTML;
+function licGet(){ try{ return JSON.parse(localStorage.getItem(LIC_KEY)||"null"); }catch(e){ return null; } }
+function licSet(o){ try{ localStorage.setItem(LIC_KEY,JSON.stringify(o)); }catch(e){} }
+/* 端末の時計を戻しても期限が延びないよう、これまでに見た最も新しい日付を使う */
+function licToday(){ const st=licGet()||{}; const t=localToday(); return st.seen&&st.seen>t?st.seen:t; }
+function hasData(){ try{ return D.some(r=>Object.keys(r).some(k=>!k.startsWith("_")))||Object.keys(S.sessions||{}).length>0; }catch(e){ return false; } }
+function licText(l){ return `${LIC_TYPES[l.type]}（No.${l.serial}）`+(l.exp?`・${l.exp}まで`:""); }
+function gateShow(msg,isErr,mode){
+  gateMode=mode||"code";
+  const g=$("#gate"); g.hidden=false;
+  $("#gateMsg").textContent=msg;
+  $("#gateErr").hidden=!isErr; if(isErr) $("#gateErr").textContent=isErr;
+  $("#gateCode").hidden=gateMode==="agree";
+  $("#gateGo").textContent=gateMode==="agree"?"同意して続ける":"同意して利用を開始";
+  $("#gateAgree").checked=(licGet()||{}).agree===TERMS_VER;
+  $("#gateData").hidden=!hasData();
+  try{ if(listening) stopRec(); }catch(e){}
+  try{ if(typeof voskStop==="function"&&vk&&vk.on) voskStop(); }catch(e){}
+}
+function gateHide(){ $("#gate").hidden=true; }
+function licShowInfo(){
+  const el=$("#licInfo"); if(!el) return;
+  el.textContent=licNow?("利用コード："+licText(licNow)):"利用コード：未入力";
+}
+/* 判定：ok / notyet / expired */
+function licState(l,today){ if(today<l.start) return "notyet"; if(l.exp&&today>l.exp) return "expired"; return "ok"; }
+async function licCheck(){
+  const st=licGet();
+  if(!st||!st.code){ licNow=null; licShowInfo(); gateShow("ご利用には利用コードが必要です。受け取ったコードを下の欄に貼り付け、利用条件と免責事項に同意して「同意して利用を開始」を押してください。"); return; }
+  let l; try{ l=await licDecode(st.code); }catch(e){ licNow=null; licShowInfo(); gateShow("保存されている利用コードを確認できませんでした。もう一度貼り付けてください。",e.message); return; }
+  const today=licToday(); licSet({...st,seen:today});
+  licNow=l; licShowInfo();
+  const s=licState(l,today);
+  if(s==="expired"){ gateShow(`利用コード（${licText(l)}）の期限が切れました。新しい利用コードを貼り付けてください。入力したデータは消えていません。`); return; }
+  if(s==="notyet"){ gateShow(`この利用コードは ${l.start} から使えます。`); return; }
+  if(st.agree!==TERMS_VER){ gateShow(`利用条件と免責事項を改定しました（${TERMS_VER}）。内容を確認し、同意のうえ続けてください。`,null,"agree"); return; }
+  gateHide();
+  if(l.exp){ const left=dayNum(l.exp)-dayNum(today); if(left<=14) note(`利用コードの期限まで、あと${left+1}日です（${l.exp}まで）。続けて使う場合は、新しいコードを用意してください。`); }
+}
+async function licEnter(code){
+  $("#gateErr").hidden=true;
+  try{
+    const l=await licDecode(code);
+    const s=licState(l,licToday());
+    if(s==="expired") throw new Error(`このコードは ${l.exp} で期限が切れています。`);
+    if(s==="notyet") throw new Error(`このコードは ${l.start} から使えます。`);
+    licSet({code:normCode(code),seen:licToday(),at:localToday(),agree:TERMS_VER});
+    $("#gateCode").value="";
+    await licCheck();
+    note(`利用コードを確認しました：${licText(l)}`);
+    return true;
+  }catch(e){ $("#gateErr").hidden=false; $("#gateErr").textContent=e.message||String(e); return false; }
+}
+function needAgree(){
+  if($("#gateAgree").checked) return false;
+  $("#gateErr").hidden=false; $("#gateErr").textContent="利用条件と免責事項を読み、「同意します」に印を付けてください。";
+  return true;
+}
+$("#gateGo").onclick=async()=>{
+  if(needAgree()) return;
+  if(gateMode==="agree"){ licSet({...(licGet()||{}),agree:TERMS_VER,agreedAt:localToday()}); await licCheck(); return; }
+  licEnter($("#gateCode").value);
+};
+$("#gateXlsx").onclick=()=>$("#btnXlsx").click();
+$("#gateBk").onclick=()=>$("#ioBackup").click();
+$("#licChange").onclick=()=>{ gateShow("新しい利用コードを貼り付けてください。今のコードはそのまま使えます。"); $("#gateClose").hidden=!(licNow&&licState(licNow,licToday())==="ok"&&(licGet()||{}).agree===TERMS_VER); };
+$("#gateClose").onclick=()=>gateHide();
+/* リンク（…pro.html#code=KOE-…）で開いたときは、コードを欄に入れて同意を待つ */
+(async()=>{
+  const m=location.hash.match(/code=([^&]+)/);
+  if(m){
+    history.replaceState(null,"",location.pathname+location.search);
+    const code=decodeURIComponent(m[1]);
+    if((licGet()||{}).agree===TERMS_VER){ if(await licEnter(code)) return; }
+    const err=$("#gateErr").hidden?"":$("#gateErr").textContent;
+    await licCheck();
+    gateShow("リンクの利用コードを入れました。利用条件と免責事項を確認し、「同意して利用を開始」を押してください。",err||null);
+    $("#gateCode").value=code; $("#gateClose").hidden=true;
+    return;
+  }
+  await licCheck();
+  $("#gateClose").hidden=true;
+})();
+setInterval(()=>{ if($("#gate").hidden) licCheck(); },10*60*1000);
+</script>
+</body>
+</html>
