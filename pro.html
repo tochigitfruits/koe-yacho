@@ -217,7 +217,7 @@ th.gstart,td.gstart{border-left:3px solid var(--accent)}
       <p>これまでに入力したデータは、この端末に残っています。コードがなくても保存できます。</p>
       <div class="gatebtns"><button type="button" id="gateXlsx" class="sec">Excelで保存</button><button type="button" id="gateBk" class="sec">バックアップを保存</button></div>
     </div>
-    <p class="gatesmall">利用コードは3か月用と1年用があります。期限が切れても、入力したデータは消えません。</p>
+    <p class="gatesmall">利用コードごとに使える期間が決まっています。期限が切れても、入力したデータは消えません。</p>
   </div>
 </div>
 <div class="wrap">
@@ -829,7 +829,7 @@ function handleText(raw, fromVoice){
 /* ========= 音声 ========= */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, gestureStart=false, standby=false;
-const APP_VER="Pro 3.1（2026-10-15）";
+const APP_VER="Pro 3.2（2026-10-15）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -1411,7 +1411,8 @@ if(!SR) note("このブラウザは音声認識に対応していません。And
 render();
 /* ========= 利用コード（共通） ========= */
 const LIC_PUB="BOudjzCP+kKh6CRo+2Yw+Mykv1uIt2ldgk/MJ5qxg5h6CSIhuvlVN7AZpuX34RgGsuDDqberT1hGfTlg0hsD2x4=";
-const LIC_TYPES={1:"3か月",2:"1年",9:"開発者（無期限）"};
+/* 種類：1 3か月／2 1年／3 期間指定（期限はコードに記録した日付）／9 開発者（無期限）。期限の判定はどの種類も、コードに記録した日付で行う */
+const LIC_TYPES={1:"3か月",2:"1年",3:"期間指定",9:"開発者（無期限）"};
 const B32="0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const DAY0=Date.UTC(2026,0,1);
 function dayNum(s){ const [y,m,d]=s.split("-").map(Number); return Math.round((Date.UTC(y,m-1,d)-DAY0)/864e5); }
@@ -1444,7 +1445,7 @@ function licSet(o){ try{ localStorage.setItem(LIC_KEY,JSON.stringify(o)); }catch
 /* 端末の時計を戻しても期限が延びないよう、これまでに見た最も新しい日付を使う */
 function licToday(){ const st=licGet()||{}; const t=localToday(); return st.seen&&st.seen>t?st.seen:t; }
 function hasData(){ try{ return D.some(r=>Object.keys(r).some(k=>!k.startsWith("_")))||Object.keys(S.sessions||{}).length>0; }catch(e){ return false; } }
-function licText(l){ return `${LIC_TYPES[l.type]}（No.${l.serial}）`+(l.exp?`・${l.exp}まで`:""); }
+function licText(l){ return `${LIC_TYPES[l.type]}（No.${l.serial}）`+(l.type===3?`・${l.start}〜`:"")+(l.exp?`${l.type===3?"":"・"}${l.exp}まで`:""); }
 function gateShow(msg,isErr,mode){
   gateMode=mode||"code";
   const g=$("#gate"); g.hidden=false;
@@ -1475,7 +1476,7 @@ async function licCheck(){
   if(s==="notyet"){ gateShow(`この利用コードは ${l.start} から使えます。`); return; }
   if(st.agree!==TERMS_VER){ gateShow(`利用条件と免責事項を改定しました（${TERMS_VER}）。内容を確認し、同意のうえ続けてください。`,null,"agree"); return; }
   gateHide();
-  if(l.exp){ const left=dayNum(l.exp)-dayNum(today); if(left<=14) note(`利用コードの期限まで、あと${left+1}日です（${l.exp}まで）。続けて使う場合は、新しいコードを用意してください。`); }
+  if(l.exp){ const left=dayNum(l.exp)-dayNum(today); /* 期間が30日以内の短いコードは3日前から、それ以外は14日前からお知らせ */ const warn=(dayNum(l.exp)-dayNum(l.start))<=30?3:14; if(left<=warn) note(`利用コードの期限まで、あと${left+1}日です（${l.exp}まで）。続けて使う場合は、新しいコードを用意してください。`); }
 }
 async function licEnter(code){
   $("#gateErr").hidden=true;
