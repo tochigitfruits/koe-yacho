@@ -218,6 +218,21 @@ th.gstart,td.gstart{border-left:3px solid var(--accent)}
 #gateData{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px}
 .gatesmall{font-size:.85rem;color:var(--muted)}
 #licInfo{margin-left:8px}
+/* ウインドウ枠の固定：固定したセルは不透明の地にして、下を流れる表が透けないようにする */
+th{z-index:3}
+td.fzc,td.fzr{position:sticky;background-color:var(--surface)}
+td.fzc{z-index:1} td.fzr{z-index:2} td.fzc.fzr{z-index:4} th.fzc{left:0;z-index:5}
+td.fzc,th.fzc,td.fzr{box-shadow:inset -1px -1px 0 var(--line)}
+td.fzc.fzend,th.fzc.fzend{box-shadow:inset -2px 0 0 var(--accent),inset 0 -1px 0 var(--line)}
+td.fzr.fzrend{box-shadow:inset 0 -2px 0 var(--accent),inset -1px 0 0 var(--line)}
+td.fzc.fzr.fzend.fzrend{box-shadow:inset -2px -2px 0 var(--accent)}
+td:is(.fzc,.fzr).idc{background-image:linear-gradient(color-mix(in srgb,var(--line) 35%,transparent),color-mix(in srgb,var(--line) 35%,transparent))}
+td:is(.fzc,.fzr).al-warn{background-image:linear-gradient(color-mix(in srgb,var(--warn) 20%,transparent),color-mix(in srgb,var(--warn) 20%,transparent))}
+td:is(.fzc,.fzr).al-block{background-image:linear-gradient(color-mix(in srgb,var(--rec) 20%,transparent),color-mix(in srgb,var(--rec) 20%,transparent))}
+td:is(.fzc,.fzr).sel{background-image:linear-gradient(color-mix(in srgb,var(--accent) 22%,transparent),color-mix(in srgb,var(--accent) 22%,transparent))}
+td:is(.fzc,.fzr).sel{box-shadow:inset 0 0 0 1px var(--accent)}
+td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shadow:inset 0 0 0 2px var(--mark-ink)}
+#sFzCols,#sFzRows{width:5em;height:auto;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--bg);font-family:var(--f-num);text-align:right;flex:none}
 </style>
 </head>
 <body>
@@ -434,9 +449,16 @@ th.gstart,td.gstart{border-left:3px solid var(--accent)}
       <label class="toggle" for="sSerial"><span>左端に通し番号（No.）を付ける</span><input type="checkbox" id="sSerial"></label>
       <label class="toggle" for="sUndoGap"><span>声の「取り消し」を続けるときの間隔<small class="ver" style="display:block">読み上げの声を拾って取り消しが進みすぎるのを防ぎます。この間隔より早い2回目は無視します（ボタンには効きません）</small></span><select id="sUndoGap"><option value="0">なし</option><option value="1.5">1.5秒</option><option value="3">3秒</option><option value="5">5秒</option></select></label>
     </fieldset>
+    <fieldset>
+      <legend>表の表示（ウインドウ枠の固定）</legend>
+      <label class="toggle" for="sFzCols"><span>左から固定する列数<small class="ver" style="display:block">No.の列も1列と数えます。0で固定しません</small></span><input type="number" id="sFzCols" min="0" max="30" step="1" inputmode="numeric"></label>
+      <label class="toggle" for="sFzRows"><span>上から固定する行数<small class="ver" style="display:block">項目名の行はいつも固定されます。ここではその下のデータの行を数えます</small></span><input type="number" id="sFzRows" min="0" max="20" step="1" inputmode="numeric"></label>
+      <div class="toggle"><button type="button" class="ghost" id="sFzId">事前入力の列まで固定</button><span class="ver" id="sFzPrev"></span></div>
+      <p class="help">表を横や下に動かしても、固定した列・行は残ります。画面が狭いときは、固定する部分を表の幅・高さの7割までにとどめます。</p>
+    </fieldset>
     <p class="help">音声コマンド：<code>取り消し</code> 直前を消す（続けて言うときは、下の「その他」で決めた間隔をあける）／<code>スキップ</code> 空欄で進む／<code>次</code> 次の行・列へ／<code>戻る</code> 1つ前へ。<code>待機</code>（<code>一時停止</code>・<code>休憩</code>）聞き取りを休む／<code>再開</code> 待機から戻る／<code>停止</code>（<code>ストップ</code>・<code>終了</code>）聞き取りを止める（続けるときはマイクを押す）。<code>除外</code>（<code>落果</code>・<code>枯死</code>・<code>欠株</code>）その個体をこの調査日以降は飛ばす／<code>復帰</code> 除外を取り消す。前回比の「注意」が出たら <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）、または正しい値を言い直します。文字の列は話した言葉がそのまま入り、選択肢の列は登録した候補から一番近いものが入ります。小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。表のセルをタップすると、そこから入力を再開します。</p>
     <p class="help">まとめて入力：<code>32.5 31.2 30.8</code> 続けて言うと今のセルから順に入る（値の間に少し間を置くか「と」を挟む）／<code>ゼロ 6個</code>（<code>0を6つ</code>）今の列の今の個体から6個体分（列単位では、列の最後まで来たら次の列へ続く）／<code>残り全部ゼロ</code>（<code>残りゼロ</code>）今の列の最後の個体まで／<code>5から10 ゼロ</code>（<code>5番から10番まで0</code>）今の列の No.5〜10。除外した個体は飛ばします。前回比で「禁止」になるセルには入れず、「注意」のセルは入れたうえで件数を知らせます。直後に「取り消し」と言うか「元に戻す」を押すと、まとめて入れた分をすべて戻せます。</p>
-    <p class="help">表の操作：<code>クリア</code> 選んだセル（範囲）の値を消す／<code>削除して詰める</code> 今のセルを消し、入力の順番で後ろの値を1つずつ前へ詰める（2回入ってしまったとき）／<code>行を削除</code> 今の行（範囲を選んでいればその行すべて）を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も一緒に消える（余計な行を増やしてしまったとき）／<code>範囲選択</code> オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）／<code>コピー</code> 選んだ範囲の「音声で入力」の列をコピー（Excelにも貼れる）／<code>貼付</code> 今のセルを左上にして貼り付け（PCは Ctrl+C・Ctrl+V・Delete も使えます）。操作のあとは「元に戻す」で戻せます。</p>
+    <p class="help">表の操作：<code>クリア</code> 選んだセル（範囲）の値を消す／<code>削除して詰める</code> 今のセルを消し、入力の順番で後ろの値を1つずつ前へ詰める（2回入ってしまったとき）／<code>行を削除</code> 今の行（範囲を選んでいればその行すべて）を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も一緒に消える（余計な行を増やしてしまったとき）／<code>範囲選択</code> オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）／<code>コピー</code> 選んだ範囲の「音声で入力」の列をコピー（Excelにも貼れる）／<code>貼付</code> 今のセルを左上にして貼り付け（PCは Ctrl+C・Ctrl+V・Delete も使えます）。操作のあとは「元に戻す」で戻せます。表の左の列や上の行を固定するには、上の「表の表示（ウインドウ枠の固定）」で列数・行数を指定します。</p>
     <fieldset>
       <legend>データの保存と読み込み</legend>
       <p class="help">「バックアップを保存」は、設定・個体リスト・全調査日・除外の記録をまるごと1つのファイルに保存します。別の端末で「ファイルを読み込む」と、そのまま続きから使えます。このアプリで保存したExcel（縦持ちシート）やCSVも読み込めます。</p>
@@ -588,6 +610,8 @@ function normS(){
   { const g=+S.undoGap; S.undoGap=(S.undoGap!==undefined&&S.undoGap!==null&&[0,1.5,3,5].includes(g))?g:3; }
   if(!["full","short","beep"].includes(S.rbMode)) S.rbMode="full";
   if(typeof S.fastCommit!=="boolean") S.fastCommit=false;
+  S.freezeCols=Math.max(0,Math.min(30,Math.floor(+S.freezeCols||0)));
+  S.freezeRows=Math.max(0,Math.min(20,Math.floor(+S.freezeRows||0)));
 }
 normS();
 function save(){ try{ localStorage.setItem(KEY,JSON.stringify({S,D,cur,logs})); }catch(e){} }
@@ -1039,7 +1063,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません)$/;
-const APP_VER="Pro 3.5（2026-10-21）";
+const APP_VER="Pro 3.6（2026-10-21）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -1232,6 +1256,7 @@ function render(){
     h+="</tr>";
   }
   $("#tbl").innerHTML=h+"</tbody>"; flashCells.clear(); badCells.clear();
+  applyFreeze();
   if(!dragging){ const cc=$("#tbl td.cur"); if(cc) cc.scrollIntoView({block:"nearest",inline:"nearest"}); }
   $("#log").innerHTML=logs.map(esc).join("<br>");
   $("#dateBar").hidden=!S.ts; if(!S.ts) $("#newDateBox").hidden=true;
@@ -1242,6 +1267,28 @@ function render(){
   $("#btnEx").firstChild.nodeValue=isEx(cur.r)?"復帰":"除外";
   updateMic();
 }
+/* ウインドウ枠の固定：左の列は left、上の行は top を、実際の幅・高さを測って積み上げる */
+let fzCapped=false;
+function applyFreeze(){
+  const tb=$("#tbl"), box=$("#tablebox"), head=tb.tHead?.rows[0];
+  if(!head){ return; }
+  const fc=Math.min(+S.freezeCols||0,head.cells.length), fr=+S.freezeRows||0;
+  const W=box.clientWidth, H=box.clientHeight, T=tb.getBoundingClientRect();
+  /* 固定を当てる前に、各列の左端・各行の上端を表の左上からの位置で測る（幅の足し算より誤差が出ない） */
+  const lefts=[]; let left=0; fzCapped=false;
+  for(let i=0;i<fc;i++){ const R=head.cells[i].getBoundingClientRect(), l=R.left-T.left, rr=R.right-T.left; if(rr>W*0.7&&i>0){ fzCapped=true; break; } lefts.push(l); left=rr; }
+  const bodyRows=[...tb.tBodies[0].rows];
+  let top=head.getBoundingClientRect().bottom-T.top; const tops=[];
+  for(let r=0;r<Math.min(fr,bodyRows.length);r++){ const R=bodyRows[r].getBoundingClientRect(), t=R.top-T.top, bb=R.bottom-T.top; if(bb>H*0.7&&r>0){ fzCapped=true; break; } tops.push(t); top=bb; }
+  const nc=lefts.length, nr=tops.length;
+  if(nc){ [head,...bodyRows].forEach(row=>{ for(let i=0;i<nc&&i<row.cells.length;i++){ const c=row.cells[i]; c.classList.add("fzc"); c.style.left=lefts[i]+"px"; if(i===nc-1) c.classList.add("fzend"); } }); }
+  for(let r=0;r<nr;r++){ [...bodyRows[r].cells].forEach(c=>{ c.classList.add("fzr"); c.style.top=tops[r]+"px"; if(r===nr-1) c.classList.add("fzrend"); }); }
+  /* 今のセルが固定部分の下に隠れないよう、スクロールの余白を取る */
+  box.style.scrollPaddingLeft=left+"px"; box.style.scrollPaddingTop=top+"px";
+}
+let fzTimer=null;
+window.addEventListener("resize",()=>{ clearTimeout(fzTimer); fzTimer=setTimeout(()=>{ if(S.freezeCols||S.freezeRows) render(); },150); });
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(S.freezeCols||S.freezeRows) render(); });
 function renderSel(){
   const b=$("#btnRange"); b.classList.toggle("on",rangeMode); b.setAttribute("aria-pressed",String(rangeMode));
   let t="";
@@ -1663,7 +1710,7 @@ function drawItems(){
         <label>減った${lvSel("dec",c.dec)}</label><label>増えた${lvSel("inc",c.inc)}</label><label>同じ${lvSel("same",c.same)}</label>
         <label>許容±<input type="text" inputmode="decimal" data-k="cmp.tol" value="${c.tol||""}" placeholder="0"></label></div>`:""}
     </div>`; }).join("");
-  drawGen(); if(document.querySelector("input[name=dir]:checked")) drawGroupPrev();
+  drawGen(); if(document.querySelector("input[name=dir]:checked")) drawGroupPrev(); if($("#sFzPrev")) drawFzPrev();
 }
 function drawGen(){
   const ids=draft.items.filter(it=>it.role==="id");
@@ -1727,6 +1774,7 @@ $("#btnSettings").onclick=()=>{
   $("#sRead").checked=draft.readback; $("#sSerial").checked=draft.serial; $("#sAuto").checked=!!draft.autoCommit; $("#sSound").checked=!!draft.alertSound;
   $("#sUndoGap").value=String(draft.undoGap);
   $("#sRbMode").value=draft.rbMode; $("#sFast").checked=!!draft.fastCommit;
+  $("#sFzCols").value=draft.freezeCols; $("#sFzRows").value=draft.freezeRows; drawFzPrev();
   $("#sRate").value=draft.rate||1.1; $("#sRateVal").textContent="×"+(+$("#sRate").value).toFixed(1);
   listOrig=listText(); $("#sList").value=listOrig; $("#sListInfo").textContent=listOrig?`現在 ${listOrig.split("\n").length}個体`:"";
   drawItems(); $("#dlg").showModal();
@@ -1739,6 +1787,19 @@ function drawGroupPrev(){
   $("#sGroupPrev").textContent=G.length?G.map((g,i)=>(mk[i]||"・")+g.map(c=>draft.items[c].name).join("・")).join(" → "):"";
 }
 $("#sGroups").addEventListener("input",drawGroupPrev);
+/* 固定する列の名前を見せる（No.の列を含めて数える） */
+function fzColNames(){ return (($("#sSerial").checked)?["No."]:[]).concat(draft.items.map(it=>it.name)); }
+function drawFzPrev(){
+  const k=Math.max(0,Math.floor(+$("#sFzCols").value||0)), r=Math.max(0,Math.floor(+$("#sFzRows").value||0));
+  const names=fzColNames().slice(0,k);
+  $("#sFzPrev").textContent=(k?`列：${names.join("・")}`:"列：固定しない")+"　"+(r?`行：上から${r}行`:"行：項目名だけ");
+}
+["sFzCols","sFzRows","sSerial"].forEach(id=>$("#"+id).addEventListener("input",drawFzPrev));
+$("#sSerial").addEventListener("change",drawFzPrev);
+$("#sFzId").onclick=()=>{
+  let last=-1; draft.items.forEach((it,i)=>{ if(it.role==="id") last=i; });
+  $("#sFzCols").value=last<0?($("#sSerial").checked?1:0):last+1+($("#sSerial").checked?1:0); drawFzPrev();
+};
 document.querySelectorAll("input[name=dir]").forEach(r=>r.addEventListener("change",drawGroupPrev));
 $("#sCancel").onclick=()=>$("#dlg").close();
 $("#sSave").onclick=()=>{
@@ -1750,6 +1811,7 @@ $("#sSave").onclick=()=>{
   draft.readback=$("#sRead").checked; draft.serial=$("#sSerial").checked; draft.autoCommit=$("#sAuto").checked; draft.rate=+$("#sRate").value||1.1;
   draft.alertSound=$("#sSound").checked; draft.undoGap=+$("#sUndoGap").value;
   draft.rbMode=$("#sRbMode").value; draft.fastCommit=$("#sFast").checked;
+  draft.freezeCols=+String($("#sFzCols").value).normalize("NFKC")||0; draft.freezeRows=+String($("#sFzRows").value).normalize("NFKC")||0;
   draft.items.forEach((it,i)=>{ if(!it.name.trim()) it.name="項目"+(i+1); });
   const curId=S.items[cur.c]?.id; S=draft; normS();
   /* 個体リストを反映（事前入力の列だけを書き換え、測定値はそのまま） */
