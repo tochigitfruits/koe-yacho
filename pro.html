@@ -21,8 +21,8 @@
 <meta name="theme-color" content="#15231d">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=BIZ+UDPGothic:wght@400;700&display=swap">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=BIZ+UDPGothic:wght@400;700&display=swap" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 /* 屋外で読める野帳：紙に近い明るい地、入力中セルは黄色マーカー、操作は大きな親指ボタン */
 :root{
@@ -250,6 +250,10 @@ details.fold.flash>summary{animation:flash 1.2s ease-out}
 .arow button{width:36px;height:38px;border:1.5px solid var(--line);border-radius:8px;background:var(--bg)}
 .arow .awarn{grid-column:1 / -1;font-size:.78rem;color:var(--warn)}
 .arow .awarn:empty{display:none}
+/* ひな形の共有（3.9.2） */
+.qrbox{display:grid;justify-items:center;gap:6px}
+#tplCanvas{width:min(340px,100%);height:auto;image-rendering:pixelated;background:#fff;border-radius:8px}
+#tplTitle:focus{outline:none}
 /* 使い方の説明（3.9） */
 .hbtn{min-width:44px;font-weight:700;padding-inline:12px}
 #helpDlg .sheet{gap:10px}
@@ -310,6 +314,39 @@ td:is(.fzc,.fzr).sel{background-image:linear-gradient(color-mix(in srgb,var(--ac
 td:is(.fzc,.fzr).sel{box-shadow:inset 0 0 0 1px var(--accent)}
 td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shadow:inset 0 0 0 2px var(--mark-ink)}
 #sFzCols,#sFzRows{width:5em;height:auto;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--bg);font-family:var(--f-num);text-align:right;flex:none}
+/* 4.0：更新のお知らせ・集計とグラフ */
+#updBar .albtns button:not(.sec){background:var(--accent);color:var(--accent-ink)}
+#sumDlg{width:min(960px,100%)}
+#sumTitle:focus{outline:none}
+.sumctl{display:grid;gap:10px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:640px){.sumctl{grid-template-columns:auto minmax(0,1fr)}.sumctl .field:last-child{grid-column:1 / -1}.grctl{grid-template-columns:repeat(2,minmax(0,16em))}.grctl .field:last-child{grid-column:auto}}
+.sumctl select{border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);min-width:0;max-width:100%}
+.chks{display:flex;flex-wrap:wrap;gap:6px}
+.chk{display:flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;min-height:40px;cursor:pointer;font-size:.9rem}
+.chk:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.chk:has(input:disabled){cursor:default;opacity:.75}
+.chk input{width:18px;height:18px;margin:0}
+.sumwrap{overflow:auto;border:1px solid var(--line);border-radius:12px;max-height:60vh}
+.sumtbl{border-collapse:separate;border-spacing:0;width:100%;font-family:var(--f-num);font-variant-numeric:tabular-nums;-webkit-user-select:text;user-select:text}
+.sumtbl th,.sumtbl td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:8px 10px;white-space:nowrap}
+.sumtbl thead th{position:sticky;top:0;background:var(--surface);z-index:2;font-family:var(--f-ui);font-size:.85rem}
+.sumtbl th.sg{position:sticky;left:0;background:var(--surface);z-index:1;text-align:left;font-family:var(--f-ui);font-size:.88rem}
+.sumtbl thead th.sg{z-index:3}
+.sumtbl td.sv{text-align:right}
+.sumtbl td.sv b{display:block;font-size:1.05rem}
+.sumtbl .sn{display:block;font-size:.72rem;color:var(--muted)}
+.sumtbl tr.sall th,.sumtbl tr.sall td{border-top:2px solid var(--ink);background:color-mix(in srgb,var(--line) 25%,var(--surface))}
+.grbox{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:12px}
+.grbox h3{margin:0;font-size:1rem}
+.grwrap{position:relative;width:100%;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+#grCanvas{display:block;touch-action:pan-y}
+.grtip{position:absolute;z-index:2;min-width:10em;max-width:min(18em,80%);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;box-shadow:0 6px 18px rgba(0,0,0,.18);font-size:.8rem;pointer-events:none;display:grid;gap:3px}
+.grtip .th{font-weight:700;color:var(--muted)}
+.grtip .tr{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:6px;align-items:center}
+.grtip .tr i{width:10px;height:10px;border-radius:50%}
+.grtip .tr span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grtip .tr small{grid-column:2 / -1;color:var(--muted);margin-top:-3px}
+.grtip b{font-family:var(--f-num)}
 </style>
 </head>
 <body>
@@ -341,6 +378,10 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
       <button class="ghost hbtn" id="btnHelp" type="button" aria-label="使い方の説明" title="使い方の説明">？</button>
     </div>
   </header>
+  <div class="alertbar info" id="updBar" role="status" hidden>
+    <div id="updMsg"></div>
+    <div class="albtns"><button type="button" id="updGo">今すぐ切り替える</button><button type="button" id="updLater" class="sec">あとで</button></div>
+  </div>
 
   <section class="panel" aria-live="polite">
     <div class="status">
@@ -405,6 +446,7 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
   <div class="tablebox" id="tablebox"><table id="tbl"></table></div>
 
   <div class="out">
+    <button type="button" id="btnSum" class="sec">集計・グラフ</button>
     <button type="button" id="btnXlsx">Excelで保存</button>
     <button type="button" id="btnCsv" class="sec">この日のCSV</button>
     <button type="button" id="btnCsvWide" class="sec">全調査日CSV（野帳型）</button>
@@ -445,7 +487,7 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
 <dialog id="svDlg">
   <div class="sheet">
     <h2>調査の一覧</h2>
-    <p class="help">調査ごとに、設定・個体リスト・全調査日のデータを分けてこの端末に保存します。押すとその調査に切り替わります（入力中の調査は自動で保存されます）。調査名は「設定」の調査名で変えられます。</p>
+    <p class="help">調査ごとに、設定・個体リスト・全調査日のデータを分けてこの端末に保存します。押すとその調査に切り替わります（入力中の調査は自動で保存されます）。調査名は「設定」の調査名で変えられます。「共有」で、その調査の設定をひな形としてほかの人・端末に配れます（ファイル・リンク・QRコード。測定データは含みません）。</p>
     <div class="svlist" id="svList"></div>
     <fieldset>
       <legend>新しい調査を作る</legend>
@@ -460,11 +502,12 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
       </div>
       <div class="addrow">
         <button type="button" class="add" id="svCreate">＋ 作って開く</button>
-        <label class="add filebtn" for="svFile">ファイルから作る<small class="ver" style="display:block">バックアップ・Excel・CSV</small><input type="file" id="svFile" accept=".json,.csv,.xlsx,.xls,.txt" hidden></label>
+        <label class="add filebtn" for="svFile">ファイルから作る<small class="ver" style="display:block">ひな形・バックアップ・Excel・CSV</small><input type="file" id="svFile" accept=".json,.csv,.xlsx,.xls,.txt" hidden></label>
       </div>
       <span class="ver" id="svOut"></span>
     </fieldset>
     <p class="help">同じ調査を2つのタブ・ウインドウで同時に開くと、あとから変えた方の内容に揃えます。別々の調査なら、タブ・ウインドウごとに並行して使えます。</p>
+    <span class="ver" id="svStore"></span>
     <div class="actions"><button type="button" id="svClose">閉じる</button></div>
   </div>
 </dialog>
@@ -477,6 +520,54 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
     <span class="ver" id="helpCount" aria-live="polite"></span>
     <div class="hlist" id="helpList"></div>
     <div class="actions"><button type="button" id="helpClose">閉じる</button></div>
+  </div>
+</dialog>
+
+<dialog id="tplDlg" aria-labelledby="tplTitle">
+  <div class="sheet">
+    <h2 id="tplTitle" tabindex="-1" autofocus>ひな形を配る</h2>
+    <p class="help" id="tplWhat"></p>
+    <label class="toggle" for="tplList"><span>個体リストも含める<small class="ver" style="display:block">樹番号・処理区などの事前入力の列。外すと項目と設定だけを配ります</small></span><input type="checkbox" id="tplList" checked></label>
+    <div class="qrbox">
+      <canvas id="tplCanvas" width="10" height="10" role="img" aria-label="ひな形のQRコード" hidden></canvas>
+      <span class="ver" id="tplQrInfo">QRコードを作っています…</span>
+    </div>
+    <div class="addrow">
+      <button type="button" class="add" id="tplFile">ファイルで保存（.json）</button>
+      <button type="button" class="add" id="tplLink">リンクをコピー</button>
+      <button type="button" class="add" id="tplShare" hidden>ほかのアプリで送る</button>
+      <button type="button" class="add" id="tplPng">QRコードを画像で保存</button>
+    </div>
+    <span class="ver" id="tplOut" aria-live="polite"></span>
+    <p class="help">受け取る人は、QRコードをカメラで読み取るか、リンクを開きます。アプリが開き、確かめたうえで新しい調査として作られます（受け取る人の今の調査はそのまま）。ファイルは「調査一覧」の「ファイルから作る」で読み込みます。</p>
+    <p class="help">iPhoneでホーム画面から使っている場合、QRコードやリンクはSafariで開くため、ホーム画面のアプリとは別の場所に調査が作られます。その場合はファイルで受け取ってください。</p>
+    <div class="actions"><button type="button" id="tplClose">閉じる</button></div>
+  </div>
+</dialog>
+
+<dialog id="sumDlg" aria-labelledby="sumTitle">
+  <div class="sheet">
+    <div class="sheethead"><h2 id="sumTitle" tabindex="-1" autofocus>集計・グラフ</h2><span class="ver" id="sumSub"></span></div>
+    <div class="sumctl">
+      <label class="field" id="sumDateBox"><b>調査日</b><select id="sumDate"></select></label>
+      <div class="field"><b>まとめる列（事前入力の列）</b><div class="chks" id="sumBy"></div></div>
+      <div class="field"><b>出す値</b><div class="chks"><label class="chk"><input type="checkbox" checked disabled><span>平均・n</span></label><label class="chk"><input type="checkbox" id="sumSD"><span>SD（標準偏差）</span></label><label class="chk"><input type="checkbox" id="sumSE"><span>SE（標準誤差）</span></label></div></div>
+    </div>
+    <div class="sumwrap"><table id="sumTbl" class="sumtbl"></table></div>
+    <p class="help" id="sumNote"></p>
+    <div class="addrow"><button type="button" class="add" id="sumCopy">表をコピー</button><button type="button" class="add" id="sumCsv">表をCSVで保存</button></div>
+    <section id="grBox" class="grbox">
+      <h3>経時グラフ</h3>
+      <div class="sumctl grctl">
+        <label class="field"><b>項目</b><select id="grItem"></select></label>
+        <label class="field"><b>誤差棒</b><select id="grErr"><option value="none">なし</option><option value="se">SE（標準誤差）</option><option value="sd">SD（標準偏差）</option></select></label>
+      </div>
+      <div class="grwrap" id="grWrap"><canvas id="grCanvas" role="img" aria-label="まとまりごとの平均の推移（値は上の表と、点に触れると出る一覧で確かめられます）"></canvas><div class="grtip" id="grTip" hidden></div></div>
+      <p class="help">線はまとめた列の値ごと（例 処理区ごと）、点は各調査日の平均です。点のあたりに触れると、その日の値が出ます。上の表で調査日を切り替えると、数値でも確かめられます。</p>
+      <div class="addrow"><button type="button" class="add" id="grPng">グラフを画像で保存（PNG）</button></div>
+    </section>
+    <span class="ver" id="sumOut" aria-live="polite"></span>
+    <div class="actions"><button type="button" id="sumClose">閉じる</button></div>
   </div>
 </dialog>
 
@@ -624,8 +715,9 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
         <label class="add filebtn" for="ioFile">ファイルを読み込む<input type="file" id="ioFile" accept=".json,.csv,.xlsx,.xls,.txt" hidden></label>
       </div>
       <span class="ver" id="ioOut"></span>
+      <span class="ver" id="ioStore"></span>
       <button type="button" class="danger" id="sClear">この調査の測定データを全消去する（個体リストは残す）</button>
-      <p class="help">別の調査を始めるときは、画面上の「調査一覧」から新しい調査を作ると、今の調査を残したまま切り替えられます。</p>
+      <p class="help">別の調査を始めるときは、画面上の「調査一覧」から新しい調査を作ると、今の調査を残したまま切り替えられます。設定だけをほかの人に配るときは、「調査一覧」の「共有」を使います。</p>
     </fieldset>
     </details>
     <div class="actions">
@@ -764,17 +856,119 @@ const S_DEFAULT=()=>({ name:"果実品質調査", items:PRESET_FRUIT(), dir:"row
 const SV_KEY="koe-yacho-v2-surveys", TAB_KEY="koe-yacho-v2-tab";
 const svKey=id=>id==="main"?KEY:KEY+":"+id;
 const nowStamp=()=>{ const d=new Date(); return today()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); };
-function svGet(){
+/* ========= 保存先（4.0〜：ブラウザ内の大容量領域 IndexedDB） =========
+   調査の中身は IndexedDB「koe-yacho-pro」の surveys（キー＝調査の id）、一覧は meta の "surveys"。
+   最初に 4.0 を開いたとき、3.9 までの保存場所（localStorage）から自動で移す。移す前のデータは消さずに残す（旧版・オフライン版がそのまま使える）。
+   IndexedDB が使えないブラウザでは、これまでどおり localStorage に保存する */
+const IDB_NAME="koe-yacho-pro", IDB_VER=1, MIG_KEY="koe-yacho-v2-idb", PING_KEY="koe-yacho-v2-ping";
+const ST={mode:"",db:null,mig:null,err:""};
+let SVL={list:[{id:"main",name:"",created:"",updated:""}],last:"main"};
+let stReady=false;
+const TAB_TOKEN=Math.random().toString(36).slice(2);
+/* 旧保存場所（localStorage）の一覧と中身 */
+function lsList(){
   try{ const o=JSON.parse(localStorage.getItem(SV_KEY)||"null"); if(o&&Array.isArray(o.list)&&o.list.length) return o; }catch(e){}
   return {list:[{id:"main",name:"",created:"",updated:""}],last:"main"};
 }
-function svPut(o){ try{ localStorage.setItem(SV_KEY,JSON.stringify(o)); }catch(e){} }
-function svRead(id){ try{ return JSON.parse(localStorage.getItem(svKey(id))||"null"); }catch(e){ return null; } }
-let svId=(()=>{ const o=svGet(); let id=null; try{ id=sessionStorage.getItem(TAB_KEY); }catch(e){}
-  if(!id||!o.list.some(x=>x.id===id)) id=o.list.some(x=>x.id===o.last)?o.last:o.list[0].id; return id; })();
+function lsRead(id){ try{ return JSON.parse(localStorage.getItem(svKey(id))||"null"); }catch(e){ return null; } }
+function normList(o){
+  const list=(o&&Array.isArray(o.list)?o.list:[]).filter(e=>e&&typeof e.id==="string");
+  if(!list.length) list.push({id:"main",name:"",created:"",updated:""});
+  return {list,last:list.some(e=>e.id===o?.last)?o.last:list[0].id};
+}
+function idbOpen(){
+  return new Promise((ok,ng)=>{
+    let r; try{ r=indexedDB.open(IDB_NAME,IDB_VER); }catch(e){ ng(e); return; }
+    r.onupgradeneeded=()=>{ const db=r.result; ["surveys","meta"].forEach(s=>{ if(!db.objectStoreNames.contains(s)) db.createObjectStore(s); }); };
+    r.onsuccess=()=>{ const db=r.result; db.onversionchange=()=>{ try{ db.close(); }catch(e){} }; ok(db); };
+    r.onerror=()=>ng(r.error||new Error("IndexedDB")); r.onblocked=()=>ng(new Error("blocked"));
+    setTimeout(()=>ng(new Error("timeout")),8000);
+  });
+}
+/* 1回の読み書き（トランザクション）。fn(store群) が返した要求の結果を返す。書き込みは完了まで待つ */
+function idbRun(names,mode,fn){
+  return new Promise((ok,ng)=>{
+    let tx, req; try{ tx=ST.db.transaction(names,mode); req=fn(...names.map(n=>tx.objectStore(n))); }catch(e){ ng(e); return; }
+    tx.oncomplete=()=>ok(req&&"result" in req?req.result:undefined);
+    tx.onerror=()=>ng(tx.error||new Error("IndexedDB")); tx.onabort=()=>ng(tx.error||new Error("abort"));
+  });
+}
+async function stGet(id){
+  if(ST.mode==="idb") return (await idbRun(["surveys"],"readonly",s=>s.get(id)))||null;
+  return lsRead(id);
+}
+async function stPut(id,obj){
+  if(ST.mode==="idb"){ await idbRun(["surveys"],"readwrite",s=>s.put(obj,id)); return; }
+  localStorage.setItem(svKey(id),JSON.stringify(obj));
+}
+async function stDel(id){
+  if(ST.mode==="idb"){ await idbRun(["surveys"],"readwrite",s=>s.delete(id)); return; }
+  localStorage.removeItem(svKey(id));
+}
+async function stListGet(){
+  if(ST.mode==="idb") return normList(await idbRun(["meta"],"readonly",m=>m.get("surveys")));
+  return normList(lsList());
+}
+/* 一覧を書き換える（読み直してから変えるので、別のタブの変更を消さない） */
+async function svListUpdate(fn){
+  if(ST.mode==="idb"){
+    let out;
+    await new Promise((ok,ng)=>{
+      const tx=ST.db.transaction(["meta"],"readwrite"), m=tx.objectStore("meta"), g=m.get("surveys");
+      g.onsuccess=()=>{ out=normList(g.result); fn(out); out=normList(out); m.put(out,"surveys"); };
+      tx.oncomplete=ok; tx.onerror=()=>ng(tx.error); tx.onabort=()=>ng(tx.error||new Error("abort"));
+    });
+    SVL=out;
+  } else { const o=lsList(); fn(o); SVL=normList(o); try{ localStorage.setItem(SV_KEY,JSON.stringify(SVL)); }catch(e){} }
+  peerSend({t:"list"});
+  return SVL;
+}
+/* 3.9 までの localStorage から IndexedDB へ移す（1回だけ。元のデータは残す） */
+async function stMigrate(){
+  const done=await idbRun(["meta"],"readonly",m=>m.get("migrated"));
+  if(done){ ST.mig=done; return; }
+  const old=lsList(), rows=[];
+  old.list.forEach(e=>{ const j=lsRead(e.id); if(j&&j.S) rows.push([e.id,j]); });
+  const at=nowStamp();
+  const list=normList({list:old.list.filter(e=>e.id==="main"||rows.some(([id])=>id===e.id)).map(e=>{ const j=rows.find(([id])=>id===e.id)?.[1]; return {...e,info:j?svInfoOf(j.S,j.D):""}; }),last:old.last});
+  ST.mig={at,ver:APP_VER,n:rows.length};
+  await new Promise((ok,ng)=>{
+    const tx=ST.db.transaction(["surveys","meta"],"readwrite"), sv=tx.objectStore("surveys"), m=tx.objectStore("meta");
+    rows.forEach(([id,j])=>sv.put(j,id));
+    m.put(list,"surveys"); m.put(ST.mig,"migrated");
+    tx.oncomplete=ok; tx.onerror=()=>ng(tx.error); tx.onabort=()=>ng(tx.error||new Error("abort"));
+  });
+  try{ localStorage.setItem(MIG_KEY,JSON.stringify(ST.mig)); }catch(e){}
+  if(rows.length) setTimeout(()=>note(`保存先を、より多く保存できる場所（ブラウザ内の大容量領域）に移しました（${rows.length}件の調査）。これまでのデータはそのまま残してあります。`),1200);
+}
+async function stInit(){
+  if(window.indexedDB){
+    try{ ST.db=await idbOpen(); ST.mode="idb"; await stMigrate(); }
+    catch(e){ ST.err=String(e&&e.message||e); ST.mode="ls"; ST.db=null; }
+  } else ST.mode="ls";
+  SVL=await stListGet();
+  /* 端末の空きが少なくなってもブラウザに消されにくくする（許可はブラウザが決める） */
+  try{ if(ST.mode==="idb"&&navigator.storage?.persist&&!(await navigator.storage.persisted())) navigator.storage.persist(); }catch(e){}
+  stReady=true;
+}
+function svGet(){ return SVL; }
+/* 一覧に出す概要（個体数・調査日の回数） */
+function svInfoOf(S0,D0){
+  if(!S0) return "まだ入力なし";
+  const ids=(S0.items||[]).filter(it=>it.role==="id"), dd=D0||[];
+  let L=0; if(ids.length) dd.forEach((row,i)=>{ if(ids.some(it=>hasVal(row?.[it.id]))) L=i+1; });
+  const nd=new Set([...Object.keys(S0.sessions||{}),S0.curDate].filter(Boolean)).size;
+  return (L?`${L}個体`:`${dd.length}行`)+(S0.ts?`・調査日${nd}回`:"");
+}
+/* ========= ほかのタブ・ウインドウへの知らせ（同じ調査を開いていれば揃える） ========= */
+let peerCh=null; try{ if("BroadcastChannel" in window) peerCh=new BroadcastChannel("koe-yacho-pro"); }catch(e){}
+function peerSend(m){
+  m.from=TAB_TOKEN;
+  try{ if(peerCh) peerCh.postMessage(m); else localStorage.setItem(PING_KEY,JSON.stringify({...m,ts:Date.now()})); }catch(e){}
+}
+let svId="main";
 let S=S_DEFAULT();
 let D=[]; let cur={r:0,c:0}; let logs=[];
-try{ const j=JSON.parse(localStorage.getItem(svKey(svId))||"null"); if(j){ S=Object.assign(S,j.S); D=j.D||[]; cur=j.cur||cur; logs=j.logs||[]; } }catch(e){}
 function normS(){
   S.items=S.items.map(normItem);
   S.sessions=S.sessions||{}; S.curDate=S.curDate||today();
@@ -793,17 +987,22 @@ function normS(){
 }
 normS();
 let saveWarned=0;
+function saveWarn(){ if(Date.now()-saveWarned>30000){ saveWarned=Date.now(); setTimeout(()=>note("この端末に保存できませんでした（保存できる容量を超えた可能性があります）。すぐにExcelかバックアップで保存し、「調査一覧」で使わない調査を削除してください。",true),0); } }
+/* 今の調査を保存する。IndexedDB へは呼んだ時点の内容が写される（その後の変更は次の保存で入る） */
 function save(){
-  try{ localStorage.setItem(svKey(svId),JSON.stringify({S,D,cur,logs})); }
-  catch(e){ if(Date.now()-saveWarned>30000){ saveWarned=Date.now(); setTimeout(()=>note("この端末に保存できませんでした（保存できる容量を超えた可能性があります）。すぐにExcelかバックアップで保存し、「調査一覧」で使わない調査を削除してください。",true),0); } return; }
+  if(!stReady) return;
+  const id=svId;
+  if(ST.mode==="idb"){ let p; try{ p=stPut(id,{S,D,cur,logs}); }catch(e){ saveWarn(); return; } p.then(()=>peerSend({t:"put",id}),()=>saveWarn()); }
+  else { try{ localStorage.setItem(svKey(id),JSON.stringify({S,D,cur,logs})); }catch(e){ saveWarn(); return; } peerSend({t:"put",id}); }
   svTouch();
 }
-/* 一覧の名前・更新日時を今の調査に合わせ、このタブで開いている調査を覚える */
+/* 一覧の名前・概要・更新日時を今の調査に合わせ、このタブで開いている調査を覚える（変わったときだけ書く） */
 function svTouch(){
-  const o=svGet(); let e=o.list.find(x=>x.id===svId);
-  if(!e){ e={id:svId,created:today()}; o.list.push(e); }
-  e.name=S.name||"調査"; e.updated=nowStamp(); o.last=svId; svPut(o);
   try{ sessionStorage.setItem(TAB_KEY,svId); }catch(_){}
+  const e=SVL.list.find(x=>x.id===svId), name=S.name||"調査", info=svInfoOf(S,D), up=nowStamp(), id=svId;
+  if(e&&e.name===name&&e.info===info&&e.updated===up&&SVL.last===id) return;
+  if(e){ e.name=name; e.info=info; e.updated=up; } SVL.last=id;
+  svListUpdate(o=>{ let x=o.list.find(v=>v.id===id); if(!x){ x={id,created:today()}; o.list.push(x); } x.name=name; x.info=info; x.updated=up; o.last=id; }).catch(()=>{});
 }
 
 const n=()=>S.items.length;
@@ -1300,7 +1499,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 3.9.1（2026-10-29）";
+const APP_VER="Pro 4.0（2026-10-29）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -1676,6 +1875,11 @@ $("#diag").onclick=async()=>{
     try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); st.getTracks().forEach(t=>t.stop()); lines.push("マイク：使えます → 止められているのは音声認識（Siri・音声入力）側です"); }
     catch(err){ lines.push(`マイク：使えません（${err.name}）→ マイク自体の許可が拒否されています`); }
   }
+  lines.push(await stUsage());
+  if(ST.mode==="idb"&&ST.mig) lines.push(`保存先の移行：${ST.mig.at}（${ST.mig.n}件。移行前のデータも残しています）`);
+  if(ST.mode!=="idb") lines.push(`大容量の保存領域：使えません${ST.err?"（"+ST.err+"）":""}`);
+  try{ if(navigator.storage?.persisted) lines.push(`ブラウザによる自動削除からの保護：${(await navigator.storage.persisted())?"あり":"なし（空き容量が少なくなると消される場合があります）"}`); }catch(e){}
+  lines.push(await swStatus());
   $("#diagOut").textContent=lines.join("\n"); $("#diagOut").hidden=false;
 };
 $("#ver").textContent=APP_VER;
@@ -2172,6 +2376,7 @@ function openSettings(go,then){
   $("#sRate").value=draft.rate||1.1; $("#sRateVal").textContent="×"+(+$("#sRate").value).toFixed(1);
   listOrig=listText(); $("#sList").value=listOrig; $("#sListInfo").textContent=listOrig?`現在 ${listOrig.split("\n").length}個体`:"";
   drawItems(); applyFold(); $("#dlg").showModal(); foldSums();
+  stUsage().then(t=>{ $("#ioStore").textContent=t; });
   if(go) foldGo(go);
   if(then) then();
 }
@@ -2302,27 +2507,35 @@ $("#sClear").onclick=()=>{
 };
 
 /* ========= 調査の一覧・切り替え ========= */
-/* 調査 id の中身を読み込んで今の調査にする（入力中の状態はリセット） */
-function svLoad(id){
-  const j=svRead(id);
+/* 読み込んだ中身 j を今の調査にする（入力中の状態はリセット） */
+function svApply(j){
   S=S_DEFAULT(); D=[]; cur={r:0,c:0}; logs=[];
-  if(j){ S=Object.assign(S,j.S); D=j.D||[]; cur=j.cur||cur; logs=j.logs||[]; }
+  if(j&&j.S){ S=Object.assign(S,j.S); D=j.D||[]; cur=j.cur||cur; logs=j.logs||[]; }
   normS(); if(cur.c>=n()||S.items[cur.c]?.role==="id") cur.c=firstMeas();
   pend=null; hideAlert(); sel=null; undoSnap=null; bulkSnap=null; rangeMode=false; anchor=null; halt=false;
   $("#newDateBox").hidden=true;
 }
-function svOpen(id,msg){
+async function svOpen(id,msg){
   if(listening||standby) stopRec();
   if(id!==svId) save();
-  svId=id; svLoad(id);
+  let j=null; try{ j=await stGet(id); }catch(e){ note("調査を読み込めませんでした："+(e.message||e),true); return false; }
+  svId=id; svApply(j);
   try{ sessionStorage.setItem(TAB_KEY,id); }catch(e){}
-  const o=svGet(); o.last=id; svPut(o);
+  svListUpdate(o=>{ o.last=id; }).catch(()=>{});
   const h=$("#heard"); h.className="heard"; h.textContent="マイクを押して話してください";
   render(); note(msg||`「${S.name}」を開きました`);
+  return true;
+}
+/* 新しい調査を保存して一覧に加える（開くのは呼んだ側）。失敗したら null */
+async function svCreateRaw(nS,nD){
+  const id=Date.now().toString(36)+uid().slice(0,4);
+  try{ await stPut(id,{S:nS,D:nD,cur:{r:0,c:0},logs:[]}); }
+  catch(e){ return null; }
+  await svListUpdate(o=>{ o.list.push({id,name:nS.name,created:today(),updated:nowStamp(),info:svInfoOf(nS,nD)}); });
+  return id;
 }
 /* 新しい調査。mode：copy＝今の調査の設定と個体リストを引き継ぐ（測定データ・除外は引き継がない）／preset＝ひな形／blank＝空白から */
-function svNew(mode,name){
-  const id=Date.now().toString(36)+uid().slice(0,4);
+async function svNew(mode,name){
   let nS, nD=[];
   if(mode==="copy"){
     nS=JSON.parse(JSON.stringify(S)); nS.sessions={}; nS.curDate=today(); nS.freezeRows=S.freezeRows;
@@ -2332,68 +2545,66 @@ function svNew(mode,name){
     nS=S_DEFAULT(); nS.items=[normItem({name:"項目1",type:"num",dec:0})];
   } else nS=S_DEFAULT();
   nS.name=name;
-  try{ localStorage.setItem(svKey(id),JSON.stringify({S:nS,D:nD,cur:{r:0,c:0},logs:[]})); }
-  catch(e){ svMsg("この端末に保存できませんでした（容量を超えた可能性があります）。使わない調査を削除してから作り直してください。"); return null; }
-  const o=svGet(); o.list.push({id,name,created:today(),updated:nowStamp()}); svPut(o);
-  svOpen(id,`新しい調査「${name}」を作りました`+(mode==="copy"?"（設定と個体リストを引き継ぎ、測定データは空です）":mode==="blank"?"（空白から。設定で項目を作ってください）":""));
+  const id=await svCreateRaw(nS,nD);
+  if(!id){ svMsg("この端末に保存できませんでした（容量を超えた可能性があります）。使わない調査を削除してから作り直してください。"); return null; }
+  await svOpen(id,`新しい調査「${name}」を作りました`+(mode==="copy"?"（設定と個体リストを引き継ぎ、測定データは空です）":mode==="blank"?"（空白から。設定で項目を作ってください）":""));
   return id;
 }
-function svDelete(id){
+async function svDelete(id){
   const o=svGet(), e=o.list.find(x=>x.id===id); if(!e) return;
   if(o.list.length<=1){ svMsg("調査が1つしかないため削除できません。データを消すときは「設定」の全消去を使ってください。"); return; }
   const nm=(id===svId?S.name:e.name)||"調査";
   if(!confirm(`「${nm}」を削除します。\nこの調査の設定・個体リスト・全調査日のデータが端末から消え、元に戻せません。\n必要なら先に、一覧の「保存」でバックアップを取ってください。削除しますか？`)) return;
   if(id===svId){
     const rest=o.list.filter(x=>x.id!==id).sort((a,b)=>String(b.updated).localeCompare(String(a.updated)));
-    svOpen(rest[0].id);
+    if(!(await svOpen(rest[0].id))) return;
   }
-  try{ localStorage.removeItem(svKey(id)); }catch(err){}
-  const p=svGet(); p.list=p.list.filter(x=>x.id!==id); if(p.last===id) p.last=svId; svPut(p);
+  try{ await stDel(id); }catch(err){}
+  await svListUpdate(p=>{ p.list=p.list.filter(x=>x.id!==id); if(p.last===id) p.last=svId; });
+  peerSend({t:"del",id});
   drawSurveys(); note(`「${nm}」を削除しました`);
 }
 /* 一覧の「保存」：その調査のバックアップ（.json）。開いていない調査も保存できる */
-function svBackup(id){
-  const j=id===svId?{S,D,cur}:svRead(id); if(!j||!j.S){ svMsg("この調査にはまだデータがありません。"); return; }
+async function svBackup(id){
+  let j=null; if(id===svId) j={S,D,cur}; else { try{ j=await stGet(id); }catch(e){} }
+  if(!j||!j.S){ svMsg("この調査にはまだデータがありません。"); return; }
   const nm=String(j.S.name||"調査").replace(/[\\/:*?"<>|]/g,"_");
   download(new Blob([JSON.stringify({app:"koe-yacho-v2",ver:APP_VER,saved:new Date().toISOString(),S:j.S,D:j.D||[],cur:j.cur})],{type:"application/json"}),`${nm}_バックアップ_${today()}.json`);
 }
 function svMsg(t){ $("#svOut").textContent=t; }
-function svInfo(id){
-  const j=id===svId?{S,D}:svRead(id); if(!j||!j.S) return "まだ入力なし";
-  const ids=(j.S.items||[]).filter(it=>it.role==="id"), dd=j.D||[];
-  let L=0; if(ids.length) dd.forEach((row,i)=>{ if(ids.some(it=>hasVal(row?.[it.id]))) L=i+1; });
-  const nd=new Set([...Object.keys(j.S.sessions||{}),j.S.curDate].filter(Boolean)).size;
-  return (L?`${L}個体`:`${dd.length}行`)+(j.S.ts?`・調査日${nd}回`:"");
-}
+function svInfo(e){ return e.id===svId?svInfoOf(S,D):(e.info||""); }
 function drawSurveys(){
-  save();
   const o=svGet();
   const list=[...o.list].sort((a,b)=>String(b.updated).localeCompare(String(a.updated)));
   $("#svList").innerHTML=list.map(e=>{
-    const isCur=e.id===svId, nm=(isCur?S.name:e.name)||"調査";
+    const isCur=e.id===svId, nm=(isCur?S.name:e.name)||"調査", info=svInfo(e);
     return `<div class="svrow${isCur?" cur":""}">
-      <button type="button" class="svopen" data-open="${esc(e.id)}"${isCur?' aria-current="true"':""}><b>${esc(nm)}${isCur?'<span class="svbadge">開いている</span>':""}</b><small>${esc(svInfo(e.id))}${e.updated?`・更新 ${esc(e.updated)}`:""}</small></button>
+      <button type="button" class="svopen" data-open="${esc(e.id)}"${isCur?' aria-current="true"':""}><b>${esc(nm)}${isCur?'<span class="svbadge">開いている</span>':""}</b><small>${esc(info)}${info&&e.updated?"・":""}${e.updated?`更新 ${esc(e.updated)}`:""}</small></button>
+      <button type="button" class="sva" data-sh="${esc(e.id)}" title="この調査の設定をひな形として配る（測定データは含まない）">共有</button>
       <button type="button" class="sva" data-bk="${esc(e.id)}" title="この調査のバックアップを保存">保存</button>
       <button type="button" class="sva del" data-del="${esc(e.id)}" title="この調査を削除"${o.list.length<=1?" disabled":""}>削除</button>
     </div>`;
   }).join("");
+  stUsage().then(t=>{ $("#svStore").textContent=t; });
 }
 $("#btnSurveys").onclick=()=>{
   if(listening||standby) stopRec(); clearPend();
+  save();
   svMsg(""); $("#svName").value=""; document.querySelector('input[name=svMode][value=copy]').checked=true; drawSurveys(); $("#svDlg").showModal();
 };
 $("#svClose").onclick=()=>$("#svDlg").close();
-$("#svList").addEventListener("click",e=>{
+$("#svList").addEventListener("click",async e=>{
   const b=e.target.closest("button"); if(!b) return;
-  if(b.dataset.open){ if(b.dataset.open!==svId) svOpen(b.dataset.open); $("#svDlg").close(); }
+  if(b.dataset.open){ if(b.dataset.open!==svId) await svOpen(b.dataset.open); $("#svDlg").close(); }
+  else if(b.dataset.sh) tplOpen(b.dataset.sh);
   else if(b.dataset.bk) svBackup(b.dataset.bk);
   else if(b.dataset.del) svDelete(b.dataset.del);
 });
 function svDefaultName(){ const m=document.querySelector("input[name=svMode]:checked")?.value; const base=(m==="copy"?S.name:m==="blank"?"新しい調査":"果実品質調査")||"調査"; return `${base}（${today()}）`; }
-$("#svCreate").onclick=()=>{
+$("#svCreate").onclick=async()=>{
   const name=$("#svName").value.trim()||svDefaultName();
   const mode=document.querySelector("input[name=svMode]:checked").value;
-  if(!svNew(mode,name)) return;
+  if(!(await svNew(mode,name))) return;
   $("#svDlg").close();
   /* 空白から作ったときは、そのまま設定を開いて最初の項目名を入力できるようにする */
   if(mode==="blank") openSettings("items",()=>{ const el=$("#sItems input.iname"); if(el){ el.focus(); el.select(); } });
@@ -2402,23 +2613,38 @@ $("#svFile").onchange=async e=>{
   const f=e.target.files[0]; e.target.value=""; if(!f) return;
   await importFile(f,true);
 };
+/* 使っている容量（目安）。保存先の説明に使う */
+async function stUsage(){
+  const where=ST.mode==="idb"?"保存先：この端末のブラウザ内の大容量領域":"保存先：この端末のブラウザ内（小容量の領域）";
+  try{ if(navigator.storage?.estimate){ const e=await navigator.storage.estimate(); const mb=x=>x>=1e9?(x/1e9).toFixed(1)+" GB":(x/1e6).toFixed(1)+" MB";
+    return `${where}。使用 ${mb(e.usage||0)}`+(e.quota?`（上限の目安 ${mb(e.quota)}）`:""); } }catch(e){}
+  return where;
+}
 /* 同じ調査を別のタブ・ウインドウで変えたとき：最新の内容に揃える（古い内容で上書きしないため） */
-window.addEventListener("storage",e=>{
-  if(e.storageArea!==localStorage||e.key!==svKey(svId)) return;
-  if(e.newValue===null){
+async function peerRecv(m){
+  if(!m||m.from===TAB_TOKEN||!stReady) return;
+  if(m.t==="list"){ try{ SVL=await stListGet(); }catch(e){} if($("#svDlg").open) drawSurveys(); return; }
+  if(m.id!==svId) return;
+  if(m.t==="del"){
+    try{ SVL=await stListGet(); }catch(e){}
     const rest=svGet().list.filter(x=>x.id!==svId);
-    if(rest.length){ svId=rest[0].id; svLoad(svId); try{ sessionStorage.setItem(TAB_KEY,svId); }catch(_){} render(); note(`開いていた調査は別の画面で削除されたため、「${S.name}」を開きました`,true); }
+    if(rest.length){ let j=null; try{ j=await stGet(rest[0].id); }catch(e){} svId=rest[0].id; svApply(j); try{ sessionStorage.setItem(TAB_KEY,svId); }catch(_){} render(); note(`開いていた調査は別の画面で削除されたため、「${S.name}」を開きました`,true); }
     return;
   }
-  let j; try{ j=JSON.parse(e.newValue); }catch(_){ return; }
-  if(!j||!j.S) return;
-  const keep=cur;
-  S=Object.assign(S_DEFAULT(),j.S); D=j.D||[]; logs=j.logs||[]; normS();
-  cur=(keep&&keep.c<n())?keep:(j.cur||{r:0,c:firstMeas()});
-  pend=null; hideAlert(); sel=null; undoSnap=null; bulkSnap=null;
-  if($("#dlg").open) $("#dlg").close();
-  render(); note("この調査が別のタブ・ウインドウで変更されたため、最新の内容に揃えました");
-});
+  if(m.t==="put"){
+    let j=null; try{ j=await stGet(svId); }catch(e){ return; }
+    if(!j||!j.S||m.id!==svId) return;
+    const keep=cur;
+    S=Object.assign(S_DEFAULT(),j.S); D=j.D||[]; logs=j.logs||[]; normS();
+    cur=(keep&&keep.c<n())?keep:(j.cur||{r:0,c:firstMeas()});
+    pend=null; hideAlert(); sel=null; undoSnap=null; bulkSnap=null;
+    if($("#dlg").open) $("#dlg").close();
+    if($("#sumDlg").open) sumDraw();
+    render(); note("この調査が別のタブ・ウインドウで変更されたため、最新の内容に揃えました");
+  }
+}
+if(peerCh) peerCh.onmessage=e=>peerRecv(e.data);
+else window.addEventListener("storage",e=>{ if(e.storageArea===localStorage&&e.key===PING_KEY&&e.newValue){ try{ peerRecv(JSON.parse(e.newValue)); }catch(_){} } });
 
 /* ========= バックアップと読み込み ========= */
 $("#ioBackup").onclick=()=>{
@@ -2437,6 +2663,7 @@ async function importFile(f,asNew){
     const name=f.name.toLowerCase(); let job=null;
     if(name.endsWith(".json")){
       const j=JSON.parse(await f.text());
+      if(j&&j.app===TPL_APP){ if($("#dlg").open) $("#dlg").close(); if($("#svDlg").open) $("#svDlg").close(); tplReceive(j,"ファイル"); return; }
       if(!j||j.app!=="koe-yacho-v2"||!j.S||!Array.isArray(j.D)){ ioMsg("声で野帳 Pro（2）のバックアップファイルではありません。"); return; }
       job=()=>importJson(j);
     }
@@ -2449,7 +2676,7 @@ async function importFile(f,asNew){
     } else { ioMsg("読み込めるのは .json（バックアップ）、.csv、.xlsx です。"); return; }
     if(asNew){
       const nm=f.name.replace(/\.[^.]+$/,"").replace(/_バックアップ_\d{4}-\d{2}-\d{2}$/,"").replace(/_\d{4}-\d{2}-\d{2}$/,"")||"読み込んだ調査";
-      if(!svNew("copy",nm)) return;
+      if(!(await svNew("copy",nm))) return;
       importNoAsk=true;
     }
     try{ job(); } finally{ importNoAsk=false; }
@@ -2525,14 +2752,423 @@ function importTable(rows){
   note(`読み込みました：${ds.length}調査日、${ND.length}個体`+(added.length?`。新しい項目「${added.join("・")}」を追加しました（設定で種類を確認してください）`:""));
 }
 
+/* ========= ひな形の共有（3.9.2〜） =========
+   ひな形＝調査の設定（項目・言い換え・順番・読み上げなど）と、必要なら個体リスト（事前入力の列）。測定データ・調査日・除外は含めない。
+   配り方：ファイル（.json）／リンク（pro.html#tpl=…）／QRコード（リンクを載せる）。リンクの # 以降はサーバーへ送られない。
+   受け取ると、確かめたうえで新しい調査を作る（今の調査は変えない） */
+const TPL_APP="koe-yacho-v2-template";
+const TPL_KEYS=["name","items","aliases","ts","outFmt","dir","groups","mode","standbyMode","readback","rbMode","rate","fastCommit","serial","autoCommit","alertSound","undoGap","freezeCols","freezeRows"];
+const TPL_HOME="https://tochigitfruits.github.io/koe-yacho/pro.html";
+const QR_SRC="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
+const QR_SRI="sha384-8FWZA6BGMXhsfO+BLtrJK0We6gg5o1JyO8xQm6peWDEUs17ACA5ziE/NIAkl9z2k";
+const QR_MAX=2900;      /* QRコードに載せられる長さ（バイト）の目安 */
+let tplCur=null, tplSeq=0;
+/* 調査（S・D）からひな形を作る */
+function tplBuild(j,withList){
+  const src=j.S||{}, o={}; TPL_KEYS.forEach(k=>{ if(src[k]!==undefined) o[k]=src[k]; });
+  const t={app:TPL_APP,v:1,ver:APP_VER,name:src.name||"調査",S:o};
+  if(withList){
+    const ids=(src.items||[]).filter(it=>it.role==="id").map(it=>it.id);
+    if(ids.length){ const rows=(j.D||[]).map(r=>{ const x={}; ids.forEach(id=>{ if(hasVal(r?.[id])) x[id]=r[id]; }); return x; });
+      while(rows.length&&!Object.keys(rows[rows.length-1]).length) rows.pop(); if(rows.length) t.list=rows; }
+  }
+  return t;
+}
+function tplCounts(S0,list){
+  const its=S0.items||[], ni=its.filter(it=>it.role==="id").length;
+  return {items:its.length,id:ni,meas:its.length-ni,list:(list||[]).length,alias:(S0.aliases||[]).length};
+}
+/* 文字列 ⇔ リンク用の短い文字列（圧縮して base64url。圧縮できないブラウザはそのまま） */
+const b64u=u8=>{ let s=""; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000)); return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); };
+const unb64u=t=>{ const s=atob(t.replace(/-/g,"+").replace(/_/g,"/")); const u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; };
+async function tplEncode(obj){
+  const raw=new TextEncoder().encode(JSON.stringify(obj));
+  if(typeof CompressionStream==="function"){
+    try{ const buf=await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer(); return "z."+b64u(new Uint8Array(buf)); }catch(e){}
+  }
+  return "j."+b64u(raw);
+}
+async function tplDecode(code){
+  code=decodeURIComponent(String(code||"")).trim();
+  const kind=code.slice(0,2), body=code.slice(2);
+  let bytes; try{ bytes=unb64u(body); }catch(e){ throw new Error("リンクが途中で切れているか、壊れています"); }
+  let txt;
+  if(kind==="z."){
+    if(typeof DecompressionStream!=="function") throw new Error("このブラウザではリンクのひな形を開けません。ファイルで受け取ってください");
+    try{ txt=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text(); }catch(e){ throw new Error("リンクが途中で切れているか、壊れています"); }
+  } else if(kind==="j.") txt=new TextDecoder().decode(bytes);
+  else throw new Error("ひな形のリンクではありません");
+  return JSON.parse(txt);
+}
+const tplUrl=code=>(location.protocol==="https:"?location.origin+location.pathname:TPL_HOME)+"#tpl="+code;
+/* 受け取ったひな形を、安全な形に直す（知らない項目は捨て、長さ・数をおさえる） */
+function tplSanitize(o){
+  if(!o||o.app!==TPL_APP||!o.S||!Array.isArray(o.S.items)) throw new Error("声で野帳 Pro のひな形ではありません");
+  const src=o.S, nS=S_DEFAULT();
+  TPL_KEYS.forEach(k=>{ if(src[k]!==undefined&&k!=="items"&&k!=="aliases") nS[k]=src[k]; });
+  const seen=new Set();
+  nS.items=src.items.slice(0,200).map(x=>{ x=x&&typeof x==="object"?x:{};
+    let id=typeof x.id==="string"&&/^[\w-]{1,40}$/.test(x.id)?x.id:uid(); if(seen.has(id)) id=uid(); seen.add(id);
+    return normItem({id,name:String(x.name??"項目").slice(0,60),type:["num","text","choice"].includes(x.type)?x.type:"num",
+      dec:Math.max(0,Math.min(4,Math.floor(+x.dec||0))),step:Math.max(0,+x.step||0),role:x.role==="id"?"id":"meas",
+      options:Array.isArray(x.options)?x.options.slice(0,200).map(v=>String(v).slice(0,60)):[],allow:String(x.allow??"").slice(0,200),cmp:x.cmp&&typeof x.cmp==="object"?x.cmp:{}}); });
+  if(!nS.items.length) nS.items=[normItem({name:"項目1",type:"num",dec:0})];
+  nS.aliases=Array.isArray(src.aliases)?src.aliases.slice(0,300).map(a=>({from:String(a?.from??"").slice(0,200),to:String(a?.to??"").slice(0,100),item:String(a?.item??"").slice(0,40)})):[];
+  nS.name=String(src.name||o.name||"ひな形").slice(0,80);
+  nS.groups=String(nS.groups??"").slice(0,100); nS.rate=Math.max(0.6,Math.min(2,+nS.rate||1.1));
+  if(!["row","col","group"].includes(nS.dir)) nS.dir="row"; if(!["cont","ptt"].includes(nS.mode)) nS.mode="cont";
+  ["ts","readback","fastCommit","serial","autoCommit","alertSound"].forEach(k=>{ if(nS[k]!==undefined) nS[k]=!!nS[k]; });
+  nS.sessions={}; nS.curDate=today();
+  const ids=nS.items.filter(it=>it.role==="id").map(it=>it.id);
+  const nD=(Array.isArray(o.list)?o.list.slice(0,5000):[]).map(r=>{ const x={}; ids.forEach(id=>{ const v=r?.[id];
+    if(typeof v==="number"&&Number.isFinite(v)) x[id]=v; else if(typeof v==="string"&&v.trim()) x[id]=v.slice(0,100); }); return x; });
+  while(nD.length&&!Object.keys(nD[nD.length-1]).length) nD.pop();
+  return {nS,nD};
+}
+/* ひな形から新しい調査を作る（確かめてから） */
+async function tplReceive(o,via){
+  let r; try{ r=tplSanitize(o); }catch(e){ note(e.message,true); return false; }
+  const c=tplCounts(r.nS,r.nD);
+  if(!confirm(`${via}のひな形「${r.nS.name}」から新しい調査を作りますか？\n項目 ${c.items}（音声 ${c.meas}・事前 ${c.id}）、個体リスト ${c.list}個体、言い換え ${c.alias}件\n（今の調査はそのまま残ります。ひな形に測定データは入っていません）`)) { note("ひな形からの作成をやめました"); return false; }
+  const id=await svCreateRaw(r.nS,r.nD);
+  if(!id){ note("この端末に保存できませんでした（容量を超えた可能性があります）。使わない調査を削除してから、もう一度開いてください。",true); return false; }
+  await svOpen(id,`ひな形「${r.nS.name}」から新しい調査を作りました（項目 ${c.items}・個体 ${c.list}）。設定で確かめてから使ってください`);
+  return true;
+}
+/* QRコードの部品は、使うときだけ読み込む（中身の確認つき）。通信できないときはファイル・リンクで配る */
+let qrLoading=null;
+function loadQR(){
+  if(typeof qrcode==="function") return Promise.resolve();
+  if(qrLoading) return qrLoading;
+  qrLoading=new Promise((ok,ng)=>{ const sc=document.createElement("script"); sc.src=QR_SRC; sc.integrity=QR_SRI; sc.crossOrigin="anonymous";
+    sc.onload=()=>typeof qrcode==="function"?ok():ng(new Error("load")); sc.onerror=()=>{ qrLoading=null; sc.remove(); ng(new Error("load")); }; document.head.appendChild(sc); });
+  return qrLoading;
+}
+function drawQR(text){
+  const qr=qrcode(0,"L"); qr.addData(text,"Byte"); qr.make();
+  const n=qr.getModuleCount(), q=4, px=Math.max(3,Math.floor(560/(n+q*2))), size=(n+q*2)*px;
+  const cv=$("#tplCanvas"); cv.width=size; cv.height=size; const g=cv.getContext("2d");
+  g.fillStyle="#fff"; g.fillRect(0,0,size,size); g.fillStyle="#000";
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(qr.isDark(r,c)) g.fillRect((c+q)*px,(r+q)*px,px,px);
+  return n;
+}
+async function tplRefresh(){
+  if(!tplCur) return; const seq=++tplSeq;
+  const t=tplBuild(tplCur.j,$("#tplList").checked), c=tplCounts(t.S,t.list);
+  $("#tplWhat").textContent=`「${t.name}」の設定：項目 ${c.items}（音声 ${c.meas}・事前 ${c.id}）、言い換え ${c.alias}件`+($("#tplList").checked?`、個体リスト ${c.list}個体`:"")+`。測定データ・調査日・除外の記録は含みません。`;
+  $("#tplList").disabled=!c.id;
+  const code=await tplEncode(t); if(seq!==tplSeq) return;
+  tplCur.t=t; tplCur.url=tplUrl(code);
+  const cv=$("#tplCanvas"), info=$("#tplQrInfo"), len=new TextEncoder().encode(tplCur.url).length;
+  if(len>QR_MAX){ cv.hidden=true; $("#tplPng").disabled=true;
+    info.textContent=$("#tplList").checked&&c.list?"個体リストを含めるとQRコードに入りきりません。個体リストを外すか、ファイルで配ってください。":"設定が多く、QRコードに入りきりません。ファイルで配ってください。"; return; }
+  info.textContent="QRコードを作っています…";
+  try{ await loadQR(); }catch(e){ if(seq!==tplSeq) return; cv.hidden=true; $("#tplPng").disabled=true; info.textContent="QRコードを作る部品を読み込めませんでした（通信を確認してください）。ファイルかリンクで配れます。"; return; }
+  if(seq!==tplSeq) return;
+  try{ const n=drawQR(tplCur.url); cv.hidden=false; $("#tplPng").disabled=false;
+    info.textContent=`カメラで読み取ってください（${n}×${n}）`+(len>1200?"。細かいので、読み取りにくいときは画面を明るく大きくするか、ファイルで配ってください":""); }
+  catch(e){ cv.hidden=true; $("#tplPng").disabled=true; info.textContent="QRコードを作れませんでした。ファイルかリンクで配ってください。"; }
+}
+async function tplOpen(id){
+  let j=null; if(id===svId) j={S,D}; else { try{ j=await stGet(id); }catch(e){} } if(!j||!j.S){ svMsg("この調査にはまだ設定がありません。"); return; }
+  tplCur={id,j}; $("#tplOut").textContent=""; $("#tplList").checked=true;
+  $("#tplShare").hidden=!navigator.share;
+  $("#tplCanvas").hidden=true; $("#tplDlg").showModal(); tplRefresh();
+}
+const tplFileName=ext=>`${String(tplCur?.t?.name||"調査").replace(/[\\/:*?"<>|]/g,"_")}_ひな形.${ext}`;
+$("#tplList").addEventListener("change",tplRefresh);
+$("#tplFile").onclick=()=>{ if(!tplCur?.t) return; download(new Blob([JSON.stringify(tplCur.t)],{type:"application/json"}),tplFileName("json")); $("#tplOut").textContent="ファイルを保存しました。受け取る人は「調査一覧」の「ファイルから作る」で読み込みます。"; };
+$("#tplLink").onclick=async()=>{ if(!tplCur?.url) return; const ok=await writeClip(tplCur.url); $("#tplOut").textContent=ok?"リンクをコピーしました。メールやチャットに貼って送れます。":"コピーできませんでした。ファイルで配ってください。"; };
+$("#tplShare").onclick=async()=>{ if(!tplCur?.url||!navigator.share) return; try{ await navigator.share({title:`声で野帳 Pro ひな形「${tplCur.t.name}」`,url:tplCur.url}); }catch(e){} };
+$("#tplPng").onclick=()=>{ const cv=$("#tplCanvas"); if(cv.hidden) return; cv.toBlob(b=>{ if(b) download(b,tplFileName("png")); }); };
+$("#tplClose").onclick=()=>$("#tplDlg").close();
+/* リンク（…pro.html#tpl=…）で開いたとき：利用コードの確認が済んでから受け取る */
+let tplPending=null;
+{ const h=location.hash.replace(/^#/,""); const parts=h.split("&"); const t=parts.find(x=>x.startsWith("tpl="));
+  if(t){ tplPending=t.slice(4); const rest=parts.filter(x=>!x.startsWith("tpl=")).join("&");
+    try{ history.replaceState(null,"",location.pathname+location.search+(rest?"#"+rest:"")); }catch(e){} } }
+async function tplAfterGate(){
+  if(!tplPending) return; const c=tplPending; tplPending=null;
+  try{ await tplReceive(await tplDecode(c),"リンク"); }catch(e){ note("リンクのひな形を開けませんでした："+(e.message||e),true); }
+}
+/* ========= 集計・経時グラフ（4.0〜） =========
+   別の画面で、事前入力の列（処理区など）ごとに数値の項目の平均と n を出す。SD・SE は選んだときだけ。
+   経時調査では、項目を1つ選んで、まとまりごとの平均の推移を折れ線で描く（誤差棒は なし／SE／SD）。画像（PNG）で保存できる。
+   設定は調査ごとに S.sumCfg = {by:[事前入力の列のid], sd, se, item, err} に覚える */
+const SUM_COLORS={light:["#2a78d6","#eb6834","#1baf7a","#eda100","#e87ba4","#008300","#6250d6","#e34948"],
+  dark:["#3987e5","#d95926","#199e70","#c98500","#d55181","#008300","#9085e9","#e66767"]};
+const SUM_MAX_LINES=8;     /* 色を見分けられる線の数。超えた分は描かない（表には全部出す） */
+const SUM_MARKS=["circle","square","triangle","diamond","circle-o","square-o","triangle-o","diamond-o"];
+function sumCfgNorm(){
+  const c=S.sumCfg&&typeof S.sumCfg==="object"?S.sumCfg:{};
+  const idIds=idItems().map(it=>it.id), numIds=meas().map(i=>S.items[i]).filter(it=>it.type==="num").map(it=>it.id);
+  let by=Array.isArray(c.by)?c.by.filter(id=>idIds.includes(id)):null;
+  if(by===null) by=sumDefaultBy();
+  S.sumCfg={by,sd:!!c.sd,se:!!c.se,item:numIds.includes(c.item)?c.item:(numIds[0]||""),err:["none","se","sd"].includes(c.err)?c.err:"none"};
+  return S.sumCfg;
+}
+/* まとめる列の初期値：名前が処理・区・品種などの事前入力の列。なければ、値の種類が少ない列（2種類以上、個体数の半分未満） */
+function sumDefaultBy(){
+  const ids=idItems(); if(!ids.length) return [];
+  const named=ids.find(it=>/処理|区|品種|系統|区分|treat|group/i.test(it.name)&&!/番号|No/i.test(it.name));
+  if(named) return [named.id];
+  const L=listLen()||D.length; let best=null, bk=Infinity;
+  ids.forEach(it=>{ const k=new Set(D.slice(0,L).map(r=>r?.[it.id]).filter(hasVal).map(String)).size; if(k>=2&&k<L/2&&k<bk){ best=it; bk=k; } });
+  return best?[best.id]:[];
+}
+/* 個体をまとまりに分ける（並びは個体リストに出てきた順） */
+function sumGroups(by){
+  const R=lastRowAll(), map=new Map();
+  const cols=by.map(id=>S.items.find(it=>it.id===id)).filter(Boolean);
+  for(let r=0;r<=R;r++){
+    const parts=cols.map(it=>fmt(D[r]?.[it.id],it));
+    const key=cols.length?parts.join("\u0001"):"*";
+    const label=cols.length?(parts.some(Boolean)?parts.map(p=>p||"（空）").join(" ／ "):"（未入力）"):"全体";
+    if(!map.has(key)) map.set(key,{key,label,parts,rows:[]});
+    map.get(key).rows.push(r);
+  }
+  return [...map.values()];
+}
+/* 数値の並びから n・平均・SD（n−1で割る）・SE */
+function stats(vals){
+  const n=vals.length; if(!n) return {n:0};
+  const m=vals.reduce((a,b)=>a+b,0)/n;
+  const sd=n>1?Math.sqrt(vals.reduce((a,b)=>a+(b-m)*(b-m),0)/(n-1)):null;
+  return {n,mean:m,sd,se:sd===null?null:sd/Math.sqrt(n)};
+}
+function sumVals(rows,it,date){ const out=[]; rows.forEach(r=>{ if(exState(r,date)) return; const v=valAt(r,it,date); if(typeof v==="number"&&Number.isFinite(v)) out.push(v); }); return out; }
+const sumDec=it=>Math.min(4,(it.dec||0)+1);
+const sumF=(x,it)=>x===null||x===undefined||!Number.isFinite(x)?"":x.toFixed(sumDec(it));
+let sumDate="";
+/* 表のデータ：まとまりごと×数値の項目 */
+function sumTable(){
+  const cfg=sumCfgNorm(), items=meas().map(i=>S.items[i]).filter(it=>it.type==="num");
+  const groups=sumGroups(cfg.by);
+  const rows=groups.map(g=>({g,cells:items.map(it=>stats(sumVals(g.rows,it,sumDate)))})).filter(x=>x.cells.some(c=>c.n));
+  let all=null;
+  if(cfg.by.length&&rows.length>1){ const rs=rows.flatMap(x=>x.g.rows); all={g:{label:"全体",parts:[],rows:rs},cells:items.map(it=>stats(sumVals(rs,it,sumDate))),all:true}; }
+  return {cfg,items,rows,all};
+}
+function sumDraw(){
+  const cfg=sumCfgNorm(), ds=allDates();
+  if(!ds.includes(sumDate)) sumDate=S.curDate;
+  $("#sumDateBox").hidden=!S.ts;
+  $("#sumDate").innerHTML=ds.map(d=>`<option value="${d}"${d===sumDate?" selected":""}>${d}</option>`).join("");
+  const ids=idItems();
+  $("#sumBy").innerHTML=ids.length?ids.map(it=>`<label class="chk"><input type="checkbox" value="${esc(it.id)}"${cfg.by.includes(it.id)?" checked":""}><span>${esc(it.name)}</span></label>`).join(""):`<span class="ver">事前入力の列がないため、全体でまとめます</span>`;
+  $("#sumSD").checked=cfg.sd; $("#sumSE").checked=cfg.se;
+  const T=sumTable(), cols=cfg.by.map(id=>S.items.find(it=>it.id===id)).filter(Boolean);
+  $("#sumSub").textContent=`${S.name}${S.ts?`・${sumDate}`:""}`;
+  if(!T.items.length){ $("#sumTbl").innerHTML=""; $("#sumNote").textContent="数値の「音声で入力」の項目がないため、集計できません。"; }
+  else if(!T.rows.length){ $("#sumTbl").innerHTML=""; $("#sumNote").textContent=S.ts?`${sumDate} には、まだ数値が入っていません。`:"まだ数値が入っていません。"; }
+  else{
+    const head=`<thead><tr><th class="sg">${esc(cols.length?cols.map(it=>it.name).join(" ／ "):"まとまり")}</th>${T.items.map(it=>`<th>${esc(it.name)}</th>`).join("")}</tr></thead>`;
+    const line=(x,cls)=>`<tr${cls?` class="${cls}"`:""}><th class="sg" scope="row">${esc(x.g.label)}</th>${x.cells.map((c,k)=>{ const it=T.items[k];
+      if(!c.n) return `<td class="sv"><span class="sn">n=0</span></td>`;
+      const sub=[cfg.sd?`SD ${sumF(c.sd,it)||"–"}`:"",cfg.se?`SE ${sumF(c.se,it)||"–"}`:"",`n=${c.n}`].filter(Boolean).join("・");
+      return `<td class="sv"><b>${sumF(c.mean,it)}</b><span class="sn">${sub}</span></td>`; }).join("")}</tr>`;
+    $("#sumTbl").innerHTML=head+"<tbody>"+T.rows.map(x=>line(x)).join("")+(T.all?line(T.all,"sall"):"")+"</tbody>";
+    const ex=(()=>{ let k=0; for(let r=0;r<=lastRowAll();r++) if(exState(r,sumDate)) k++; return k; })();
+    $("#sumNote").textContent=`平均は測った桁より1桁多く表示します。SDは標本標準偏差（n−1で割る）、SE＝SD÷√n。`+(ex?`除外した${ex}個体は入れていません。`:"")+`文字・選択肢の列は集計しません。`;
+  }
+  $("#sumCopy").disabled=$("#sumCsv").disabled=!T.rows.length;
+  /* 経時グラフ */
+  const nums=meas().map(i=>S.items[i]).filter(it=>it.type==="num");
+  $("#grBox").hidden=!S.ts||!nums.length;
+  if(!$("#grBox").hidden){
+    $("#grItem").innerHTML=nums.map(it=>`<option value="${esc(it.id)}"${it.id===cfg.item?" selected":""}>${esc(it.name)}</option>`).join("");
+    $("#grErr").value=cfg.err; grDraw();
+  }
+}
+/* 集計の表を行に（コピー・CSV用）。1行＝まとまり×項目 */
+function sumAoa(){
+  const T=sumTable(), cols=T.cfg.by.map(id=>S.items.find(it=>it.id===id)).filter(Boolean);
+  const head=[].concat(S.ts?["調査日"]:[],cols.length?cols.map(it=>it.name):["まとまり"],["項目","n","平均"],T.cfg.sd?["SD"]:[],T.cfg.se?["SE"]:[]);
+  const out=[head];
+  [...T.rows,...(T.all?[T.all]:[])].forEach(x=>T.items.forEach((it,k)=>{ const c=x.cells[k]; if(!c.n) return;
+    out.push([].concat(S.ts?[sumDate]:[],cols.length?(x.all?cols.map((_,i)=>i?"":"全体"):x.g.parts):[x.g.label],[it.name,c.n,sumF(c.mean,it)],T.cfg.sd?[sumF(c.sd,it)]:[],T.cfg.se?[sumF(c.se,it)]:[])); }));
+  return out;
+}
+/* ---- 経時グラフ ---- */
+function grSeries(){
+  const cfg=S.sumCfg, it=S.items.find(x=>x.id===cfg.item); if(!it) return null;
+  const ds=allDates(), groups=sumGroups(cfg.by);
+  const ser=groups.map(g=>({label:g.label,pts:ds.map(d=>{ const s=stats(sumVals(g.rows,it,d)); return s.n?{d,...s}:null; })})).filter(s=>s.pts.some(Boolean));
+  return {it,ds,ser,more:Math.max(0,ser.length-SUM_MAX_LINES),ser8:ser.slice(0,SUM_MAX_LINES)};
+}
+const dayOf=d=>Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))/864e5;
+function niceTicks(lo,hi,k){
+  if(!(hi>lo)){ const p=Math.abs(lo)||1; lo-=p*0.1; hi+=p*0.1; }
+  const raw=(hi-lo)/k, mag=Math.pow(10,Math.floor(Math.log10(raw))), f=raw/mag;
+  const st=(f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*mag, a=Math.floor(lo/st)*st, out=[];
+  for(let v=a;v<=hi+st*0.5;v+=st) out.push(+v.toFixed(10));
+  return {ticks:out,step:st};
+}
+/* 描く。W・H は CSSピクセル、theme は light/dark、forPng は保存用（題名を入れる） */
+function grPaint(cv,W,H,theme,forPng){
+  const G=grSeries(); const ctx=cv.getContext("2d"); const dpr=forPng?2:(window.devicePixelRatio||1);
+  /* 大きさは、凡例の行数が分かってから決める（画面では H を描く部分の高さとして使う） */
+  const size=h=>{ cv.width=Math.round(W*dpr); cv.height=Math.round(h*dpr); if(!forPng){ cv.style.width=W+"px"; cv.style.height=h+"px"; } ctx.setTransform(dpr,0,0,dpr,0,0); };
+  const cs=getComputedStyle(document.documentElement);
+  const C=theme==="dark"?{bg:cs.getPropertyValue("--surface").trim()||"#18221d",ink:"#e6eee9",mut:"#9db0a6",grid:"#2d3b34"}:{bg:"#ffffff",ink:"#15231d",mut:"#5b6b63",grid:"#e3e8e5"};
+  const pal=SUM_COLORS[theme==="dark"?"dark":"light"];
+  const font=(px,w)=>`${w||400} ${px}px "BIZ UDPGothic","Hiragino Sans","Noto Sans JP",sans-serif`;
+  if(!G||!G.ser8.length){ size(forPng?H:120); ctx.fillStyle=C.bg; ctx.fillRect(0,0,W,forPng?H:120); ctx.fillStyle=C.mut; ctx.font=font(14); ctx.fillText("この項目には、まだ数値が入っていません。",16,40); return {G,box:null}; }
+  const err=S.sumCfg.err, it=G.it;
+  /* 凡例の行（先に測って、下に必要な高さを決める） */
+  ctx.font=font(13);
+  const legItems=G.ser8.map((s,i)=>({s,i,w:ctx.measureText(s.label).width+34}));
+  const legRows=[]; let row=[], rw=0; const LW=W-32;
+  legItems.forEach(x=>{ if(row.length&&rw+x.w>LW){ legRows.push(row); row=[]; rw=0; } row.push(x); rw+=x.w+10; }); if(row.length) legRows.push(row);
+  const topPad=forPng?78:14, legH=legRows.length*22+(G.more?20:0);
+  const L={l:56,r:16,t:topPad,b:30+legH};
+  if(!forPng) H=H+L.t+L.b;
+  size(H); ctx.fillStyle=C.bg; ctx.fillRect(0,0,W,H);
+  const pw=W-L.l-L.r, ph=H-L.t-L.b;
+  /* 縦軸の範囲（誤差棒も入れる） */
+  let lo=Infinity, hi=-Infinity;
+  G.ser8.forEach(s=>s.pts.forEach(p=>{ if(!p) return; const e=err==="sd"?p.sd:err==="se"?p.se:0; const ee=Number.isFinite(e)?e:0; lo=Math.min(lo,p.mean-ee); hi=Math.max(hi,p.mean+ee); }));
+  const {ticks}=niceTicks(lo,hi,5); const y0=ticks[0], y1=ticks[ticks.length-1];
+  const ds=G.ds, x0=dayOf(ds[0]), x1=dayOf(ds[ds.length-1]);
+  const IN=14;  /* 端の点が軸に重ならないよう、内側に寄せる */
+  const X=d=>ds.length===1?L.l+pw/2:L.l+IN+(dayOf(d)-x0)/(x1-x0)*(pw-IN*2);
+  const Y=v=>L.t+(1-(v-y0)/(y1-y0||1))*ph;
+  if(forPng){ ctx.fillStyle=C.ink; ctx.font=font(18,700); ctx.textBaseline="alphabetic"; ctx.fillText(`${S.name}　${it.name}`,16,30); ctx.fillStyle=C.mut; ctx.font=font(13); ctx.fillText(`まとまりごとの平均${err==="se"?" ± SE":err==="sd"?" ± SD":""}（${S.sumCfg.by.length?S.sumCfg.by.map(id=>S.items.find(x=>x.id===id)?.name).filter(Boolean).join("・")+"ごと":"全体"}）　声で野帳 Pro・${today()}`,16,52); }
+  /* 目盛りと格子（控えめに） */
+  ctx.font=font(12); ctx.textAlign="right"; ctx.textBaseline="middle";
+  const tdec=Math.max(0,Math.min(4,(String(ticks[1]-ticks[0]).split(".")[1]||"").length));
+  ticks.forEach(v=>{ const y=Y(v); ctx.strokeStyle=C.grid; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(L.l,Math.round(y)+0.5); ctx.lineTo(L.l+pw,Math.round(y)+0.5); ctx.stroke(); ctx.fillStyle=C.mut; ctx.fillText(v.toFixed(tdec),L.l-8,y); });
+  /* 横軸：調査日（日数の間隔どおり）。重なる日付は間引く */
+  ctx.textAlign="center"; ctx.textBaseline="top";
+  const yrs=new Set(ds.map(d=>d.slice(0,4))).size>1, lab=d=>yrs?d.slice(2).replace(/-/g,"/"):d.slice(5).replace("-","/");
+  let lastX=-1e9; const lw=ctx.measureText(lab(ds[0])).width+10;
+  ds.forEach((d,i)=>{ const x=X(d); ctx.strokeStyle=C.grid; ctx.beginPath(); ctx.moveTo(Math.round(x)+0.5,L.t+ph); ctx.lineTo(Math.round(x)+0.5,L.t+ph+5); ctx.stroke();
+    if(x-lastX>=lw||i===ds.length-1&&x-lastX>=lw*0.6){ ctx.fillStyle=C.mut; ctx.fillText(lab(d),x,L.t+ph+8); lastX=x; } });
+  ctx.strokeStyle=C.mut; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(L.l,L.t+ph+0.5); ctx.lineTo(L.l+pw,L.t+ph+0.5); ctx.stroke();
+  ctx.save(); ctx.translate(14,L.t+ph/2); ctx.rotate(-Math.PI/2); ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillStyle=C.mut; ctx.font=font(12); ctx.fillText(it.name,0,0); ctx.restore();
+  /* 線・誤差棒・点（点は面の色で縁取って重なりを見分ける） */
+  const mark=(x,y,k,col)=>{ const s=SUM_MARKS[k%SUM_MARKS.length], o=s.endsWith("-o"), sh=s.replace("-o",""), r=4.5;
+    ctx.beginPath();
+    if(sh==="circle") ctx.arc(x,y,r,0,Math.PI*2);
+    else if(sh==="square") ctx.rect(x-r*0.9,y-r*0.9,r*1.8,r*1.8);
+    else if(sh==="triangle"){ ctx.moveTo(x,y-r*1.15); ctx.lineTo(x+r*1.05,y+r*0.75); ctx.lineTo(x-r*1.05,y+r*0.75); ctx.closePath(); }
+    else { ctx.moveTo(x,y-r*1.2); ctx.lineTo(x+r*1.05,y); ctx.lineTo(x,y+r*1.2); ctx.lineTo(x-r*1.05,y); ctx.closePath(); }
+    ctx.lineWidth=2; ctx.strokeStyle=C.bg; ctx.stroke(); ctx.fillStyle=o?C.bg:col; ctx.fill(); if(o){ ctx.lineWidth=2; ctx.strokeStyle=col; ctx.stroke(); } };
+  const hits=[];
+  G.ser8.forEach((s,k)=>{
+    const col=pal[k];
+    ctx.strokeStyle=col; ctx.lineWidth=2; ctx.lineJoin="round"; ctx.beginPath(); let on=false;
+    s.pts.forEach(p=>{ if(!p){ on=false; return; } const x=X(p.d), y=Y(p.mean); if(on) ctx.lineTo(x,y); else ctx.moveTo(x,y); on=true; }); ctx.stroke();
+    if(err!=="none") s.pts.forEach(p=>{ if(!p) return; const e=err==="sd"?p.sd:p.se; if(!Number.isFinite(e)) return; const x=X(p.d);
+      ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(x,Y(p.mean-e)); ctx.lineTo(x,Y(p.mean+e)); ctx.moveTo(x-4,Y(p.mean-e)); ctx.lineTo(x+4,Y(p.mean-e)); ctx.moveTo(x-4,Y(p.mean+e)); ctx.lineTo(x+4,Y(p.mean+e)); ctx.stroke(); });
+    s.pts.forEach(p=>{ if(!p) return; const x=X(p.d), y=Y(p.mean); mark(x,y,k,col); hits.push({x,y,d:p.d}); });
+  });
+  /* 凡例（いつも出す。色と形の両方で見分ける） */
+  ctx.textAlign="left"; ctx.textBaseline="middle"; ctx.font=font(13);
+  let ly=L.t+ph+38;
+  legRows.forEach(rw2=>{ let lx=16; rw2.forEach(x=>{ const col=pal[x.i]; ctx.strokeStyle=col; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx+20,ly); ctx.stroke(); mark(lx+10,ly,x.i,col); ctx.fillStyle=C.ink; ctx.fillText(x.s.label,lx+26,ly); lx+=x.w+10; }); ly+=22; });
+  if(G.more){ ctx.fillStyle=C.mut; ctx.font=font(12); ctx.fillText(`まとまりが多いため、最初の${SUM_MAX_LINES}つだけを描いています（ほか${G.more}）。まとめる列を減らしてください。`,16,ly); }
+  return {G,box:{L,pw,ph,X,hits}};
+}
+let grLast=null;
+function grTheme(){ const t=document.documentElement.dataset.theme; return t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches)?"dark":"light"; }
+function grDraw(){
+  const cv=$("#grCanvas"); const W=Math.max(260,($("#grWrap").clientWidth||600)-2);
+  grLast=grPaint(cv,W,Math.round(Math.max(200,Math.min(360,W*0.5))),grTheme(),false);
+  $("#grTip").hidden=true;
+  const G=grLast.G; $("#grPng").disabled=!G||!G.ser8.length;
+}
+/* 調べたい日付に指を置くと、その日の各まとまりの値を出す */
+function grTip(e){
+  if(!grLast||!grLast.box) return;
+  const r=$("#grCanvas").getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top, b=grLast.box;
+  if(x<b.L.l-20||x>b.L.l+b.pw+20||y<b.L.t-10||y>b.L.t+b.ph+10){ $("#grTip").hidden=true; return; }
+  const G=grLast.G; let best=null, bd=Infinity;
+  G.ds.forEach(d=>{ const dd=Math.abs(b.X(d)-x); if(dd<bd){ bd=dd; best=d; } });
+  if(!best||bd>40){ $("#grTip").hidden=true; return; }
+  const it=G.it, err=S.sumCfg.err, pal=SUM_COLORS[grTheme()];
+  const rows=G.ser8.map((s,k)=>{ const p=s.pts[G.ds.indexOf(best)]; if(!p) return ""; const e=err==="sd"?p.sd:err==="se"?p.se:null;
+    return `<div class="tr"><i style="background:${pal[k]}"></i><span>${esc(s.label)}</span><b>${sumF(p.mean,it)}${Number.isFinite(e)?` ±${sumF(e,it)}`:""}</b><small>n=${p.n}</small></div>`; }).join("");
+  if(!rows){ $("#grTip").hidden=true; return; }
+  const tip=$("#grTip"); tip.innerHTML=`<div class="th">${best}　${esc(it.name)}</div>${rows}`; tip.hidden=false;
+  const wrap=$("#grWrap").getBoundingClientRect(), tw=tip.offsetWidth;
+  let left=b.X(best)+(r.left-wrap.left)+12; if(left+tw>wrap.width) left=b.X(best)+(r.left-wrap.left)-tw-12; if(left<0) left=4;
+  tip.style.left=left+"px"; tip.style.top=Math.max(4,b.L.t)+"px";
+}
+function sumOpen(){
+  if(listening||standby) stopRec(); clearPend();
+  save(); sumDate=S.curDate; sumDraw(); $("#sumDlg").showModal();
+  requestAnimationFrame(()=>{ if(!$("#grBox").hidden) grDraw(); });
+}
+$("#btnSum").onclick=sumOpen;
+$("#sumClose").onclick=()=>$("#sumDlg").close();
+$("#sumDate").onchange=e=>{ sumDate=e.target.value; sumDraw(); };
+$("#sumBy").addEventListener("change",()=>{ S.sumCfg.by=[...$("#sumBy").querySelectorAll("input:checked")].map(x=>x.value); save(); sumDraw(); });
+$("#sumSD").onchange=e=>{ S.sumCfg.sd=e.target.checked; save(); sumDraw(); };
+$("#sumSE").onchange=e=>{ S.sumCfg.se=e.target.checked; save(); sumDraw(); };
+$("#grItem").onchange=e=>{ S.sumCfg.item=e.target.value; save(); grDraw(); };
+$("#grErr").onchange=e=>{ S.sumCfg.err=e.target.value; save(); grDraw(); };
+$("#sumCopy").onclick=async()=>{ const t=sumAoa().map(r=>r.join("\t")).join("\n"); const ok=await writeClip(t); $("#sumOut").textContent=ok?"集計の表をコピーしました（Excelに貼れます）":"コピーできませんでした。CSVで保存してください"; };
+$("#sumCsv").onclick=()=>{ download(new Blob([toCsv(sumAoa())],{type:"text/csv"}),`${safeName()}_集計${S.ts?"_"+sumDate:""}.csv`); $("#sumOut").textContent="CSVで保存しました"; };
+$("#grPng").onclick=()=>{
+  const cv=document.createElement("canvas"); const g=grPaint(cv,1000,620,"light",true); if(!g.G||!g.G.ser8.length) return;
+  cv.toBlob(b=>{ if(b) download(b,`${safeName()}_${g.G.it.name.replace(/[\\/:*?"<>|]/g,"_")}_経時グラフ.png`); });
+  $("#sumOut").textContent="グラフを画像（PNG）で保存しました";
+};
+$("#grCanvas").addEventListener("pointermove",grTip);
+$("#grCanvas").addEventListener("pointerdown",grTip);
+$("#grCanvas").addEventListener("pointerleave",e=>{ if(e.pointerType==="mouse") $("#grTip").hidden=true; });
+let grRz=null; window.addEventListener("resize",()=>{ clearTimeout(grRz); grRz=setTimeout(()=>{ if($("#sumDlg").open&&!$("#grBox").hidden) grDraw(); },150); });
+try{ matchMedia("(prefers-color-scheme:dark)").addEventListener("change",()=>{ if($("#sumDlg").open&&!$("#grBox").hidden) grDraw(); }); }catch(e){}
+/* ========= オフライン対応（4.0〜） =========
+   sw-pro.js（pro.html と同じ場所）が、アプリ本体とExcel・QRの部品、アイコン、文字をこの端末に保存する。
+   本体は保存した版をすぐに開き、裏で新しい版を確かめる。新しい版が届いたら知らせ、押すと切り替える */
+const SW_URL="sw-pro.js";
+let swState="off", swOffered="";
+function swInit(){
+  if(!("serviceWorker" in navigator)||!/^https?:$/.test(location.protocol)){ swState=location.protocol==="file:"?"file":"none"; return; }
+  navigator.serviceWorker.addEventListener("message",e=>{ const m=e.data||{}; if((m.t==="update"||m.t==="ver")&&m.ver) swOffer(m.ver); });
+  navigator.serviceWorker.register(SW_URL,{scope:"./pro.html"}).then(reg=>{
+    swState="on";
+    const ask=()=>{ try{ (reg.active||navigator.serviceWorker.controller)?.postMessage({t:"ver?"}); }catch(e){} };
+    setTimeout(ask,6000);
+    document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ try{ reg.update(); }catch(e){} setTimeout(ask,4000); } });
+  }).catch(e=>{ swState="err:"+(e&&e.message||e); });
+}
+/* 保存している本体が今より新しい版なら、切り替えを勧める（入力中は邪魔をしない位置に出す） */
+function swOffer(ver){
+  if(!ver||ver===APP_VER||ver===swOffered) return;
+  swOffered=ver;
+  const b=$("#updBar"); b.hidden=false;
+  $("#updMsg").textContent=`新しい版 ${ver} が届きました。切り替えると、画面を開き直します（入力したデータはそのまま残ります）。`;
+}
+$("#updGo").onclick=()=>{ if(listening||standby) stopRec(); save(); setTimeout(()=>location.reload(),150); };
+$("#updLater").onclick=()=>{ $("#updBar").hidden=true; };
+/* 診断・説明に使う：オフラインで開ける状態か */
+async function swStatus(){
+  if(swState==="file") return "オフライン用の保存：ファイルとして開いているため使いません（この画面はそのままオフラインで使えます）";
+  if(!("serviceWorker" in navigator)||swState==="none") return "オフライン用の保存：このブラウザでは使えません";
+  try{
+    const ks=(await caches.keys()).filter(k=>k.startsWith("koe-pro-"));
+    if(!ks.length) return "オフライン用の保存：準備中（一度、電波のある所で開き直すと完了します）";
+    const c=await caches.open(ks[0]); const hit=await c.match(new URL("pro.html",location.href).href);
+    const v=hit?((await hit.text()).match(/const APP_VER="([^"]+)"/)||[])[1]:"";
+    const xl=!!(await c.match("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"));
+    return `オフライン用の保存：済み（${v||"本体なし"}${xl?"・Excel部品あり":"・Excel部品はまだ"}）`;
+  }catch(e){ return "オフライン用の保存：確認できませんでした"; }
+}
 /* ========= 使い方の説明（3.9〜。機能を足したら、ここにも説明を足す） =========
    g：分類、t：見出し、k：探すときの言葉（言い換え）、go：設定で開く見出し（data-fold）、b：本文 */
 const HELP_GROUPS=[["start","はじめに"],["input","入力する"],["table","表と順番"],["ts","経時調査"],["save","保存と出力"],["trouble","困ったとき"]];
 const HELP=[
 {g:"start",id:"flow",t:"使い始めの流れ",k:"始め方 最初 手順 基本 使い方 準備 はじめかた てじゅん",go:"items",b:
-"<ol><li>画面上の「調査一覧」で調査を作ります（今の調査の設定を使う／果実品質調査のひな形／空白から）。</li><li>「設定」の「調査項目」で、表の列を決めます。樹番号・処理区など先に分かっている列は「事前入力」、調査で測る列は「音声で入力」にします。</li><li>事前入力の列があれば、「個体リスト」で個体を並べます。</li><li>マイクを押して値を話します。入るたびに次のセルへ進みます。</li><li>終わったら「Excelで保存」か、設定の「バックアップを保存」で保存します。</li></ol>"},
+"<ol><li>画面上の「調査一覧」で調査を作ります（今の調査の設定を使う／果実品質調査のひな形／空白から）。</li><li>「設定」の「調査項目」で、表の列を決めます。樹番号・処理区など先に分かっている列は「事前入力」、調査で測る列は「音声で入力」にします。</li><li>事前入力の列があれば、「個体リスト」で個体を並べます。</li><li>マイクを押して値を話します。入るたびに次のセルへ進みます。</li><li>終わったら「Excelで保存」か、設定の「バックアップを保存」で保存します。「集計・グラフ」で、処理区ごとの平均や推移をその場で確かめられます。</li></ol>"},
 {g:"start",id:"surveys",t:"調査一覧（複数の調査）",k:"新しい調査 作る 切り替え 空白から ひな形 削除 ファイルから作る 別の調査 複数 ちょうさいちらん くうはく ひながた さくじょ",b:
-"<p>調査ごとに、設定・個体リスト・全調査日のデータを分けてこの端末に保存します。「調査一覧」で調査を押すと切り替わり、入力中の調査は自動で保存されます。</p><ul><li><b>今の調査の設定を使う</b>：項目・個体リスト・読み上げなどを引き継ぎ、測定データは空で始めます。</li><li><b>果実品質調査のひな形</b>：標準の項目（樹番号・横径・果実重など）から始めます。</li><li><b>空白から</b>：標準の項目を使わず、項目を自分で作ります。作るとすぐ設定が開き、最初の項目名を打ち直せます。</li><li><b>ファイルから作る</b>：バックアップ（.json）、このアプリのExcel・CSVから新しい調査を作ります。今の調査はそのまま残ります。</li></ul><p>一覧の「保存」でその調査のバックアップを、「削除」で調査ごと消せます（削除は元に戻せません）。別々の調査なら、タブ・ウインドウごとに並行して使えます。</p>"},
+"<p>調査ごとに、設定・個体リスト・全調査日のデータを分けてこの端末に保存します。「調査一覧」で調査を押すと切り替わり、入力中の調査は自動で保存されます。</p><ul><li><b>今の調査の設定を使う</b>：項目・個体リスト・読み上げなどを引き継ぎ、測定データは空で始めます。</li><li><b>果実品質調査のひな形</b>：標準の項目（樹番号・横径・果実重など）から始めます。</li><li><b>空白から</b>：標準の項目を使わず、項目を自分で作ります。作るとすぐ設定が開き、最初の項目名を打ち直せます。</li><li><b>ファイルから作る</b>：ひな形・バックアップ（.json）、このアプリのExcel・CSVから新しい調査を作ります。今の調査はそのまま残ります。</li></ul><p>一覧の「共有」でその調査の設定をひな形として配れ、「保存」でその調査のバックアップを、「削除」で調査ごと消せます（削除は元に戻せません）。別々の調査なら、タブ・ウインドウごとに並行して使えます。</p>"},
+{g:"start",id:"template",t:"ひな形を配る・受け取る（ファイル・リンク・QR）",k:"ひな形 テンプレート 共有 配る 受け取る QR QRコード リンク 送る 同じ設定 ほかの人 研究会 ひながた きょうゆう くばる",b:
+"<p>「調査一覧」で調査の「共有」を押すと、その調査の設定（項目・言い換え・入力の順番・読み上げなど）をひな形として配れます。「個体リストも含める」を外すと、項目と設定だけを配ります。<b>測定データ・調査日・除外の記録は含みません。</b></p><ul><li><b>QRコード</b>：受け取る人がカメラで読み取ると、このアプリが開きます。</li><li><b>リンクをコピー</b>：メールやチャットに貼って送ります。</li><li><b>ファイルで保存</b>：受け取る人は「調査一覧」の「ファイルから作る」で読み込みます。</li></ul><p>受け取ると、中身（項目・個体・言い換えの数）を確かめてから新しい調査として作ります。受け取る人の今の調査は変わりません。ひな形の中身はリンクの「#」より後ろに入っていて、サーバーには送られません。</p><p>個体リストが大きいとQRコードに入りきらないことがあります。そのときは個体リストを外すか、ファイルで配ります。iPhoneでホーム画面から使っている場合、QRコードやリンクはSafariで開くため、ホーム画面のアプリとは別の場所に作られます。その場合はファイルで受け取ってください。QRコードを作るときだけ、部品をインターネットから読み込みます。</p>"},
+{g:"start",id:"offline",t:"オフラインで使う・新しい版への切り替え",k:"オフライン 電波 圏外 通信 ネット インターネット 更新 新しい版 アップデート 切り替え おふらいん でんぱ けんがい こうしん",b:
+"<p>一度、電波のある所でこのアプリを開くと、アプリ本体・Excel出力の部品・QRコードの部品・アイコンを端末に保存します。その後は、電波のない畑でもアプリを開けます。</p><ul><li>電波がなくても使えるもの：手入力、ノギス・はかりからの入力、表の操作、集計・グラフ、Excel・CSV・バックアップの保存、利用コードの確認。</li><li>声での入力は、端末の音声認識が通信を使うため、電波がないと使えないことがあります（iPhoneは端末内で認識できる場合があります）。</li></ul><p>アプリは保存しておいた版をすぐに開き、電波があれば裏で新しい版を確かめます。新しい版が届くと画面の上に知らせが出るので、「今すぐ切り替える」を押します（入力したデータはそのまま残ります）。準備の状況は、画面下の「マイク診断」で確かめられます。</p>"},
 {g:"start",id:"settings",t:"設定画面の使い方",k:"設定 見出し 折りたたみ 開く 閉じる すべて開く せってい",b:
 "<p>設定は見出しごとに折りたたんであります。見出しを押すと開いたり閉じたりでき、その状態は次に設定を開いたときも残ります。閉じた見出しの右には、今の設定が短く出ます。上の「すべて開く」「すべて閉じる」でまとめて切り替えられます。変更は「保存」を押すまで反映されません。</p>"},
 {g:"start",id:"code",t:"利用コード",k:"ライセンス コード 期限 期限切れ 更新 変更 KOE りようこーど きげん",b:
@@ -2577,12 +3213,14 @@ const HELP=[
 
 {g:"save",id:"export",t:"Excel・CSVで保存",k:"Excel エクセル CSV 保存 出力 野帳型 縦持ち R 統計 ダウンロード えくせる ほぞん しゅつりょく やちょうがた たてもち",go:"ts",b:
 "<p>「Excelで保存」は、その日の表を保存します。経時調査では、全調査日をまとめたシートも入ります。</p><ul><li><b>野帳型</b>：1行＝1個体、調査日ごとに項目を横に並べる</li><li><b>縦持ち（R用）</b>：1行＝1個体×1調査日。Rなどの統計に向く</li></ul><p>どちらを出すかは、設定の「調査の種類」の「全調査日の出力形式」で選びます。</p>"},
+{g:"save",id:"summary",t:"集計とグラフ（平均・n・SD・SE、経時グラフ）",k:"集計 平均 n 標準偏差 SD 標準誤差 SE グラフ 経時グラフ 折れ線 誤差棒 処理区ごと 画像 PNG しゅうけい へいきん ひょうじゅんへんさ ひょうじゅんごさ ぐらふ",b:
+"<p>表の下の「集計・グラフ」を押すと、別の画面で集計します。野帳の表は変わりません。</p><ul><li><b>まとめる列</b>：事前入力の列（処理区・品種など）を選ぶと、その値ごとに平均を出します。何も選ばなければ全体の平均です。2つ以上選ぶと組み合わせごとになります。</li><li><b>出す値</b>：ふだんは平均と n（値の数）。SD（標準偏差、n−1で割る）・SE（標準誤差）は、印を付けたときだけ出します。</li><li>平均は測った桁より1桁多く出します。除外した個体と、空のセルは入れません。文字・選択肢の列は集計しません。</li><li>「表をコピー」でExcelに貼れ、「表をCSVで保存」でファイルにできます。</li></ul><p><b>経時グラフ</b>（経時調査のとき）：項目を1つ選ぶと、まとまりごとの平均の推移を折れ線で描きます。横軸は調査日の間隔どおりです。誤差棒は なし・SE・SD から選べます。点のあたりに触れると、その日の値が出ます。「グラフを画像で保存」で、報告書に貼れる白地の画像（PNG）にします。線は8本まで描きます（それより多いときは、まとめる列を減らしてください）。</p><p>選んだまとめる列や誤差棒は、調査ごとに覚えます。</p>"},
 {g:"save",id:"backup",t:"バックアップと読み込み（機種変更）",k:"バックアップ json 読み込み 復元 機種変更 別の端末 移行 引き継ぎ ばっくあっぷ よみこみ きしゅへんこう いこう",go:"io",b:
 "<p>「バックアップを保存」は、設定・個体リスト・全調査日・除外の記録をまるごと1つのファイル（.json）に保存します。別の端末で「ファイルを読み込む」と、そのまま続きから使えます。このアプリで保存したExcel（縦持ちシート）やCSVも読み込めます。</p><p>設定からの読み込みは、今開いている調査を置き換えます。今の調査を残したいときは、「調査一覧」の「ファイルから作る」を使います。</p>"},
 {g:"save",id:"clear",t:"全消去と調査の削除",k:"全消去 消去 削除 リセット 初期化 ぜんしょうきょ さくじょ しょきか",go:"io",b:
 "<p>設定の「この調査の測定データを全消去する」は、すべての調査日の測定データと除外の記録を消します（項目と個体リストは残ります）。調査そのものを消すときは、「調査一覧」の「削除」を使います。どちらも元に戻せないので、先にバックアップを取ってください。</p>"},
-{g:"save",id:"privacy",t:"データの保存場所",k:"保存場所 端末 プライバシー 送信 容量 消える ブラウザ ほぞんばしょ たんまつ そうしん ようりょう",b:
-"<p>入力したデータは、お使いの端末のブラウザの中にだけ保存します。開発者が集めることはありません。話した音声は、文字にするためにApple・Google・Microsoftの音声認識サービスへ送られます。</p><p>ブラウザの閲覧データを削除すると、保存したデータも消えます。調査の後は、Excelかバックアップで保存してください。保存できる容量を超えたときは、警告が出ます。</p>"},
+{g:"save",id:"privacy",t:"データの保存場所",k:"保存場所 端末 プライバシー 送信 容量 消える ブラウザ IndexedDB 移行 大容量 ほぞんばしょ たんまつ そうしん ようりょう",b:
+"<p>入力したデータは、お使いの端末のブラウザの中（大容量の保存領域。4.0から）にだけ保存します。開発者が集めることはありません。話した音声は、文字にするためにApple・Google・Microsoftの音声認識サービスへ送られます。</p><p>ブラウザの閲覧データを削除すると、保存したデータも消えます。調査の後は、Excelかバックアップで保存してください。保存できる容量を超えたときは、警告が出ます。使っている容量は「調査一覧」の下に出ます。</p><p>3.9までの版で入力したデータは、4.0を初めて開いたときに自動で移します。移す前のデータも消さずに残してあります（オフライン版など、前の版はそのデータを使います）。4.0で入力した内容は、前の版には入りません。</p>"},
 
 {g:"trouble",id:"mic",t:"マイクが使えない・聞き取らない",k:"マイク 使えない 許可 聞き取らない 反応しない 診断 https iPhone Android まいく つかえない きょか しんだん",b:
 "<ol><li>画面下の「マイク診断」を押します。マイク自体が止められているのか、音声認識の側が止められているのかが分かります。</li><li>iPhoneはSafari、AndroidはChrome、PCはChromeかEdgeで開きます。</li><li>マイクの使用を、ブラウザと端末の設定で許可します。iPhoneでは、音声入力（Siri・音声入力）が止められていると使えません。</li><li>電波が弱いと聞き取れないことがあります。そのときは手入力欄を使います。</li></ol>"},
@@ -2594,7 +3232,7 @@ const HELP=[
 "<p>ブラウザのメニューから「ホーム画面に追加」すると、アプリのように開けます。Androidで追加したアプリはタブを複数開けないので、複数の調査は「調査一覧」で切り替えます。同じ調査を2か所で開くと、あとから変えた方の内容に揃えます。</p>"}
 ];
 const HELP_GO={ts:"調査の種類",items:"調査項目",alias:"言い換え",list:"個体リスト",dir:"入力の進む順番",listen:"聞き取り方",standby:"待機のしかた",other:"読み上げ・音・その他",freeze:"表の表示",io:"データの保存・読み込み・全消去"};
-const HELP_EX=["取り消し","ノギス","言い換え","経時","Excel","除外","読み上げ"];
+const HELP_EX=["取り消し","ノギス","言い換え","ひな形","集計","オフライン","経時","Excel","除外"];
 /* 探す言葉を正規化（全角半角・ひらがなカタカナ・大文字小文字の違いを無視） */
 const helpNorm=s=>normJ(s);
 const helpText=h=>{ const d=document.createElement("div"); d.innerHTML=h.b; return d.textContent; };
@@ -2652,7 +3290,6 @@ $("#helpList").addEventListener("click",e=>{
 });
 
 if(!SR) note("このブラウザは音声認識に対応していません。AndroidはChrome、iPhoneはSafariで開いてください。");
-render();
 /* ========= 利用コード（共通） ========= */
 const LIC_PUB="BOudjzCP+kKh6CRo+2Yw+Mykv1uIt2ldgk/MJ5qxg5h6CSIhuvlVN7AZpuX34RgGsuDDqberT1hGfTlg0hsD2x4=";
 /* 種類：1 3か月／2 1年／3 期間指定（期限はコードに記録した日付）／9 開発者（無期限）。期限の判定はどの種類も、コードに記録した日付で行う */
@@ -2702,7 +3339,7 @@ function gateShow(msg,isErr,mode){
   try{ if(listening) stopRec(); }catch(e){}
   try{ if(typeof voskStop==="function"&&vk&&vk.on) voskStop(); }catch(e){}
 }
-function gateHide(){ $("#gate").hidden=true; }
+function gateHide(){ $("#gate").hidden=true; if(tplPending) setTimeout(tplAfterGate,0); }
 function licShowInfo(){
   const el=$("#licInfo"); if(!el) return;
   el.textContent=licNow?("利用コード："+licText(licNow)):"利用コード：未入力";
@@ -2751,7 +3388,7 @@ $("#gateBk").onclick=()=>$("#ioBackup").click();
 $("#licChange").onclick=()=>{ gateShow("新しい利用コードを貼り付けてください。今のコードはそのまま使えます。"); $("#gateClose").hidden=!(licNow&&licState(licNow,licToday())==="ok"&&(licGet()||{}).agree===TERMS_VER); };
 $("#gateClose").onclick=()=>gateHide();
 /* リンク（…pro.html#code=KOE-…）で開いたときは、コードを欄に入れて同意を待つ */
-(async()=>{
+async function licStart(){
   const m=location.hash.match(/code=([^&]+)/);
   if(m){
     history.replaceState(null,"",location.pathname+location.search);
@@ -2765,8 +3402,21 @@ $("#gateClose").onclick=()=>gateHide();
   }
   await licCheck();
   $("#gateClose").hidden=true;
-})();
+}
 setInterval(()=>{ if($("#gate").hidden) licCheck(); },10*60*1000);
+/* ========= 起動（4.0〜） =========
+   保存先を開き（初回は 3.9 までのデータを移し）、このタブで開いていた調査を読み込んでから表示する */
+async function boot(){
+  try{ await stInit(); }catch(e){ ST.mode="ls"; ST.err=String(e&&e.message||e); SVL=normList(lsList()); stReady=true; }
+  const o=svGet(); let id=null; try{ id=sessionStorage.getItem(TAB_KEY); }catch(e){}
+  if(!id||!o.list.some(x=>x.id===id)) id=o.list.some(x=>x.id===o.last)?o.last:o.list[0].id;
+  let j=null; try{ j=await stGet(id); }catch(e){ note("保存したデータを読み込めませんでした："+(e.message||e),true); }
+  svId=id; svApply(j); try{ sessionStorage.setItem(TAB_KEY,id); }catch(e){}
+  render();
+  swInit();
+  await licStart();
+}
+boot();
 </script>
 </body>
 </html>
