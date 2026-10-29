@@ -55,6 +55,17 @@ header{display:flex;align-items:center;gap:12px;justify-content:space-between}
 header h1{margin:0;font-size:1.15rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 header small{display:block;color:var(--muted);font-size:.8rem;font-weight:400}
 .ghost{background:transparent;border:1.5px solid var(--line);border-radius:10px;padding:8px 14px;flex:none}
+.hbtns{display:flex;gap:8px;flex:none}
+/* 調査の一覧 */
+.svlist{display:grid;gap:8px}
+.svrow{display:flex;gap:6px;align-items:stretch}
+.svopen{flex:1;min-width:0;text-align:left;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);padding:10px 12px;display:grid;gap:2px}
+.svopen b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.svopen small{color:var(--muted);font-size:.75rem;font-family:var(--f-num)}
+.svrow.cur .svopen{border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.svbadge{display:inline-block;font-size:.7rem;font-weight:700;color:var(--accent-ink);background:var(--accent);border-radius:999px;padding:0 8px;margin-left:6px;vertical-align:middle}
+.svrow .sva{flex:none;min-width:48px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);font-size:.8rem;font-weight:700;padding:0 8px}
+.svrow .sva.del{color:var(--rec)}
 
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:12px}
 .status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
@@ -209,6 +220,25 @@ td.txt{text-align:left;font-family:var(--f-ui)}
 .danger{border:1.5px solid var(--rec);color:var(--rec);background:transparent;border-radius:10px;padding:10px}
 .help{font-size:.82rem;color:var(--muted);margin:0}
 .help code{font-family:var(--f-num);background:var(--bg);padding:0 .3em;border-radius:4px}
+/* 設定の折りたたみ（3.8.1） */
+#setForm{gap:10px}
+.sheethead{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.foldbar{display:flex;gap:6px}
+.foldbar button{padding:6px 10px;font-size:.8rem}
+details.fold{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+details.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:48px;padding:8px 12px;font-weight:700;font-size:.95rem;-webkit-user-select:none;user-select:none;touch-action:manipulation;border-radius:12px}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:"";flex:none;width:8px;height:8px;margin:0 4px 0 2px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s}
+details.fold[open]>summary::before{transform:rotate(45deg)}
+details.fold[open]>summary{border-bottom:1px solid var(--line);border-radius:12px 12px 0 0}
+@media (hover:hover){details.fold>summary:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}}
+.ftitle{flex:0 1 auto;min-width:0}
+.fsum{flex:1 1 0;min-width:3em;text-align:right;font-weight:400;font-size:.78rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fbody{padding:12px}
+.fhelp{display:grid;gap:10px}
+details.fold legend{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+details.fold.flash>summary{animation:flash 1.2s ease-out}
+@media (prefers-reduced-motion:reduce){details.fold>summary::before{transition:none}}
 @media (max-width:420px){.mic,.rbbtn{width:84px;height:84px}.sbbtn{min-width:84px}.where .cell{font-size:1.3rem}}
 .terms{font-size:.78rem;color:var(--muted)}
 .terms summary{cursor:pointer;padding-block:4px}
@@ -278,7 +308,10 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
 <div class="wrap">
   <header>
     <h1 id="title">調査<small id="subtitle"></small></h1>
-    <button class="ghost" id="btnSettings" type="button">設定</button>
+    <div class="hbtns">
+      <button class="ghost" id="btnSurveys" type="button">調査一覧</button>
+      <button class="ghost" id="btnSettings" type="button">設定</button>
+    </div>
   </header>
 
   <section class="panel" aria-live="polite">
@@ -381,6 +414,33 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
   </details>
 </div>
 
+<dialog id="svDlg">
+  <div class="sheet">
+    <h2>調査の一覧</h2>
+    <p class="help">調査ごとに、設定・個体リスト・全調査日のデータを分けてこの端末に保存します。押すとその調査に切り替わります（入力中の調査は自動で保存されます）。調査名は「設定」の調査名で変えられます。</p>
+    <div class="svlist" id="svList"></div>
+    <fieldset>
+      <legend>新しい調査を作る</legend>
+      <div class="field">
+        <label for="svName"><b>調査名</b></label>
+        <input type="text" id="svName" placeholder="例 幸水 果実肥大調査">
+      </div>
+      <div class="seg">
+        <label><input type="radio" name="svMode" value="copy" checked><span>今の調査の設定を使う<small>項目・個体リスト・読み上げなどを引き継ぐ（測定データは空）</small></span></label>
+        <label><input type="radio" name="svMode" value="preset"><span>果実品質調査のひな形<small>標準の項目から始める</small></span></label>
+        <label><input type="radio" name="svMode" value="blank"><span>空白から<small>標準の項目を使わず、項目を自分で作る（作ると設定が開きます）</small></span></label>
+      </div>
+      <div class="addrow">
+        <button type="button" class="add" id="svCreate">＋ 作って開く</button>
+        <label class="add filebtn" for="svFile">ファイルから作る<small class="ver" style="display:block">バックアップ・Excel・CSV</small><input type="file" id="svFile" accept=".json,.csv,.xlsx,.xls,.txt" hidden></label>
+      </div>
+      <span class="ver" id="svOut"></span>
+    </fieldset>
+    <p class="help">同じ調査を2つのタブ・ウインドウで同時に開くと、あとから変えた方の内容に揃えます。別々の調査なら、タブ・ウインドウごとに並行して使えます。</p>
+    <div class="actions"><button type="button" id="svClose">閉じる</button></div>
+  </div>
+</dialog>
+
 <dialog id="pasteDlg">
   <div class="sheet">
     <h2>数値をまとめて貼り付け</h2>
@@ -397,12 +457,17 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
 
 <dialog id="dlg">
   <form class="sheet" id="setForm" method="dialog">
-    <h2>調査の設定</h2>
+    <div class="sheethead">
+      <h2>調査の設定</h2>
+      <div class="foldbar"><button type="button" class="ghost" id="fOpenAll">すべて開く</button><button type="button" class="ghost" id="fCloseAll">すべて閉じる</button></div>
+    </div>
     <div class="field">
       <label for="sName"><b>調査名</b>（ファイル名に使います）</label>
       <input type="text" id="sName" placeholder="例 にっこり果実肥大調査">
     </div>
-    <fieldset>
+    <p class="help">見出しを押すと開いたり閉じたりできます。開いた・閉じた状態は、次に設定を開いたときも残ります。</p>
+    <details class="fold" data-fold="ts"><summary><span class="ftitle">調査の種類</span><span class="fsum" data-sum="ts"></span></summary>
+    <fieldset class="fbody">
       <legend>調査の種類</legend>
       <div class="seg">
         <label><input type="radio" name="ts" value="0"><span>1回の調査<small>調査日を分けずに記録</small></span></label>
@@ -415,17 +480,21 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
           <option value="long">縦持ち（1行＝1個体×1調査日、R・統計向け）</option>
           <option value="both">両方</option>
         </select>
-        <p class="help">前回比のアラートは、下の各項目（数値・音声で入力）の「前回比」で設定します。例：肥大調査なら、横径・縦径・果実重の「減った」を「注意」か「禁止」にします。「許容±」は測定誤差の幅で、この幅以内の差は「同じ」とみなします。</p>
+        <p class="help">前回比のアラートは、「調査項目」の各項目（数値・音声で入力）の「前回比」で設定します。例：肥大調査なら、横径・縦径・果実重の「減った」を「注意」か「禁止」にします。「許容±」は測定誤差の幅で、この幅以内の差は「同じ」とみなします。</p>
       </div>
     </fieldset>
-    <fieldset>
+    </details>
+    <details class="fold" data-fold="items"><summary><span class="ftitle">調査項目（左の列から順）</span><span class="fsum" data-sum="items"></span></summary>
+    <fieldset class="fbody">
       <legend>調査項目（左の列から順）</legend>
       <p class="help">左端の <b>⠿</b> をつかんで上下に動かすと、順番を変えられます。<b>＋上</b>・<b>＋下</b> で、その項目のすぐ上・下に新しい項目を入れます。</p>
       <div class="items" id="sItems"></div>
       <div class="addrow"><button type="button" class="add" id="sAdd">＋ 項目を最後に追加</button><button type="button" class="add" id="sPreset">果実品質調査のひな形</button></div>
       <p class="help">「事前入力」の列（樹番号・処理区など）は、下の個体リストで先に入れておきます。音声では「音声で入力」の列だけを順に入力します。項目の順番を変えたり項目を足したりしても、これまでに入力した値はそのまま残ります。</p>
     </fieldset>
-    <fieldset id="sListBox">
+    </details>
+    <details class="fold" data-fold="list" id="sListBox"><summary><span class="ftitle">個体リスト（事前入力の列）</span><span class="fsum" data-sum="list"></span></summary>
+    <fieldset class="fbody">
       <legend>個体リスト（事前入力の列）</legend>
       <p class="help">組み合わせで作るか、Excelから事前入力の列を並べてコピーし、貼り付けます（1行が1個体、列の順は <b id="sListHead"></b>）。</p>
       <div class="gens" id="sGen"></div>
@@ -433,7 +502,9 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
       <textarea id="sList" rows="6" aria-label="個体リスト" spellcheck="false"></textarea>
       <span class="ver" id="sListInfo"></span>
     </fieldset>
-    <fieldset>
+    </details>
+    <details class="fold" data-fold="dir"><summary><span class="ftitle">入力の進む順番</span><span class="fsum" data-sum="dir"></span></summary>
+    <fieldset class="fbody">
       <legend>入力の進む順番</legend>
       <div class="seg">
         <label><input type="radio" name="dir" value="row"><span>行単位<small>1個体の全項目 → 次の個体</small></span></label>
@@ -446,22 +517,28 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
         <span class="ver" id="sGroupPrev"></span>
       </div>
     </fieldset>
-    <fieldset>
+    </details>
+    <details class="fold" data-fold="listen"><summary><span class="ftitle">聞き取り方</span><span class="fsum" data-sum="listen"></span></summary>
+    <fieldset class="fbody">
       <legend>聞き取り方</legend>
       <div class="seg">
         <label><input type="radio" name="mode" value="cont"><span>連続認識<small>停止するまで聞き続ける</small></span></label>
         <label><input type="radio" name="mode" value="ptt"><span>1回ずつ<small>押すたびに1回聞く</small></span></label>
       </div>
     </fieldset>
-    <fieldset>
+    </details>
+    <details class="fold" data-fold="standby"><summary><span class="ftitle">待機のしかた</span><span class="fsum" data-sum="standby"></span></summary>
+    <fieldset class="fbody">
       <legend>待機のしかた</legend>
       <div class="seg">
         <label><input type="radio" name="sbm" value="voice"><span>声で再開できる<small>聞き取りは続け、「再開」「停止」以外は無視する</small></span></label>
         <label><input type="radio" name="sbm" value="stop"><span>完全に止める<small>マイクを切る。再開はボタンで</small></span></label>
       </div>
     </fieldset>
-    <fieldset>
-      <legend>その他</legend>
+    </details>
+    <details class="fold" data-fold="other"><summary><span class="ftitle">読み上げ・音・その他</span><span class="fsum" data-sum="other"></span></summary>
+    <fieldset class="fbody">
+      <legend>読み上げ・音・その他</legend>
       <label class="toggle" for="sRead"><span>声で入力した値を読み上げる<small class="ver" style="display:block">マイクで話した値の読み上げ。手入力の読み上げは、入力画面の「復唱」ボタンで切り替えます</small></span><input type="checkbox" id="sRead"></label>
       <p class="help">ノギスやはかりから手入力欄に入った値は、入力画面のマイクの横にある「復唱」（話す人のマーク）を押すと、オフにするまで読み上げます。上の設定とは別に働きます。</p>
       <label class="toggle" for="sRbMode"><span>読み上げの内容<small class="ver" style="display:block">全部：値と次の個体をすべて読む／短く：値と、変わった番号だけを読む（3件以上まとめて言ったときは件数と最後の値）／区切りだけ：ふだんは「ピッ」と鳴らし、次の個体に移るとき・アラートのときだけ話す（復唱オンの手入力は値も読む）。復唱の読み上げにも同じ内容を使います</small></span><select id="sRbMode"><option value="full">全部</option><option value="short">短く</option><option value="beep">区切りだけ</option></select></label>
@@ -474,26 +551,36 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
       <label class="toggle" for="sSerial"><span>左端に通し番号（No.）を付ける</span><input type="checkbox" id="sSerial"></label>
       <label class="toggle" for="sUndoGap"><span>声の「取り消し」を続けるときの間隔<small class="ver" style="display:block">読み上げの声を拾って取り消しが進みすぎるのを防ぎます。この間隔より早い2回目は無視します（ボタンには効きません）</small></span><select id="sUndoGap"><option value="0">なし</option><option value="1.5">1.5秒</option><option value="3">3秒</option><option value="5">5秒</option></select></label>
     </fieldset>
-    <fieldset>
+    </details>
+    <details class="fold" data-fold="freeze"><summary><span class="ftitle">表の表示（ウインドウ枠の固定）</span><span class="fsum" data-sum="freeze"></span></summary>
+    <fieldset class="fbody">
       <legend>表の表示（ウインドウ枠の固定）</legend>
       <label class="toggle" for="sFzCols"><span>左から固定する列数<small class="ver" style="display:block">No.の列も1列と数えます。0で固定しません</small></span><input type="number" id="sFzCols" min="0" max="30" step="1" inputmode="numeric"></label>
       <label class="toggle" for="sFzRows"><span>上から固定する行数<small class="ver" style="display:block">項目名の行はいつも固定されます。ここではその下のデータの行を数えます</small></span><input type="number" id="sFzRows" min="0" max="20" step="1" inputmode="numeric"></label>
       <div class="toggle"><button type="button" class="ghost" id="sFzId">事前入力の列まで固定</button><span class="ver" id="sFzPrev"></span></div>
       <p class="help">表を横や下に動かしても、固定した列・行は残ります。画面が狭いときは、固定する部分を表の幅・高さの7割までにとどめます。</p>
     </fieldset>
-    <p class="help">音声コマンド：<code>取り消し</code> 直前を消す（続けて言うときは、下の「その他」で決めた間隔をあける）／<code>スキップ</code> 空欄で進む／<code>次</code> 次の行・列へ／<code>戻る</code> 1つ前へ。<code>待機</code>（<code>一時停止</code>・<code>休憩</code>）聞き取りを休む／<code>再開</code> 待機から戻る／<code>停止</code>（<code>ストップ</code>・<code>終了</code>）聞き取りを止める（続けるときはマイクを押す）。<code>除外</code>（<code>落果</code>・<code>枯死</code>・<code>欠株</code>）その個体をこの調査日以降は飛ばす／<code>復帰</code> 除外を取り消す。前回比の「注意」が出たら <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）、または正しい値を言い直します。文字の列は話した言葉がそのまま入り、選択肢の列は登録した候補から一番近いものが入ります。数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます（数字の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます）。小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。表のセルをタップすると、そこから入力を再開します。</p>
+    </details>
+    <details class="fold" data-fold="cmd"><summary><span class="ftitle">音声コマンド・まとめて入力・表の操作の説明</span></summary>
+    <div class="fbody fhelp">
+    <p class="help">音声コマンド：<code>取り消し</code> 直前を消す（続けて言うときは、「読み上げ・音・その他」で決めた間隔をあける）／<code>スキップ</code> 空欄で進む／<code>次</code> 次の行・列へ／<code>戻る</code> 1つ前へ。<code>待機</code>（<code>一時停止</code>・<code>休憩</code>）聞き取りを休む／<code>再開</code> 待機から戻る／<code>停止</code>（<code>ストップ</code>・<code>終了</code>）聞き取りを止める（続けるときはマイクを押す）。<code>除外</code>（<code>落果</code>・<code>枯死</code>・<code>欠株</code>）その個体をこの調査日以降は飛ばす／<code>復帰</code> 除外を取り消す。前回比の「注意」が出たら <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）、または正しい値を言い直します。文字の列は話した言葉がそのまま入り、選択肢の列は登録した候補から一番近いものが入ります。数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます（数字の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます）。小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。表のセルをタップすると、そこから入力を再開します。</p>
     <p class="help">まとめて入力：<code>32.5 31.2 30.8</code> 続けて言うと今のセルから順に入る（値の間に少し間を置くか「と」を挟む）／<code>ゼロ 6個</code>（<code>0を6つ</code>）今の列の今の個体から6個体分（列単位では、列の最後まで来たら次の列へ続く）／<code>残り全部ゼロ</code>（<code>残りゼロ</code>）今の列の最後の個体まで／<code>5から10 ゼロ</code>（<code>5番から10番まで0</code>）今の列の No.5〜10。除外した個体は飛ばします。前回比で「禁止」になるセルには入れず、「注意」のセルは入れたうえで件数を知らせます。直後に「取り消し」と言うか「元に戻す」を押すと、まとめて入れた分をすべて戻せます。</p>
-    <p class="help">表の操作：<code>クリア</code> 選んだセル（範囲）の値を消す／<code>削除して詰める</code> 今のセルを消し、入力の順番で後ろの値を1つずつ前へ詰める（2回入ってしまったとき）／<code>行を削除</code> 今の行（範囲を選んでいればその行すべて）を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も一緒に消える（余計な行を増やしてしまったとき）／<code>範囲選択</code> オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）／<code>コピー</code> 選んだ範囲の「音声で入力」の列をコピー（Excelにも貼れる）／<code>貼付</code> 今のセルを左上にして貼り付け（PCは Ctrl+C・Ctrl+V・Delete も使えます）。操作のあとは「元に戻す」で戻せます。表の左の列や上の行を固定するには、上の「表の表示（ウインドウ枠の固定）」で列数・行数を指定します。</p>
-    <fieldset>
+    <p class="help">表の操作：<code>クリア</code> 選んだセル（範囲）の値を消す／<code>削除して詰める</code> 今のセルを消し、入力の順番で後ろの値を1つずつ前へ詰める（2回入ってしまったとき）／<code>行を削除</code> 今の行（範囲を選んでいればその行すべて）を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も一緒に消える（余計な行を増やしてしまったとき）／<code>範囲選択</code> オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）／<code>コピー</code> 選んだ範囲の「音声で入力」の列をコピー（Excelにも貼れる）／<code>貼付</code> 今のセルを左上にして貼り付け（PCは Ctrl+C・Ctrl+V・Delete も使えます）。操作のあとは「元に戻す」で戻せます。表の左の列や上の行を固定するには、「表の表示（ウインドウ枠の固定）」で列数・行数を指定します。</p>
+    </div>
+    </details>
+    <details class="fold" data-fold="io"><summary><span class="ftitle">データの保存・読み込み・全消去</span><span class="fsum" data-sum="io"></span></summary>
+    <fieldset class="fbody">
       <legend>データの保存と読み込み</legend>
-      <p class="help">「バックアップを保存」は、設定・個体リスト・全調査日・除外の記録をまるごと1つのファイルに保存します。別の端末で「ファイルを読み込む」と、そのまま続きから使えます。このアプリで保存したExcel（縦持ちシート）やCSVも読み込めます。</p>
+      <p class="help">ここでの保存・読み込みは、今開いている調査が対象です。「バックアップを保存」は、設定・個体リスト・全調査日・除外の記録をまるごと1つのファイルに保存します。別の端末で「ファイルを読み込む」と、そのまま続きから使えます。このアプリで保存したExcel（縦持ちシート）やCSVも読み込めます。</p>
       <div class="addrow">
         <button type="button" class="add" id="ioBackup">バックアップを保存（.json）</button>
         <label class="add filebtn" for="ioFile">ファイルを読み込む<input type="file" id="ioFile" accept=".json,.csv,.xlsx,.xls,.txt" hidden></label>
       </div>
       <span class="ver" id="ioOut"></span>
+      <button type="button" class="danger" id="sClear">この調査の測定データを全消去する（個体リストは残す）</button>
+      <p class="help">別の調査を始めるときは、画面上の「調査一覧」から新しい調査を作ると、今の調査を残したまま切り替えられます。</p>
     </fieldset>
-    <button type="button" class="danger" id="sClear">データを全消去して新しい調査を始める</button>
+    </details>
     <div class="actions">
       <button type="button" id="sCancel">キャンセル</button>
       <button type="button" class="primary" id="sSave">保存</button>
@@ -622,9 +709,25 @@ const PRESET_FRUIT=()=>[
   {name:"水浸状障害",type:"num",dec:0},
   {name:"備考",type:"text"}
 ].map(normItem);
-let S={ name:"果実品質調査", items:PRESET_FRUIT(), dir:"row", mode:"cont", readback:true, serial:true, autoCommit:false };
+const S_DEFAULT=()=>({ name:"果実品質調査", items:PRESET_FRUIT(), dir:"row", mode:"cont", readback:true, serial:true, autoCommit:false });
+/* ========= 複数の調査 =========
+   一覧は SV_KEY に {list:[{id,name,created,updated}], last}。調査の中身は調査ごとの保存場所に {S,D,cur,logs}。
+   最初の調査（id "main"）は従来どおり KEY に置く（旧版・オフライン版と同じ場所なので、そのまま引き継げる）。
+   タブ・ウインドウごとに開いている調査を sessionStorage に覚え、別々の調査を並行して使えるようにする */
+const SV_KEY="koe-yacho-v2-surveys", TAB_KEY="koe-yacho-v2-tab";
+const svKey=id=>id==="main"?KEY:KEY+":"+id;
+const nowStamp=()=>{ const d=new Date(); return today()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); };
+function svGet(){
+  try{ const o=JSON.parse(localStorage.getItem(SV_KEY)||"null"); if(o&&Array.isArray(o.list)&&o.list.length) return o; }catch(e){}
+  return {list:[{id:"main",name:"",created:"",updated:""}],last:"main"};
+}
+function svPut(o){ try{ localStorage.setItem(SV_KEY,JSON.stringify(o)); }catch(e){} }
+function svRead(id){ try{ return JSON.parse(localStorage.getItem(svKey(id))||"null"); }catch(e){ return null; } }
+let svId=(()=>{ const o=svGet(); let id=null; try{ id=sessionStorage.getItem(TAB_KEY); }catch(e){}
+  if(!id||!o.list.some(x=>x.id===id)) id=o.list.some(x=>x.id===o.last)?o.last:o.list[0].id; return id; })();
+let S=S_DEFAULT();
 let D=[]; let cur={r:0,c:0}; let logs=[];
-try{ const j=JSON.parse(localStorage.getItem(KEY)||"null"); if(j){ S=Object.assign(S,j.S); D=j.D||[]; cur=j.cur||cur; logs=j.logs||[]; } }catch(e){}
+try{ const j=JSON.parse(localStorage.getItem(svKey(svId))||"null"); if(j){ S=Object.assign(S,j.S); D=j.D||[]; cur=j.cur||cur; logs=j.logs||[]; } }catch(e){}
 function normS(){
   S.items=S.items.map(normItem);
   S.sessions=S.sessions||{}; S.curDate=S.curDate||today();
@@ -641,7 +744,19 @@ function normS(){
   S.freezeRows=Math.max(0,Math.min(20,Math.floor(+S.freezeRows||0)));
 }
 normS();
-function save(){ try{ localStorage.setItem(KEY,JSON.stringify({S,D,cur,logs})); }catch(e){} }
+let saveWarned=0;
+function save(){
+  try{ localStorage.setItem(svKey(svId),JSON.stringify({S,D,cur,logs})); }
+  catch(e){ if(Date.now()-saveWarned>30000){ saveWarned=Date.now(); setTimeout(()=>note("この端末に保存できませんでした（保存できる容量を超えた可能性があります）。すぐにExcelかバックアップで保存し、「調査一覧」で使わない調査を削除してください。",true),0); } return; }
+  svTouch();
+}
+/* 一覧の名前・更新日時を今の調査に合わせ、このタブで開いている調査を覚える */
+function svTouch(){
+  const o=svGet(); let e=o.list.find(x=>x.id===svId);
+  if(!e){ e={id:svId,created:today()}; o.list.push(e); }
+  e.name=S.name||"調査"; e.updated=nowStamp(); o.last=svId; svPut(o);
+  try{ sessionStorage.setItem(TAB_KEY,svId); }catch(_){}
+}
 
 const n=()=>S.items.length;
 const meas=()=>S.items.map((it,i)=>it.role==="id"?-1:i).filter(i=>i>=0);
@@ -1123,7 +1238,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 3.7.2（2026-10-29）";
+const APP_VER="Pro 3.8.1（2026-10-29）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -1815,6 +1930,7 @@ function drawItems(){
         <label>許容±<input type="text" inputmode="decimal" data-k="cmp.tol" value="${c.tol||""}" placeholder="0"></label></div>`:""}
     </div>`; }).join("");
   drawGen(); if(document.querySelector("input[name=dir]:checked")) drawGroupPrev(); if($("#sFzPrev")) drawFzPrev();
+  if(typeof foldSums==="function") foldSums();
 }
 function drawGen(){
   const ids=draft.items.filter(it=>it.role==="id");
@@ -1924,7 +2040,8 @@ function listText(){
   return out.join("\n");
 }
 let listOrig="";
-$("#btnSettings").onclick=()=>{
+/* 設定を開く。go：開いて見せる見出し（data-fold の名前）、then：開いた後の処理 */
+function openSettings(go,then){
   if(listening) stopRec(); clearPend();
   draft=JSON.parse(JSON.stringify(S));
   $("#sName").value=draft.name;
@@ -1940,8 +2057,57 @@ $("#btnSettings").onclick=()=>{
   $("#sFzCols").value=draft.freezeCols; $("#sFzRows").value=draft.freezeRows; drawFzPrev();
   $("#sRate").value=draft.rate||1.1; $("#sRateVal").textContent="×"+(+$("#sRate").value).toFixed(1);
   listOrig=listText(); $("#sList").value=listOrig; $("#sListInfo").textContent=listOrig?`現在 ${listOrig.split("\n").length}個体`:"";
-  drawItems(); $("#dlg").showModal();
-};
+  drawItems(); applyFold(); $("#dlg").showModal(); foldSums();
+  if(go) foldGo(go);
+  if(then) then();
+}
+$("#btnSettings").onclick=()=>openSettings();
+/* ========= 設定の折りたたみ（見出しごと。開閉の状態は端末に覚える。調査には含めない） ========= */
+const UI_KEY="koe-yacho-v2-ui";
+const FOLD_DEFAULT={items:true,list:true};
+function uiGet(){ try{ return JSON.parse(localStorage.getItem(UI_KEY)||"null")||{}; }catch(e){ return {}; } }
+function uiSet(o){ try{ localStorage.setItem(UI_KEY,JSON.stringify(o)); }catch(e){} }
+const folds=()=>[...document.querySelectorAll("#setForm details.fold")];
+let foldApplying=false;
+function applyFold(){
+  const st=Object.assign({},FOLD_DEFAULT,uiGet().fold||{});
+  foldApplying=true; folds().forEach(d=>{ d.open=!!st[d.dataset.fold]; }); foldApplying=false;
+}
+function foldSave(){
+  const o=uiGet(), f={}; folds().forEach(d=>{ f[d.dataset.fold]=d.open; }); o.fold=f; uiSet(o);
+}
+folds().forEach(d=>d.addEventListener("toggle",()=>{ if(!foldApplying) foldSave(); }));
+/* 見出しを開いて、そこまで画面を動かす（ヘルプからの移動にも使う） */
+function foldGo(key){
+  const d=document.querySelector(`#setForm details.fold[data-fold="${key}"]`); if(!d||d.hidden) return;
+  if(!d.open){ d.open=true; foldSave(); }
+  d.scrollIntoView({block:"start"});
+  d.classList.remove("flash"); void d.offsetWidth; d.classList.add("flash");
+}
+$("#fOpenAll").onclick=()=>{ folds().forEach(d=>d.open=true); foldSave(); };
+$("#fCloseAll").onclick=()=>{ folds().forEach(d=>d.open=false); foldSave(); };
+/* 閉じた見出しにも、今の設定を短く出す */
+function foldSums(){
+  if(!draft) return;
+  const q=s=>document.querySelector(s), put=(k,t)=>{ const el=q(`#setForm [data-sum="${k}"]`); if(el) el.textContent=t; };
+  const radio=nm=>q(`input[name=${nm}]:checked`)?.value;
+  const ts=radio("ts")==="1";
+  put("ts",ts?`経時調査・${{wide:"野帳型",long:"縦持ち",both:"両方"}[q("#sOutFmt").value]||""}`:"1回の調査");
+  const its=draft.items, ni=its.filter(it=>it.role==="id").length;
+  put("items",`${its.length}項目（音声 ${its.length-ni}${ni?`・事前 ${ni}`:""}）`);
+  const lines=q("#sList").value.replace(/\r/g,"").split("\n").filter(l=>l.trim()).length;
+  put("list",lines?`${lines}個体`:"未入力");
+  const dir=radio("dir");
+  put("dir",dir==="col"?"列単位":dir==="group"?`グループ単位（${groupsFrom(its.map(normItem),"group",q("#sGroups").value).map(g=>g.length).join("・")}列）`:"行単位");
+  put("listen",radio("mode")==="ptt"?"1回ずつ":"連続認識");
+  put("standby",radio("sbm")==="stop"?"完全に止める":"声で再開できる");
+  put("other",`読み上げ ${q("#sRead").checked?"オン":"オフ"}・${{full:"全部",short:"短く",beep:"区切りだけ"}[q("#sRbMode").value]||""}・×${(+q("#sRate").value||1.1).toFixed(1)}・音 ${q("#sSound").checked?"オン":"オフ"}`);
+  const fc=Math.max(0,Math.floor(+q("#sFzCols").value||0)), fr=Math.max(0,Math.floor(+q("#sFzRows").value||0));
+  put("freeze",fc||fr?[fc?`左${fc}列`:"",fr?`上${fr}行`:""].filter(Boolean).join("・"):"固定なし");
+  put("io","この調査だけが対象");
+}
+$("#setForm").addEventListener("input",()=>foldSums());
+$("#setForm").addEventListener("change",()=>foldSums());
 function drawGroupPrev(){
   const dir=document.querySelector("input[name=dir]:checked")?.value||"row";
   $("#sGroupBox").hidden=dir!=="group";
@@ -2019,6 +2185,125 @@ $("#sClear").onclick=()=>{
   cur={r:0,c:firstMeas()}; logs=[]; sel=null; undoSnap=null; save(); render(); $("#dlg").close(); note("測定データを消去しました。設定と個体リストは残っています。");
 };
 
+/* ========= 調査の一覧・切り替え ========= */
+/* 調査 id の中身を読み込んで今の調査にする（入力中の状態はリセット） */
+function svLoad(id){
+  const j=svRead(id);
+  S=S_DEFAULT(); D=[]; cur={r:0,c:0}; logs=[];
+  if(j){ S=Object.assign(S,j.S); D=j.D||[]; cur=j.cur||cur; logs=j.logs||[]; }
+  normS(); if(cur.c>=n()||S.items[cur.c]?.role==="id") cur.c=firstMeas();
+  pend=null; hideAlert(); sel=null; undoSnap=null; bulkSnap=null; rangeMode=false; anchor=null; halt=false;
+  $("#newDateBox").hidden=true;
+}
+function svOpen(id,msg){
+  if(listening||standby) stopRec();
+  if(id!==svId) save();
+  svId=id; svLoad(id);
+  try{ sessionStorage.setItem(TAB_KEY,id); }catch(e){}
+  const o=svGet(); o.last=id; svPut(o);
+  const h=$("#heard"); h.className="heard"; h.textContent="マイクを押して話してください";
+  render(); note(msg||`「${S.name}」を開きました`);
+}
+/* 新しい調査。mode：copy＝今の調査の設定と個体リストを引き継ぐ（測定データ・除外は引き継がない）／preset＝ひな形／blank＝空白から */
+function svNew(mode,name){
+  const id=Date.now().toString(36)+uid().slice(0,4);
+  let nS, nD=[];
+  if(mode==="copy"){
+    nS=JSON.parse(JSON.stringify(S)); nS.sessions={}; nS.curDate=today(); nS.freezeRows=S.freezeRows;
+    const ids=idItems(); nD=D.slice(0,listLen()).map(row=>{ const o={}; ids.forEach(it=>{ if(hasVal(row?.[it.id])) o[it.id]=row[it.id]; }); return o; });
+  } else if(mode==="blank"){
+    /* 空白から：標準の項目を使わない。項目は1つ以上必要なので、名前だけの項目を1つ置く */
+    nS=S_DEFAULT(); nS.items=[normItem({name:"項目1",type:"num",dec:0})];
+  } else nS=S_DEFAULT();
+  nS.name=name;
+  try{ localStorage.setItem(svKey(id),JSON.stringify({S:nS,D:nD,cur:{r:0,c:0},logs:[]})); }
+  catch(e){ svMsg("この端末に保存できませんでした（容量を超えた可能性があります）。使わない調査を削除してから作り直してください。"); return null; }
+  const o=svGet(); o.list.push({id,name,created:today(),updated:nowStamp()}); svPut(o);
+  svOpen(id,`新しい調査「${name}」を作りました`+(mode==="copy"?"（設定と個体リストを引き継ぎ、測定データは空です）":mode==="blank"?"（空白から。設定で項目を作ってください）":""));
+  return id;
+}
+function svDelete(id){
+  const o=svGet(), e=o.list.find(x=>x.id===id); if(!e) return;
+  if(o.list.length<=1){ svMsg("調査が1つしかないため削除できません。データを消すときは「設定」の全消去を使ってください。"); return; }
+  const nm=(id===svId?S.name:e.name)||"調査";
+  if(!confirm(`「${nm}」を削除します。\nこの調査の設定・個体リスト・全調査日のデータが端末から消え、元に戻せません。\n必要なら先に、一覧の「保存」でバックアップを取ってください。削除しますか？`)) return;
+  if(id===svId){
+    const rest=o.list.filter(x=>x.id!==id).sort((a,b)=>String(b.updated).localeCompare(String(a.updated)));
+    svOpen(rest[0].id);
+  }
+  try{ localStorage.removeItem(svKey(id)); }catch(err){}
+  const p=svGet(); p.list=p.list.filter(x=>x.id!==id); if(p.last===id) p.last=svId; svPut(p);
+  drawSurveys(); note(`「${nm}」を削除しました`);
+}
+/* 一覧の「保存」：その調査のバックアップ（.json）。開いていない調査も保存できる */
+function svBackup(id){
+  const j=id===svId?{S,D,cur}:svRead(id); if(!j||!j.S){ svMsg("この調査にはまだデータがありません。"); return; }
+  const nm=String(j.S.name||"調査").replace(/[\\/:*?"<>|]/g,"_");
+  download(new Blob([JSON.stringify({app:"koe-yacho-v2",ver:APP_VER,saved:new Date().toISOString(),S:j.S,D:j.D||[],cur:j.cur})],{type:"application/json"}),`${nm}_バックアップ_${today()}.json`);
+}
+function svMsg(t){ $("#svOut").textContent=t; }
+function svInfo(id){
+  const j=id===svId?{S,D}:svRead(id); if(!j||!j.S) return "まだ入力なし";
+  const ids=(j.S.items||[]).filter(it=>it.role==="id"), dd=j.D||[];
+  let L=0; if(ids.length) dd.forEach((row,i)=>{ if(ids.some(it=>hasVal(row?.[it.id]))) L=i+1; });
+  const nd=new Set([...Object.keys(j.S.sessions||{}),j.S.curDate].filter(Boolean)).size;
+  return (L?`${L}個体`:`${dd.length}行`)+(j.S.ts?`・調査日${nd}回`:"");
+}
+function drawSurveys(){
+  save();
+  const o=svGet();
+  const list=[...o.list].sort((a,b)=>String(b.updated).localeCompare(String(a.updated)));
+  $("#svList").innerHTML=list.map(e=>{
+    const isCur=e.id===svId, nm=(isCur?S.name:e.name)||"調査";
+    return `<div class="svrow${isCur?" cur":""}">
+      <button type="button" class="svopen" data-open="${esc(e.id)}"${isCur?' aria-current="true"':""}><b>${esc(nm)}${isCur?'<span class="svbadge">開いている</span>':""}</b><small>${esc(svInfo(e.id))}${e.updated?`・更新 ${esc(e.updated)}`:""}</small></button>
+      <button type="button" class="sva" data-bk="${esc(e.id)}" title="この調査のバックアップを保存">保存</button>
+      <button type="button" class="sva del" data-del="${esc(e.id)}" title="この調査を削除"${o.list.length<=1?" disabled":""}>削除</button>
+    </div>`;
+  }).join("");
+}
+$("#btnSurveys").onclick=()=>{
+  if(listening||standby) stopRec(); clearPend();
+  svMsg(""); $("#svName").value=""; document.querySelector('input[name=svMode][value=copy]').checked=true; drawSurveys(); $("#svDlg").showModal();
+};
+$("#svClose").onclick=()=>$("#svDlg").close();
+$("#svList").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.open){ if(b.dataset.open!==svId) svOpen(b.dataset.open); $("#svDlg").close(); }
+  else if(b.dataset.bk) svBackup(b.dataset.bk);
+  else if(b.dataset.del) svDelete(b.dataset.del);
+});
+function svDefaultName(){ const m=document.querySelector("input[name=svMode]:checked")?.value; const base=(m==="copy"?S.name:m==="blank"?"新しい調査":"果実品質調査")||"調査"; return `${base}（${today()}）`; }
+$("#svCreate").onclick=()=>{
+  const name=$("#svName").value.trim()||svDefaultName();
+  const mode=document.querySelector("input[name=svMode]:checked").value;
+  if(!svNew(mode,name)) return;
+  $("#svDlg").close();
+  /* 空白から作ったときは、そのまま設定を開いて最初の項目名を入力できるようにする */
+  if(mode==="blank") openSettings("items",()=>{ const el=$("#sItems input.iname"); if(el){ el.focus(); el.select(); } });
+};
+$("#svFile").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  await importFile(f,true);
+};
+/* 同じ調査を別のタブ・ウインドウで変えたとき：最新の内容に揃える（古い内容で上書きしないため） */
+window.addEventListener("storage",e=>{
+  if(e.storageArea!==localStorage||e.key!==svKey(svId)) return;
+  if(e.newValue===null){
+    const rest=svGet().list.filter(x=>x.id!==svId);
+    if(rest.length){ svId=rest[0].id; svLoad(svId); try{ sessionStorage.setItem(TAB_KEY,svId); }catch(_){} render(); note(`開いていた調査は別の画面で削除されたため、「${S.name}」を開きました`,true); }
+    return;
+  }
+  let j; try{ j=JSON.parse(e.newValue); }catch(_){ return; }
+  if(!j||!j.S) return;
+  const keep=cur;
+  S=Object.assign(S_DEFAULT(),j.S); D=j.D||[]; logs=j.logs||[]; normS();
+  cur=(keep&&keep.c<n())?keep:(j.cur||{r:0,c:firstMeas()});
+  pend=null; hideAlert(); sel=null; undoSnap=null; bulkSnap=null;
+  if($("#dlg").open) $("#dlg").close();
+  render(); note("この調査が別のタブ・ウインドウで変更されたため、最新の内容に揃えました");
+});
+
 /* ========= バックアップと読み込み ========= */
 $("#ioBackup").onclick=()=>{
   if(listening) stopRec();
@@ -2027,26 +2312,41 @@ $("#ioBackup").onclick=()=>{
 };
 $("#ioFile").onchange=async e=>{
   const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  await importFile(f,false);
+};
+/* ファイルを読む。asNew＝新しい調査を作ってそこへ読み込む（今の調査はそのまま残す） */
+let importNoAsk=false;
+async function importFile(f,asNew){
   try{
-    const name=f.name.toLowerCase();
-    if(name.endsWith(".json")){ importJson(JSON.parse(await f.text())); }
-    else if(name.endsWith(".csv")||name.endsWith(".txt")){ importTable(parseCsv(await f.text())); }
+    const name=f.name.toLowerCase(); let job=null;
+    if(name.endsWith(".json")){
+      const j=JSON.parse(await f.text());
+      if(!j||j.app!=="koe-yacho-v2"||!j.S||!Array.isArray(j.D)){ ioMsg("声で野帳 Pro（2）のバックアップファイルではありません。"); return; }
+      job=()=>importJson(j);
+    }
+    else if(name.endsWith(".csv")||name.endsWith(".txt")){ const rows=parseCsv(await f.text()); job=()=>importTable(rows); }
     else if(name.endsWith(".xlsx")||name.endsWith(".xls")){
       if(typeof XLSX==="undefined"){ ioMsg("Excelを読む部品を読み込めませんでした。CSVで読み込んでください。"); return; }
       const wb=XLSX.read(await f.arrayBuffer(),{type:"array"});
       const sh=["縦持ち(R用)","縦長(R用)"].find(s=>wb.SheetNames.includes(s))||wb.SheetNames[0];
-      importTable(XLSX.utils.sheet_to_json(wb.Sheets[sh],{header:1,raw:true,defval:""}));
-    } else ioMsg("読み込めるのは .json（バックアップ）、.csv、.xlsx です。");
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sh],{header:1,raw:true,defval:""}); job=()=>importTable(rows);
+    } else { ioMsg("読み込めるのは .json（バックアップ）、.csv、.xlsx です。"); return; }
+    if(asNew){
+      const nm=f.name.replace(/\.[^.]+$/,"").replace(/_バックアップ_\d{4}-\d{2}-\d{2}$/,"").replace(/_\d{4}-\d{2}-\d{2}$/,"")||"読み込んだ調査";
+      if(!svNew("copy",nm)) return;
+      importNoAsk=true;
+    }
+    try{ job(); } finally{ importNoAsk=false; }
   }catch(err){ ioMsg("読み込みに失敗しました："+(err.message||err)); }
-};
-function ioMsg(t){ $("#ioOut").textContent=t; }
-function confirmReplace(){ return confirm("今の端末にあるデータ（全調査日）を、読み込んだ内容で置き換えます。よろしいですか？\n（念のため先に「バックアップを保存」しておくと元に戻せます）"); }
+}
+function ioMsg(t){ $("#ioOut").textContent=t; $("#svOut").textContent=t; }
+function confirmReplace(){ if(importNoAsk) return true; return confirm("今開いている調査のデータ（全調査日）を、読み込んだ内容で置き換えます。ほかの調査はそのまま残ります。\n（今の調査を残したいときは「キャンセル」を押し、「調査一覧」の「ファイルから作る」を使ってください）\nよろしいですか？\n（念のため先に「バックアップを保存」しておくと元に戻せます）"); }
 function importJson(j){
   if(!j||j.app!=="koe-yacho-v2"||!j.S||!Array.isArray(j.D)){ ioMsg("声で野帳 Pro（2）のバックアップファイルではありません。"); return; }
   if(!confirmReplace()) return;
-  S=j.S; normS();
+  { const keepName=importNoAsk?S.name:null; S=j.S; if(keepName&&!S.name) S.name=keepName; } normS();
   D=j.D; cur=j.cur||{r:firstRow(),c:firstMeas()}; logs=[]; clearPend(); sel=null; undoSnap=null;
-  save(); render(); $("#dlg").close();
+  save(); render(); $("#dlg").close(); $("#svDlg").close();
   note(`バックアップを読み込みました（調査日 ${allDates().length}回、${listLen()||D.length}個体）`);
 }
 function parseCsv(txt){
@@ -2105,7 +2405,7 @@ function importTable(rows){
   S.items=items; S.sessions={}; ds.forEach(d=>{ if(d!==last) S.sessions[d]=Array.from({length:ND.length},(_,i)=>sessions[d][i]||{}); });
   (sessions[last]||[]).forEach((m,i)=>{ if(m) Object.assign(ND[i],m); });
   D=ND; S.curDate=last; if(ds.length>1) S.ts=true; cur={r:firstRow(),c:firstMeas()}; logs=[]; clearPend(); sel=null; undoSnap=null;
-  save(); render(); $("#dlg").close();
+  save(); render(); $("#dlg").close(); $("#svDlg").close();
   note(`読み込みました：${ds.length}調査日、${ND.length}個体`+(added.length?`。新しい項目「${added.join("・")}」を追加しました（設定で種類を確認してください）`:""));
 }
 
