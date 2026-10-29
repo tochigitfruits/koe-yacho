@@ -14,6 +14,11 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="robots" content="noindex, nofollow, noarchive">
 <title>声で野帳 Pro</title>
+<link rel="manifest" href="manifest-pro.json">
+<link rel="icon" type="image/png" sizes="32x32" href="pro-favicon-32.png">
+<link rel="apple-touch-icon" href="pro-apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="声で野帳 Pro">
+<meta name="theme-color" content="#15231d">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=BIZ+UDPGothic:wght@400;700&display=swap">
@@ -456,7 +461,7 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
       <div class="toggle"><button type="button" class="ghost" id="sFzId">事前入力の列まで固定</button><span class="ver" id="sFzPrev"></span></div>
       <p class="help">表を横や下に動かしても、固定した列・行は残ります。画面が狭いときは、固定する部分を表の幅・高さの7割までにとどめます。</p>
     </fieldset>
-    <p class="help">音声コマンド：<code>取り消し</code> 直前を消す（続けて言うときは、下の「その他」で決めた間隔をあける）／<code>スキップ</code> 空欄で進む／<code>次</code> 次の行・列へ／<code>戻る</code> 1つ前へ。<code>待機</code>（<code>一時停止</code>・<code>休憩</code>）聞き取りを休む／<code>再開</code> 待機から戻る／<code>停止</code>（<code>ストップ</code>・<code>終了</code>）聞き取りを止める（続けるときはマイクを押す）。<code>除外</code>（<code>落果</code>・<code>枯死</code>・<code>欠株</code>）その個体をこの調査日以降は飛ばす／<code>復帰</code> 除外を取り消す。前回比の「注意」が出たら <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）、または正しい値を言い直します。文字の列は話した言葉がそのまま入り、選択肢の列は登録した候補から一番近いものが入ります。小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。表のセルをタップすると、そこから入力を再開します。</p>
+    <p class="help">音声コマンド：<code>取り消し</code> 直前を消す（続けて言うときは、下の「その他」で決めた間隔をあける）／<code>スキップ</code> 空欄で進む／<code>次</code> 次の行・列へ／<code>戻る</code> 1つ前へ。<code>待機</code>（<code>一時停止</code>・<code>休憩</code>）聞き取りを休む／<code>再開</code> 待機から戻る／<code>停止</code>（<code>ストップ</code>・<code>終了</code>）聞き取りを止める（続けるときはマイクを押す）。<code>除外</code>（<code>落果</code>・<code>枯死</code>・<code>欠株</code>）その個体をこの調査日以降は飛ばす／<code>復帰</code> 除外を取り消す。前回比の「注意」が出たら <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）、または正しい値を言い直します。文字の列は話した言葉がそのまま入り、選択肢の列は登録した候補から一番近いものが入ります。数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます（数字の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます）。小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。表のセルをタップすると、そこから入力を再開します。</p>
     <p class="help">まとめて入力：<code>32.5 31.2 30.8</code> 続けて言うと今のセルから順に入る（値の間に少し間を置くか「と」を挟む）／<code>ゼロ 6個</code>（<code>0を6つ</code>）今の列の今の個体から6個体分（列単位では、列の最後まで来たら次の列へ続く）／<code>残り全部ゼロ</code>（<code>残りゼロ</code>）今の列の最後の個体まで／<code>5から10 ゼロ</code>（<code>5番から10番まで0</code>）今の列の No.5〜10。除外した個体は飛ばします。前回比で「禁止」になるセルには入れず、「注意」のセルは入れたうえで件数を知らせます。直後に「取り消し」と言うか「元に戻す」を押すと、まとめて入れた分をすべて戻せます。</p>
     <p class="help">表の操作：<code>クリア</code> 選んだセル（範囲）の値を消す／<code>削除して詰める</code> 今のセルを消し、入力の順番で後ろの値を1つずつ前へ詰める（2回入ってしまったとき）／<code>行を削除</code> 今の行（範囲を選んでいればその行すべて）を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も一緒に消える（余計な行を増やしてしまったとき）／<code>範囲選択</code> オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）／<code>コピー</code> 選んだ範囲の「音声で入力」の列をコピー（Excelにも貼れる）／<code>貼付</code> 今のセルを左上にして貼り付け（PCは Ctrl+C・Ctrl+V・Delete も使えます）。操作のあとは「元に戻す」で戻せます。表の左の列や上の行を固定するには、上の「表の表示（ウインドウ枠の固定）」で列数・行数を指定します。</p>
     <fieldset>
@@ -582,7 +587,7 @@ const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth
 const LEVELS=[["none","何もしない"],["info","表示"],["warn","注意（確認）"],["block","禁止（入力し直し）"]];
 function normCmp(c){ c=c||{}; const ok=v=>LEVELS.some(([k])=>k===v)?v:"none"; return {dec:ok(c.dec),inc:ok(c.inc),same:ok(c.same),tol:Math.abs(+c.tol||0)}; }
 /* 項目：type = num（数値）| text（文字）| choice（選択肢）、role = meas（音声で入力）| id（事前入力：個体の識別） */
-function normItem(it){ return {id:it.id||uid(), name:it.name||"項目", type:it.type||"num", dec:it.dec??0, step:+it.step||0, role:it.role||"meas", options:Array.isArray(it.options)?it.options:[], cmp:normCmp(it.cmp)}; }
+function normItem(it){ return {id:it.id||uid(), name:it.name||"項目", type:it.type||"num", dec:it.dec??0, step:+it.step||0, role:it.role||"meas", options:Array.isArray(it.options)?it.options:[], allow:String(it.allow??"").trim(), cmp:normCmp(it.cmp)}; }
 const PRESET_FRUIT=()=>[
   {name:"樹番号",type:"num",dec:0,role:"id"},
   {name:"処理区名",type:"text",role:"id"},
@@ -623,8 +628,22 @@ const hasVal=v=>v!==undefined&&v!==null&&v!=="";
 function listLen(){ const ids=idItems(); if(!ids.length) return 0; let L=0; D.forEach((row,i)=>{ if(ids.some(it=>hasVal(row[it.id]))) L=i+1; }); return L; }
 function ensureRow(r){ while(D.length<=r) D.push({}); }
 function fmt(v,it){ if(!hasVal(v)) return ""; if(it&&it.type==="num"&&typeof v==="number") return v.toFixed(it.dec); return String(v); }
+/* 入力できる値（数値の項目）：「0,1,2,3」「0〜3」「20-120」、組み合わせ「0,5〜10」も可。空なら制限なし */
+function allowSpec(it){
+  const txt=String(it?.allow||"").normalize("NFKC").trim(); if(!txt||it.type!=="num") return null;
+  const out=[]; const N="(-?\\d+(?:\\.\\d+)?)";
+  for(const t of txt.split(/[、,，\s]+/).filter(Boolean)){
+    let m=t.match(new RegExp(`^${N}(?:〜|~|～|から|-)${N}$`));
+    if(m){ const a=+m[1], b=+m[2]; out.push([Math.min(a,b),Math.max(a,b)]); continue; }
+    m=t.match(new RegExp(`^${N}$`)); if(m){ out.push([+m[1],+m[1]]); continue; }
+  }
+  return out.length?out:null;
+}
+function allowOk(it,v){ const sp=allowSpec(it); if(!sp||typeof v!=="number") return true; return sp.some(([a,b])=>v>=a-1e-9&&v<=b+1e-9); }
+function allowText(it){ const sp=allowSpec(it); if(!sp) return ""; return sp.map(([a,b])=>a===b?fmt(a,it):`${fmt(a,it)}〜${fmt(b,it)}`).join("・"); }
 function typeLabel(it){
-  let b = it.type==="text"?"文字": it.type==="choice"?"選択肢": (it.dec===0?"整数":"小数"+it.dec)+(it.step?`・${it.step}刻み`:"");
+  const al=allowText(it);
+  let b = it.type==="text"?"文字": it.type==="choice"?"選択肢": (it.dec===0?"整数":"小数"+it.dec)+(it.step?`・${it.step}刻み`:"")+(al?`・${al.length>14?al.slice(0,13)+"…":al}`:"");
   return (it.role==="id"?"事前入力・":"")+b;
 }
 function rowLabel(r){
@@ -796,6 +815,12 @@ function putValue(v){
     let x=v; if(it.step>0) x=Math.round(x/it.step)*it.step;
     const m=Math.pow(10,it.dec); val=Math.round(x*m)/m; said=fmt(val,it).replace(/^-/,"マイナス");
   } else { val=String(v).trim(); if(!val) return null; said=val; }
+  if(it.type==="num"&&!allowOk(it,val)){
+    halt=true; alerted=true; badCells.add(cur.r+":"+cur.c); sound("block");
+    addLog(`${cellName(cur)} ${fmt(val,it)} は入力しない（入力できる値 ${allowText(it)} の外）`);
+    showAlert("block",`${cellName(cur)}：${fmt(val,it)} は入力できる値（${allowText(it)}）の外です。入力し直してください。`);
+    return `${said}、範囲外です、入力し直してください`;
+  }
   const a=checkCmp(cur.r,it,val);
   if(a){
     sound(a.level); alerted=true;
@@ -901,11 +926,18 @@ function tryBulk(clean){
     for(let r=a;r<=z;r++) if(!isEx(r)) cells.push({r,c});
   }
   if(!cells.length){ note("入れられるセルがありません"); return "入れられるセルがありません"; }
+  if(it.type==="num"&&!allowOk(it,b.val)){
+    alerted=true; sound("block"); badCells.add(cur.r+":"+cur.c);
+    showAlert("block",`${it.name}：${fmt(b.val,it)} は入力できる値（${allowText(it)}）の外のため、まとめて入力はしませんでした。`);
+    addLog(`${it.name} ${fmt(b.val,it)} のまとめて入力をしない（範囲外）`);
+    return `${fmt(b.val,it).replace(/^-/,"マイナス")}、範囲外です`;
+  }
   snap();
   let cnt=0, warn=0, block=0;
   cells.forEach(p=>{
     const x=S.items[p.c], v=(x===it)?b.val:valFor(x,typeof b.val==="number"?String(b.val):b.val);
     if(v===null) return;
+    if(x.type==="num"&&!allowOk(x,v)){ block++; badCells.add(p.r+":"+p.c); return; }
     const a=checkCmp(p.r,x,v);
     if(a&&a.level==="block"){ block++; badCells.add(p.r+":"+p.c); return; }
     if(a&&a.level==="warn") warn++;
@@ -1063,7 +1095,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません)$/;
-const APP_VER="Pro 3.6（2026-10-21）";
+const APP_VER="Pro 3.6.3（2026-10-27）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -1450,6 +1482,25 @@ $("#manualIn").addEventListener("input",()=>{
   clearTimeout(autoTimer);
   if($("#manualIn").value.trim()) autoTimer=setTimeout(()=>$("#manual").requestSubmit(),1200);
 });
+/* ノギスなどキーボードとして値を送る機器への対策
+   1. ボタンなどに入力先が残っているときに数字が来たら、手入力欄へ入力先を移して受け取る
+   2. 操作ボタンの上での Enter ではボタンを押さない（機器が送る Enter で「戻る」「取り消し」が押され続けるのを防ぐ）
+   3. キーの押しっぱなし（自動の繰り返し）で同じ数字や Enter が続けて入るのを止める */
+const KBD_BTN="[data-cmd],#btnEx,.celltools button,#pasteOpen,#btnStandby,#mic,#alYes,#alNo";
+document.addEventListener("keydown",e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey) return;
+  if(document.querySelector("dialog[open]")||!$("#gate").hidden) return;
+  const t=e.target, inField=t&&t.closest?.("input,textarea,select,[contenteditable]");
+  const numKey=/^[0-9.\-+]$/.test(e.key);
+  if(t===$("#manualIn")){
+    if(e.repeat&&(numKey||e.key==="Enter")){ e.preventDefault(); return; }
+    return;
+  }
+  if(inField) return;
+  if(e.key==="Enter"&&t&&t.closest?.(KBD_BTN)){ e.preventDefault(); return; }
+  if(numKey&&!e.repeat){ const m=$("#manualIn"); m.focus(); /* この後の文字は手入力欄に入る */ }
+  else if(numKey&&e.repeat) e.preventDefault();
+},true);
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&listening) holdWake(); });
 
 /* ========= 表のセル操作（選択・クリア・削除して詰める・コピー・貼り付け） ========= */
@@ -1628,7 +1679,8 @@ function applyPaste(text){
       const v=String(raw).trim(); if(!v) return;
       const it=S.items[pl.cols[j]]; let val;
       if(it.type==="num"){ const x=parseNumber(v); if(x===null||Number.isNaN(x)){ bad++; return; }
-        let y=x; if(it.step>0) y=Math.round(y/it.step)*it.step; const m=Math.pow(10,it.dec); val=Math.round(y*m)/m; }
+        let y=x; if(it.step>0) y=Math.round(y/it.step)*it.step; const m=Math.pow(10,it.dec); val=Math.round(y*m)/m;
+        if(!allowOk(it,val)){ bad++; badCells.add(r+":"+pl.cols[j]); return; } }
       else if(it.type==="choice"){ val=matchChoice(v,it.options); if(val===null){ bad++; return; } }
       else val=v;
       D[r][it.id]=val; flashCells.add(r+":"+pl.cols[j]); cnt++;
@@ -1639,7 +1691,7 @@ function applyPaste(text){
   anchor=s0;
   addLog(`${rowLabel(cur.r)} から ${rows.length}行を貼り付け（${cnt}件）`);
   save(); render();
-  offerUndo(`${cnt}件の値を貼り付けました`+(bad?`。数値にできない${bad}件は飛ばしました`:"")+(pl.over?`。右の${pl.over}列は入りきらないので無視しました`:""));
+  offerUndo(`${cnt}件の値を貼り付けました`+(bad?`。数値にできない値・入力できる値の外の値（${bad}件）は飛ばしました`:"")+(pl.over?`。右の${pl.over}列は入りきらないので無視しました`:""));
   return true;
 }
 function openPasteDlg(prefill){
@@ -1703,7 +1755,8 @@ function drawItems(){
         <select data-k="role" aria-label="入力のしかた"><option value="meas" ${it.role!=="id"?"selected":""}>音声で入力</option><option value="id" ${it.role==="id"?"selected":""}>事前入力（個体の識別）</option></select>
         <select data-k="type" aria-label="種類"><option value="num" ${it.type==="num"?"selected":""}>数値</option><option value="text" ${it.type==="text"?"selected":""}>文字</option><option value="choice" ${it.type==="choice"?"selected":""}>選択肢</option></select>
         ${it.type==="num"?`<select data-k="dec" aria-label="小数桁数">${[0,1,2,3,4].map(d=>`<option value="${d}" ${d===it.dec?"selected":""}>${d===0?"整数":"小数"+d+"桁"}</option>`).join("")}</select>
-        <select data-k="step" aria-label="刻み">${STEPS.map(s=>`<option value="${s}" ${s===+it.step?"selected":""}>${s===0?"刻みなし":s+"刻み"}</option>`).join("")}</select>`:""}
+        <select data-k="step" aria-label="刻み">${STEPS.map(s=>`<option value="${s}" ${s===+it.step?"selected":""}>${s===0?"刻みなし":s+"刻み"}</option>`).join("")}</select>
+        ${it.role!=="id"?`<input type="text" data-k="allow" value="${esc(it.allow||"")}" placeholder="入力できる値（例 0,1,2,3／0〜3）空なら制限なし" class="iopts" aria-label="入力できる値">`:""}`:""}
         ${it.type==="choice"?`<input type="text" data-k="options" value="${esc(it.options.join("、"))}" placeholder="候補を「、」区切りで（例 にっこり、幸水、豊水）" class="iopts">`:""}
       </div>
       ${draft.ts&&it.type==="num"&&it.role!=="id"?`<div class="irow cmp"><span class="cmpl">前回比</span>
@@ -1723,6 +1776,7 @@ $("#sItems").addEventListener("input",e=>{
   if(k==="name"){ it.name=e.target.value; drawGenLabels(); }
   if(k==="dec") it.dec=+e.target.value;
   if(k==="step") it.step=+e.target.value;
+  if(k==="allow") it.allow=e.target.value;
   if(k==="options") it.options=e.target.value.split(/[、,，]/).map(s=>s.trim()).filter(Boolean);
   if(k&&k.startsWith("cmp.")){ it.cmp=normCmp(it.cmp); const sub=k.slice(4); it.cmp[sub]=sub==="tol"?Math.abs(+String(e.target.value).normalize("NFKC")||0):e.target.value; }
 });
@@ -1813,7 +1867,14 @@ $("#sSave").onclick=()=>{
   draft.rbMode=$("#sRbMode").value; draft.fastCommit=$("#sFast").checked;
   draft.freezeCols=+String($("#sFzCols").value).normalize("NFKC")||0; draft.freezeRows=+String($("#sFzRows").value).normalize("NFKC")||0;
   draft.items.forEach((it,i)=>{ if(!it.name.trim()) it.name="項目"+(i+1); });
-  const curId=S.items[cur.c]?.id; S=draft; normS();
+  const curId=S.items[cur.c]?.id;
+  const wasNum=new Set(S.items.filter(it=>it.type==="num").map(it=>it.id));
+  S=draft; normS();
+  /* 選択肢・文字から数値に変えた列：記録済みの "0" などの文字を数値に直す（数値にできない値はそのまま） */
+  { const conv=S.items.filter(it=>it.type==="num"&&!wasNum.has(it.id)); let nconv=0;
+    if(conv.length){ const fix=row=>{ if(!row) return; conv.forEach(it=>{ const v=row[it.id]; if(typeof v==="string"&&v.trim()!==""){ const x=parseNumber(v); if(x!==null&&!Number.isNaN(x)){ row[it.id]=roundVal(it,x); nconv++; } } }); };
+      D.forEach(fix); Object.values(S.sessions).forEach(a=>Array.isArray(a)&&a.forEach(fix));
+      if(nconv) setTimeout(()=>note(`${conv.map(it=>it.name).join("・")} を数値の項目にしたため、記録済みの値 ${nconv}件を数値に直しました`),0); } }
   /* 個体リストを反映（事前入力の列だけを書き換え、測定値はそのまま） */
   const txt=$("#sList").value.replace(/\r/g,"").replace(/\n+$/,"");
   let trimmed=0, before=null;

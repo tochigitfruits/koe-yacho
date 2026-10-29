@@ -1,0 +1,18 @@
+{
+  "id": "./pro.html",
+  "name": "声で野帳 Pro",
+  "short_name": "声で野帳 Pro",
+  "description": "調査で読み上げた数値を表に記録するアプリ（Pro）",
+  "lang": "ja",
+  "start_url": "./pro.html",
+  "scope": "./pro.html",
+  "display": "standalone",
+  "background_color": "#eef2ef",
+  "theme_color": "#15231d",
+  "icons": [
+    { "src": "pro-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "pro-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "pro-icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "pro-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
