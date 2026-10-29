@@ -172,13 +172,14 @@ tr.exrow td.idc{text-decoration:line-through}
 /* 設定 */
 dialog{border:0;padding:0;width:min(640px,100%);max-height:100%;background:var(--surface);color:var(--ink);border-radius:16px}
 dialog::backdrop{background:rgba(0,0,0,.45)}
-.sheet{padding:16px;display:grid;gap:18px}
+.sheet{padding:16px;display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+.sheet fieldset,.fbody,.item,.items{grid-template-columns:minmax(0,1fr)}
 .sheet h2{margin:0;font-size:1.1rem}
 fieldset{border:0;margin:0;padding:0;display:grid;gap:8px;min-width:0;min-inline-size:0}
 #sOutFmt{width:100%;min-width:0;text-overflow:ellipsis}
 legend{font-weight:700;font-size:.9rem;margin-bottom:6px}
 .field{display:grid;gap:4px}
-.field input[type=text],.field select{border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.field input[type=text],.field select{border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);width:100%;min-width:0}
 .items{display:grid;gap:8px}
 .item{display:grid;gap:6px;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--surface)}
 .item.isid{background:color-mix(in srgb,var(--line) 30%,var(--surface))}
@@ -236,9 +237,35 @@ details.fold[open]>summary{border-bottom:1px solid var(--line);border-radius:12p
 .fsum{flex:1 1 0;min-width:3em;text-align:right;font-weight:400;font-size:.78rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fbody{padding:12px}
 .fhelp{display:grid;gap:10px}
-details.fold legend{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+details.fold .fbody{position:relative}details.fold legend{position:absolute;left:0;top:0;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 details.fold.flash>summary{animation:flash 1.2s ease-out}
 @media (prefers-reduced-motion:reduce){details.fold>summary::before{transition:none}}
+@media (max-width:340px){.irow.ihead{flex-wrap:wrap}.irow.ihead .iname{flex:1 1 calc(100% - 46px);width:auto}.sheet{padding:12px}}
+/* 言い換え（3.9.1） */
+.aliases{display:grid;gap:8px}
+.arow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) 36px;gap:6px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px}
+.arow input,.arow select{min-width:0;border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg)}
+.arow select{grid-column:1 / 4;padding:8px 4px}
+.arow .arr{color:var(--muted);font-weight:700}
+.arow button{width:36px;height:38px;border:1.5px solid var(--line);border-radius:8px;background:var(--bg)}
+.arow .awarn{grid-column:1 / -1;font-size:.78rem;color:var(--warn)}
+.arow .awarn:empty{display:none}
+/* 使い方の説明（3.9） */
+.hbtn{min-width:44px;font-weight:700;padding-inline:12px}
+#helpDlg .sheet{gap:10px}
+#helpTitle:focus{outline:none}
+.hq{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);font-size:16px}
+.hchips{display:flex;gap:6px;flex-wrap:wrap}
+.hchip{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:4px 12px;font-size:.82rem;min-height:32px}
+.hlist{display:grid;gap:8px}
+.hgrp{margin:8px 0 0;font-size:.82rem;color:var(--muted);letter-spacing:.05em}
+.hbody{display:grid;gap:8px;font-size:.9rem;line-height:1.7}
+.hbody p{margin:0}
+.hbody ol,.hbody ul{margin:0;padding-left:1.4em;display:grid;gap:4px}
+.hbody code{font-family:var(--f-num);background:var(--bg);padding:0 .3em;border-radius:4px}
+.hgo{justify-self:start;font-size:.85rem;font-weight:700;color:var(--accent);border-color:var(--accent)}
+mark{background:var(--mark);color:var(--mark-ink);border-radius:3px;padding:0 1px}
+@media (max-width:420px){.hbtns{gap:6px}.hbtns .ghost{padding:8px 10px}}
 @media (max-width:420px){.mic,.rbbtn{width:84px;height:84px}.sbbtn{min-width:84px}.where .cell{font-size:1.3rem}}
 .terms{font-size:.78rem;color:var(--muted)}
 .terms summary{cursor:pointer;padding-block:4px}
@@ -311,6 +338,7 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
     <div class="hbtns">
       <button class="ghost" id="btnSurveys" type="button">調査一覧</button>
       <button class="ghost" id="btnSettings" type="button">設定</button>
+      <button class="ghost hbtn" id="btnHelp" type="button" aria-label="使い方の説明" title="使い方の説明">？</button>
     </div>
   </header>
 
@@ -441,6 +469,17 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
   </div>
 </dialog>
 
+<dialog id="helpDlg" aria-labelledby="helpTitle">
+  <div class="sheet">
+    <div class="sheethead"><h2 id="helpTitle" tabindex="-1" autofocus>使い方の説明</h2><span class="ver" id="helpVer"></span></div>
+    <input type="search" id="helpQ" class="hq" placeholder="単語で探す（例 取り消し、ノギス、Excel）" aria-label="説明を単語で探す" autocomplete="off" enterkeyhint="search">
+    <div class="hchips" id="helpChips" aria-label="探す言葉の例"></div>
+    <span class="ver" id="helpCount" aria-live="polite"></span>
+    <div class="hlist" id="helpList"></div>
+    <div class="actions"><button type="button" id="helpClose">閉じる</button></div>
+  </div>
+</dialog>
+
 <dialog id="pasteDlg">
   <div class="sheet">
     <h2>数値をまとめて貼り付け</h2>
@@ -459,13 +498,13 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
   <form class="sheet" id="setForm" method="dialog">
     <div class="sheethead">
       <h2>調査の設定</h2>
-      <div class="foldbar"><button type="button" class="ghost" id="fOpenAll">すべて開く</button><button type="button" class="ghost" id="fCloseAll">すべて閉じる</button></div>
+      <div class="foldbar"><button type="button" class="ghost" id="fOpenAll">すべて開く</button><button type="button" class="ghost" id="fCloseAll">すべて閉じる</button><button type="button" class="ghost" id="fHelp" aria-label="使い方の説明">？ 説明</button></div>
     </div>
     <div class="field">
       <label for="sName"><b>調査名</b>（ファイル名に使います）</label>
       <input type="text" id="sName" placeholder="例 にっこり果実肥大調査">
     </div>
-    <p class="help">見出しを押すと開いたり閉じたりできます。開いた・閉じた状態は、次に設定を開いたときも残ります。</p>
+    <p class="help">見出しを押すと開いたり閉じたりできます。開いた・閉じた状態は、次に設定を開いたときも残ります。使い方は「？ 説明」で探せます。</p>
     <details class="fold" data-fold="ts"><summary><span class="ftitle">調査の種類</span><span class="fsum" data-sum="ts"></span></summary>
     <fieldset class="fbody">
       <legend>調査の種類</legend>
@@ -491,6 +530,14 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
       <div class="items" id="sItems"></div>
       <div class="addrow"><button type="button" class="add" id="sAdd">＋ 項目を最後に追加</button><button type="button" class="add" id="sPreset">果実品質調査のひな形</button></div>
       <p class="help">「事前入力」の列（樹番号・処理区など）は、下の個体リストで先に入れておきます。音声では「音声で入力」の列だけを順に入力します。項目の順番を変えたり項目を足したりしても、これまでに入力した値はそのまま残ります。</p>
+    </fieldset>
+    </details>
+    <details class="fold" data-fold="alias"><summary><span class="ftitle">言い換え（聞き違い・略語）</span><span class="fsum" data-sum="alias"></span></summary>
+    <fieldset class="fbody">
+      <legend>言い換え（聞き違い・略語）</legend>
+      <p class="help">話した言葉が、登録した言葉と<b>そのまま同じ</b>ときに、右の値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>。左は「、」で区切って複数書けます。ひらがな・カタカナの違いは気にしません。「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。</p>
+      <div class="aliases" id="sAliases"></div>
+      <button type="button" class="add" id="sAliasAdd">＋ 言い換えを追加</button>
     </fieldset>
     </details>
     <details class="fold" data-fold="list" id="sListBox"><summary><span class="ftitle">個体リスト（事前入力の列）</span><span class="fsum" data-sum="list"></span></summary>
@@ -740,6 +787,7 @@ function normS(){
   if(!["full","short","beep"].includes(S.rbMode)) S.rbMode="full";
   if(typeof S.fastCommit!=="boolean") S.fastCommit=false;
   if(typeof S.rbManual!=="boolean") S.rbManual=false;
+  S.aliases=(Array.isArray(S.aliases)?S.aliases:[]).map(a=>({from:String(a?.from??"").trim(),to:String(a?.to??"").trim(),item:String(a?.item??"")})).filter(a=>a.from&&a.to);
   S.freezeCols=Math.max(0,Math.min(30,Math.floor(+S.freezeCols||0)));
   S.freezeRows=Math.max(0,Math.min(20,Math.floor(+S.freezeRows||0)));
 }
@@ -992,6 +1040,7 @@ function putValue(v){
 /* 値の言葉を、今の項目の値に（数値・選択肢）。だめなら null */
 function valFor(it,txt){
   txt=String(txt||"").trim(); if(!txt) return null;
+  const al=aliasFor(it,txt); if(al!==null) txt=al;
   if(it.type==="num"){ const x=parseNumber(txt); return (x===null||Number.isNaN(x))?null:roundVal(it,x); }
   if(it.type==="choice") return matchChoice(txt,it.options);
   return null;
@@ -1158,6 +1207,16 @@ function matchChoice(raw,opts){
   const t=normJ(raw); if(!t) return null;
   return opts.find(o=>normJ(o)===t)||opts.find(o=>t.includes(normJ(o)))||opts.find(o=>normJ(o).includes(t))||null;
 }
+/* 言い換え：話した言葉（全体）が登録した言葉とそのまま同じなら、置き換える値を返す。item が空ならすべての列が対象 */
+let aliasHits=[];
+function aliasFor(it,txt){
+  const t=normJ(txt); if(!t||!it||!S.aliases||!S.aliases.length) return null;
+  for(const a of S.aliases){
+    if(a.item&&a.item!==it.id) continue;
+    if(a.from.split(/[、,，]/).some(f=>f.trim()&&normJ(f)===t)){ aliasHits.push(`${String(txt).trim()}→${a.to}`); return a.to; }
+  }
+  return null;
+}
 /* rbNow：手入力で、「復唱」ボタンがオンのとき true（声で入ったときと同じように読み上げる） */
 function handleText(raw, fromVoice, rbNow){
   const say=[], bad=[];
@@ -1174,7 +1233,7 @@ function handleText(raw, fromVoice, rbNow){
   if(fromVoice && ECHO_RE.test(clean.replace(/[、,，\s]/g,""))){ h.className="heard"; h.textContent=`読み上げの声とみなして無視しました：「${raw}」`; return; }
   rbNow=!fromVoice&&!!rbNow; manualRb=rbNow;
   voiceCtx=fromVoice?++utterSeq:0; undoBlocked=false;
-  halt=false; sel=null; putCount=0; lastPut=null; alerted=false;
+  halt=false; sel=null; putCount=0; lastPut=null; alerted=false; aliasHits=[];
   if(!pend) hideAlert();
   const whole=parseCommand(clean);
   if(whole!=="undo") bulkSnap=null;
@@ -1194,15 +1253,18 @@ function handleText(raw, fromVoice, rbNow){
       for(let i=0;i<toks.length;i++){
         if(halt) break;
         const it=S.items[cur.c]; if(!it) break;
-        if(it.type==="text"){ const s=putValue(i===0?clean:toks.slice(i).join(" ")); if(s) say.push(s); break; }
+        if(it.type==="text"){ const w=i===0?clean:toks.slice(i).join(" "); const s=putValue(aliasFor(it,w)??w); if(s) say.push(s); break; }
         const t=toks[i];
         const c=parseCommand(t); if(c){ const s=doCommand(c); if(s) say.push(s); continue; }
         if(it.type==="choice"){
-          const m=(i===0&&toks.length>1?matchChoice(clean,it.options):null)||matchChoice(t,it.options);
-          if(m===null) bad.push(t); else { const s=putValue(m); if(s) say.push(s); if(i===0&&toks.length>1&&normJ(m)===normJ(clean)) break; }
+          const multi=i===0&&toks.length>1;
+          const ac=multi?aliasFor(it,clean):null, mc=ac!==null?matchChoice(ac,it.options):null;
+          let m=mc;
+          if(m===null){ const at=aliasFor(it,t); m=(at!==null?matchChoice(at,it.options):null)||(multi?matchChoice(clean,it.options):null)||matchChoice(t,it.options); }
+          if(m===null) bad.push(t); else { const s=putValue(m); if(s) say.push(s); if(multi&&(mc!==null||normJ(m)===normJ(clean))) break; }
           continue;
         }
-        const v=parseNumber(t);
+        const v=parseNumber(aliasFor(it,t)??t);
         if(v===null||Number.isNaN(v)){
           /* くっついた小数（32.531.2）を、その項目の小数桁で切り分ける */
           if(it.type==="num"&&it.dec>0&&(t.match(/\./g)||[]).length>=2){
@@ -1216,7 +1278,7 @@ function handleText(raw, fromVoice, rbNow){
   }
   if(bad.length){ h.className="heard ng"; h.textContent=`「${raw}」→ 入力できない語：${bad.join(" ")}`; if(fromVoice) say.push("聞き取れません"); else if(rbNow) say.push("入力できません"); }
   else if(undoBlocked){ h.className="heard ng"; h.textContent=`「${raw}」→ 続けての取り消しは無視しました（${S.undoGap}秒あけてください）`; }
-  else if(!stoppedNow){ h.className="heard ok"; h.textContent=`「${raw}」`+(rbNow?"（復唱）":""); }
+  else if(!stoppedNow){ h.className="heard ok"; h.textContent=`「${raw}」`+(aliasHits.length?`（言い換え ${[...new Set(aliasHits)].join("・")}）`:"")+(rbNow?"（復唱）":""); }
   stoppedNow=false; voiceCtx=0;
   save(); render();
   if(fromVoice) speak(sayText(say,bad.length>0));
@@ -1238,7 +1300,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 3.8.1（2026-10-29）";
+const APP_VER="Pro 3.9.1（2026-10-29）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -1842,12 +1904,12 @@ function applyPaste(text){
     const r=cur.r+i; ensureRow(r);
     cells.slice(0,pl.cols.length).forEach((raw,j)=>{
       const v=String(raw).trim(); if(!v) return;
-      const it=S.items[pl.cols[j]]; let val;
-      if(it.type==="num"){ const x=parseNumber(v); if(x===null||Number.isNaN(x)){ bad++; return; }
+      const it=S.items[pl.cols[j]]; let val; const v2=aliasFor(it,v)??v;
+      if(it.type==="num"){ const x=parseNumber(v2); if(x===null||Number.isNaN(x)){ bad++; return; }
         let y=x; if(it.step>0) y=Math.round(y/it.step)*it.step; const m=Math.pow(10,it.dec); val=Math.round(y*m)/m;
         if(!allowOk(it,val)){ bad++; badCells.add(r+":"+pl.cols[j]); return; } }
-      else if(it.type==="choice"){ val=matchChoice(v,it.options); if(val===null){ bad++; return; } }
-      else val=v;
+      else if(it.type==="choice"){ val=matchChoice(v2,it.options); if(val===null){ bad++; return; } }
+      else val=v2;
       D[r][it.id]=val; flashCells.add(r+":"+pl.cols[j]); cnt++;
     });
   });
@@ -1930,8 +1992,60 @@ function drawItems(){
         <label>許容±<input type="text" inputmode="decimal" data-k="cmp.tol" value="${c.tol||""}" placeholder="0"></label></div>`:""}
     </div>`; }).join("");
   drawGen(); if(document.querySelector("input[name=dir]:checked")) drawGroupPrev(); if($("#sFzPrev")) drawFzPrev();
+  drawAliases();
   if(typeof foldSums==="function") foldSums();
 }
+/* 言い換えの行（draft.aliases）。対象は「すべての列」か、音声で入力の列 */
+function drawAliases(){
+  const box=$("#sAliases"); if(!box||!draft) return;
+  if(!Array.isArray(draft.aliases)) draft.aliases=[];
+  const cols=draft.items.filter(it=>it.role!=="id");
+  box.innerHTML=draft.aliases.map((a,i)=>`<div class="arow" data-ai="${i}">
+    <input type="text" data-ak="from" value="${esc(a.from)}" placeholder="話した言葉（例 むし、虫）" aria-label="話した言葉${i+1}">
+    <span class="arr" aria-hidden="true">→</span>
+    <input type="text" data-ak="to" value="${esc(a.to)}" placeholder="入れる値（例 虫害）" aria-label="入れる値${i+1}">
+    <button type="button" data-ak="del" aria-label="この言い換えを削除">✕</button>
+    <select data-ak="item" aria-label="対象の列${i+1}"><option value="">すべての列</option>${cols.map(it=>`<option value="${esc(it.id)}" ${it.id===a.item?"selected":""}>${esc(it.name||"（名前なし）")}の列だけ</option>`).join("")}</select>
+    <span class="awarn"></span>
+  </div>`).join("")||`<p class="help">まだありません。</p>`;
+  aliasWarn();
+}
+/* 気をつけることを行の下に出す（保存は止めない） */
+function aliasWarn(){
+  if(!draft) return;
+  const seen=new Map();
+  $("#sAliases").querySelectorAll(".arow").forEach(row=>{
+    const a=draft.aliases[+row.dataset.ai]; const w=[];
+    const froms=a.from.split(/[、,，]/).map(f=>f.trim()).filter(Boolean);
+    const cmd=froms.filter(f=>parseCommand(f)||isStopWord(f)||isResumeWord(f)||parseYesNo(f));
+    if(cmd.length) w.push(`「${cmd.join("・")}」は音声コマンドの言葉なので、操作が優先されます`);
+    const it=a.item?draft.items.find(x=>x.id===a.item):null;
+    if(a.item&&!it) w.push("対象の列がありません（保存すると「すべての列」になります）");
+    if(it&&it.type==="choice"&&a.to&&matchChoice(a.to,it.options)===null) w.push(`「${a.to}」は ${it.name} の候補にありません`);
+    if(it&&it.type==="num"&&a.to&&(parseNumber(a.to)===null||Number.isNaN(parseNumber(a.to)))) w.push(`${it.name} は数値の列ですが、「${a.to}」は数値になりません`);
+    froms.forEach(f=>{ const k=normJ(f)+"\u0001"+(a.item||""); if(seen.has(k)) w.push(`「${f}」は上の行にもあります（上の行が使われます）`); else seen.set(k,1); });
+    if((!a.from)!==(!a.to)) w.push("左右の両方を入れてください（片方だけの行は保存しません）");
+    row.querySelector(".awarn").textContent=w.join("。");
+  });
+}
+$("#sAliases").addEventListener("input",e=>{
+  const row=e.target.closest(".arow"); if(!row) return; const a=draft.aliases[+row.dataset.ai], k=e.target.dataset.ak;
+  if(k==="from"||k==="to") a[k]=e.target.value; aliasWarn();
+});
+$("#sAliases").addEventListener("change",e=>{
+  const row=e.target.closest(".arow"); if(!row) return;
+  if(e.target.dataset.ak==="item"){ draft.aliases[+row.dataset.ai].item=e.target.value; aliasWarn(); }
+});
+$("#sAliases").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-ak=del]"); if(!b) return;
+  draft.aliases.splice(+b.closest(".arow").dataset.ai,1); drawAliases(); foldSums();
+});
+$("#sAliasAdd").onclick=()=>{
+  if(!Array.isArray(draft.aliases)) draft.aliases=[];
+  draft.aliases.push({from:"",to:"",item:""}); drawAliases(); foldSums();
+  const rows=$("#sAliases").querySelectorAll(".arow"); const el=rows[rows.length-1];
+  if(el){ el.scrollIntoView({block:"nearest"}); el.querySelector("input").focus(); }
+};
 function drawGen(){
   const ids=draft.items.filter(it=>it.role==="id");
   $("#sListBox").hidden=!ids.length;
@@ -2104,6 +2218,7 @@ function foldSums(){
   put("other",`読み上げ ${q("#sRead").checked?"オン":"オフ"}・${{full:"全部",short:"短く",beep:"区切りだけ"}[q("#sRbMode").value]||""}・×${(+q("#sRate").value||1.1).toFixed(1)}・音 ${q("#sSound").checked?"オン":"オフ"}`);
   const fc=Math.max(0,Math.floor(+q("#sFzCols").value||0)), fr=Math.max(0,Math.floor(+q("#sFzRows").value||0));
   put("freeze",fc||fr?[fc?`左${fc}列`:"",fr?`上${fr}行`:""].filter(Boolean).join("・"):"固定なし");
+  { const al=(draft.aliases||[]).filter(a=>String(a.from).trim()&&String(a.to).trim()); put("alias",al.length?`${al.length}件（${al.slice(0,2).map(a=>`${a.from.split(/[、,，]/)[0].trim()}→${a.to.trim()}`).join("、")}${al.length>2?"…":""}）`:"なし"); }
   put("io","この調査だけが対象");
 }
 $("#setForm").addEventListener("input",()=>foldSums());
@@ -2142,6 +2257,7 @@ $("#sSave").onclick=()=>{
   draft.rbMode=$("#sRbMode").value; draft.fastCommit=$("#sFast").checked;
   draft.freezeCols=+String($("#sFzCols").value).normalize("NFKC")||0; draft.freezeRows=+String($("#sFzRows").value).normalize("NFKC")||0;
   draft.items.forEach((it,i)=>{ if(!String(it.name||"").trim()) it.name="項目"+(i+1); });
+  draft.aliases=(draft.aliases||[]).map(a=>({from:String(a.from||"").split(/[、,，]/).map(f=>f.trim()).filter(Boolean).join("、"),to:String(a.to||"").trim(),item:draft.items.some(it=>it.id===a.item&&it.role!=="id")?a.item:""})).filter(a=>a.from&&a.to);
   const curId=S.items[cur.c]?.id;
   const wasNum=new Set(S.items.filter(it=>it.type==="num").map(it=>it.id));
   S=draft; normS();
@@ -2408,6 +2524,132 @@ function importTable(rows){
   save(); render(); $("#dlg").close(); $("#svDlg").close();
   note(`読み込みました：${ds.length}調査日、${ND.length}個体`+(added.length?`。新しい項目「${added.join("・")}」を追加しました（設定で種類を確認してください）`:""));
 }
+
+/* ========= 使い方の説明（3.9〜。機能を足したら、ここにも説明を足す） =========
+   g：分類、t：見出し、k：探すときの言葉（言い換え）、go：設定で開く見出し（data-fold）、b：本文 */
+const HELP_GROUPS=[["start","はじめに"],["input","入力する"],["table","表と順番"],["ts","経時調査"],["save","保存と出力"],["trouble","困ったとき"]];
+const HELP=[
+{g:"start",id:"flow",t:"使い始めの流れ",k:"始め方 最初 手順 基本 使い方 準備 はじめかた てじゅん",go:"items",b:
+"<ol><li>画面上の「調査一覧」で調査を作ります（今の調査の設定を使う／果実品質調査のひな形／空白から）。</li><li>「設定」の「調査項目」で、表の列を決めます。樹番号・処理区など先に分かっている列は「事前入力」、調査で測る列は「音声で入力」にします。</li><li>事前入力の列があれば、「個体リスト」で個体を並べます。</li><li>マイクを押して値を話します。入るたびに次のセルへ進みます。</li><li>終わったら「Excelで保存」か、設定の「バックアップを保存」で保存します。</li></ol>"},
+{g:"start",id:"surveys",t:"調査一覧（複数の調査）",k:"新しい調査 作る 切り替え 空白から ひな形 削除 ファイルから作る 別の調査 複数 ちょうさいちらん くうはく ひながた さくじょ",b:
+"<p>調査ごとに、設定・個体リスト・全調査日のデータを分けてこの端末に保存します。「調査一覧」で調査を押すと切り替わり、入力中の調査は自動で保存されます。</p><ul><li><b>今の調査の設定を使う</b>：項目・個体リスト・読み上げなどを引き継ぎ、測定データは空で始めます。</li><li><b>果実品質調査のひな形</b>：標準の項目（樹番号・横径・果実重など）から始めます。</li><li><b>空白から</b>：標準の項目を使わず、項目を自分で作ります。作るとすぐ設定が開き、最初の項目名を打ち直せます。</li><li><b>ファイルから作る</b>：バックアップ（.json）、このアプリのExcel・CSVから新しい調査を作ります。今の調査はそのまま残ります。</li></ul><p>一覧の「保存」でその調査のバックアップを、「削除」で調査ごと消せます（削除は元に戻せません）。別々の調査なら、タブ・ウインドウごとに並行して使えます。</p>"},
+{g:"start",id:"settings",t:"設定画面の使い方",k:"設定 見出し 折りたたみ 開く 閉じる すべて開く せってい",b:
+"<p>設定は見出しごとに折りたたんであります。見出しを押すと開いたり閉じたりでき、その状態は次に設定を開いたときも残ります。閉じた見出しの右には、今の設定が短く出ます。上の「すべて開く」「すべて閉じる」でまとめて切り替えられます。変更は「保存」を押すまで反映されません。</p>"},
+{g:"start",id:"code",t:"利用コード",k:"ライセンス コード 期限 期限切れ 更新 変更 KOE りようこーど きげん",b:
+"<p>Proは利用コードを入れて使います。コードごとに使える期間が決まっていて、期限の少し前からお知らせが出ます。新しいコードは、画面下の「利用コードを変更」から入れます。期限が切れても入力したデータは消えず、Excel保存とバックアップはできます。</p>"},
+
+{g:"input",id:"voice",t:"声で入力する（マイク）",k:"マイク 音声 話す 開始 停止 連続認識 1回ずつ 聞き取り方 セルをタップ まいく おんせい れんぞく",go:"listen",b:
+"<p>マイクを押して話すと、黄色のセルに値が入り、次のセルへ進みます。聞き取った言葉は「次に入るセル」の下に出ます。</p><ul><li><b>連続認識</b>：止めるまで聞き続けます。</li><li><b>1回ずつ</b>：押すたびに1回だけ聞きます。</li></ul><p>表のセルをタップすると、そのセルから入力を続けます。</p>"},
+{g:"input",id:"numbers",t:"数値の言い方",k:"数字 小数 てん 点 マイナス 単位 ミリ グラム 続けて 刻み 桁 丸め すうじ しょうすう てん まいなす たんい",go:"items",b:
+"<p>小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。負の値は「マイナス」を付けます。ミリ・センチ・グラム・度などの単位は付けても無視します。</p><p><code>32.5 31.2 30.8</code> のように続けて言うと、今のセルから順に入ります（値の間に少し間を置くか「と」を挟みます）。くっついて聞き取られた数値（32.531.2）は、その項目の小数の桁で切り分けます。値は項目ごとの小数の桁数と刻み（0.5刻みなど）に合わせて丸めます。</p>"},
+{g:"input",id:"textchoice",t:"文字・選択肢の列",k:"文字 備考 選択肢 候補 品種 テキスト もじ びこう せんたくし",go:"items",b:
+"<p>文字の列には、話した言葉がそのまま入ります。選択肢の列は、登録した候補（例 にっこり、幸水、豊水）から一番近いものが入ります。ひらがな・カタカナの違いは気にしません。うまく聞き取れない言葉や短く言いたい言葉は、「言い換え」に登録できます。</p>"},
+{g:"input",id:"alias",t:"言い換え（聞き違い・略語の登録）",k:"言い換え 置き換え 略語 聞き違い 誤変換 登録 虫害 いいかえ ききちがい りゃくご とうろく",go:"alias",b:
+"<p>よく聞き違える言葉や、短く言いたい言葉を登録しておくと、決めた値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>、<code>びょう</code> → <code>病害</code>。左は「、」で区切って複数書けます。</p><ul><li>話した言葉が登録した言葉と<b>そのまま同じ</b>ときだけ置き換えます（言葉の一部は置き換えません）。</li><li>ひらがな・カタカナ、全角・半角の違いは気にしません。</li><li>対象は「すべての列」か、特定の列だけを選べます。文字・選択肢・数値のどの列にも使えます。選択肢の列では、置き換えた値が候補にあるときだけ入ります。</li><li>手入力・まとめて入力・貼り付けにも効きます。</li><li>「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。</li></ul><p>置き換えたときは、聞き取った言葉の横に（言い換え むし→虫害）と出ます。言い換えは調査ごとの設定で、「今の調査の設定を使う」で作った調査とバックアップにも引き継がれます。</p>"},
+{g:"input",id:"allow",t:"入力できる値（範囲外の防止）",k:"範囲 範囲外 入力できる値 指数 0〜3 制限 はんい はんいがい しすう",go:"items",b:
+"<p>数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます。病害の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます。</p>"},
+{g:"input",id:"commands",t:"音声コマンド",k:"取り消し スキップ 次 戻る 待機 再開 停止 除外 復帰 はい いいえ コマンド とりけし すきっぷ つぎ もどる たいき さいかい ていし じょがい ふっき こまんど",b:
+"<ul><li><code>取り消し</code>：直前の値を消す</li><li><code>スキップ</code>：空欄のまま進む</li><li><code>次</code>：次の個体（列単位では次の項目）へ</li><li><code>戻る</code>：1つ前へ</li><li><code>待機</code>（一時停止・休憩）／<code>再開</code>／<code>停止</code>（ストップ・終了）</li><li><code>除外</code>（落果・枯死・欠株）／<code>復帰</code></li><li>前回比の「注意」には <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）</li></ul><p>同じ操作は、画面のボタンでもできます。</p>"},
+{g:"input",id:"bulk",t:"まとめて入力（ゼロ 6個・残り全部）",k:"まとめて 一括 ゼロ 個 残り 全部 範囲 から まとめて いっかつ ぜろ のこり ぜんぶ",b:
+"<ul><li><code>ゼロ 6個</code>（0を6つ）：今の列の今の個体から6個体分</li><li><code>残り全部ゼロ</code>（残りゼロ）：今の列の最後の個体まで</li><li><code>5から10 ゼロ</code>：今の列の No.5〜10</li></ul><p>除外した個体は飛ばします。前回比で「禁止」になるセルには入れず、「注意」のセルは入れたうえで件数を知らせます。直後に「取り消し」と言うか「元に戻す」を押すと、まとめて入れた分をすべて戻せます。</p>"},
+{g:"input",id:"standby",t:"待機・再開・停止",k:"待機 休憩 一時停止 再開 停止 ストップ 休む たいき きゅうけい さいかい ていし",go:"standby",b:
+"<p>「待機」と言うか「待機」ボタンで、聞き取りを休みます。</p><ul><li><b>声で再開できる</b>：聞き取りは続け、「再開」「停止」以外の声は記録しません。</li><li><b>完全に止める</b>：マイクを切ります。再開はボタンで行います。</li></ul><p>「停止」は聞き取りを止めます。続けるときはマイクを押します。</p>"},
+{g:"input",id:"readback",t:"読み上げ（確認の声）",k:"読み上げ 復唱 声 速さ 短く 区切りだけ ピッ 早めに確定 よみあげ ふくしょう はやさ",go:"other",b:
+"<p>声で入れた値を読み上げて確かめられます（設定の「声で入力した値を読み上げる」）。</p><ul><li><b>全部</b>：値と次の個体をすべて読む</li><li><b>短く</b>：値と、変わった番号だけを読む</li><li><b>区切りだけ</b>：ふだんは「ピッ」と鳴らし、次の個体に移るとき・アラートのときだけ話す</li></ul><p>速さは 0.6〜2.0 で変えられます。「早めに確定する（試験的）」をオンにすると、話し終わりを待たずに入力します。</p>"},
+{g:"input",id:"manual",t:"手入力・ノギス・はかり",k:"手入力 ノギス はかり 計量器 Bluetooth キーボード U-WAVE 復唱 Enter Win+H キーボード音声入力 てにゅうりょく のぎす はかり ふくしょう",go:"other",b:
+"<p>手入力欄に値を入れて「入力」かEnterで入ります。ノギスやはかりなど、キーボードとして値を送る機器もそのまま使えます（Enterで操作ボタンが押されない・キーの繰り返しを止める対策をしています）。</p><p>マイクの横の「復唱」を押すと、オフにするまで手入力の値も読み上げます。PCで Win+H などのキーボードの音声入力を使うときは、設定の「キーボード音声入力モード」をオンにすると、話した後1.2秒で自動で確定します。</p>"},
+
+{g:"table",id:"tableops",t:"表の操作（クリア・削除して詰める・行を削除）",k:"クリア 消す 削除 詰める 行を削除 範囲選択 コピー 貼り付け 貼付 元に戻す Ctrl Delete くりあ さくじょ つめる はんいせんたく こぴー はりつけ もとにもどす",b:
+"<ul><li><b>クリア</b>：選んだセル（範囲）の値を消す</li><li><b>削除して詰める</b>：今のセルを消し、後ろの値を1つずつ前へ詰める（2回入ってしまったとき）</li><li><b>行を削除</b>：今の行を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も消える</li><li><b>範囲選択</b>：オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）</li><li><b>コピー</b>・<b>貼付</b>：Excelとの間でも使える（PCは Ctrl+C・Ctrl+V・Delete も可）</li></ul><p>操作のあとは「元に戻す」で戻せます。</p>"},
+{g:"table",id:"order",t:"入力の進む順番（行・列・グループ）",k:"順番 行単位 列単位 グループ 横 縦 進む方向 じゅんばん ぎょう れつ ぐるーぷ",go:"dir",b:
+"<ul><li><b>行単位</b>：1個体の全項目 → 次の個体</li><li><b>列単位</b>：1項目を全個体 → 次の項目</li><li><b>グループ単位</b>：決めた列数のまとまりごとに 横 → 次の個体。例 <code>2,1</code> なら、左の2列を全個体分、次の1列を全個体分</li></ul>"},
+{g:"table",id:"list",t:"個体リスト（事前入力の列）",k:"個体リスト 事前入力 樹番号 処理区 果実番号 組み合わせ Excel 貼り付け こたいりすと じぜんにゅうりょく じゅばんごう しょりく",go:"list",b:
+"<p>事前入力の列（樹番号・処理区など）は、個体リストで先に入れておきます。「組み合わせで個体リストを作る」で、例えば 樹 <code>1-5</code> × 処理区 <code>無処理、遮光</code> × 果実 <code>1-10</code> の全組み合わせを作れます。Excelで事前入力の列を並べてコピーし、貼り付けることもできます。リストを減らすと、外れた行を表から消すか確かめます。</p>"},
+{g:"table",id:"freeze",t:"ウインドウ枠の固定",k:"固定 ウインドウ枠 列 行 スクロール 見出し こてい ういんどうわく",go:"freeze",b:
+"<p>表を横や下に動かしても、左の列・上の行が残るようにできます。設定の「表の表示」で、左から固定する列数（No.の列も1列と数える）と上から固定する行数を指定します。「事前入力の列まで固定」で、個体の識別の列までを一度に指定できます。</p>"},
+
+{g:"ts",id:"timeseries",t:"経時調査と調査日",k:"経時 調査日 日付 新しい調査日 肥大 継続 繰り返し けいじ ちょうさび ぜんかい ひだい",go:"ts",b:
+"<p>設定の「調査の種類」を「経時調査」にすると、調査日ごとに記録します。表の上の「＋ 新しい調査日」で次の調査を始め、調査日の欄で過去の日に切り替えて見直せます。個体リストと除外の記録は、全調査日で共通です。</p>"},
+{g:"ts",id:"compare",t:"前回比アラート",k:"前回比 アラート 減った 増えた 同じ 注意 禁止 表示 許容 誤差 はい いいえ ぜんかいひ あらーと ちゅうい きんし きょよう ごさ",go:"items",b:
+"<p>経時調査では、各項目（数値・音声で入力）の「前回比」で、前回より減った・増えた・同じときの扱いを決めます。</p><ul><li><b>表示</b>：知らせるだけ</li><li><b>注意</b>：「はい」で確定、「いいえ」か正しい値で入力し直し</li><li><b>禁止</b>：入れずに、入力し直しを求める</li></ul><p>「許容±」は測定誤差の幅で、この幅以内の差は「同じ」とみなします。例：肥大調査なら、横径・縦径・果実重の「減った」を「注意」か「禁止」にします。</p>"},
+{g:"ts",id:"exclude",t:"除外（落果・枯死・欠株）と復帰",k:"除外 落果 枯死 欠株 復帰 飛ばす じょがい らっか こし けっかぶ ふっき",b:
+"<p>「除外」（または「落果」「枯死」「欠株」）と言うか、「除外」ボタンを押すと、その個体をこの調査日以降は自動で飛ばします。間違えたときは、その個体のセルで「復帰」と言うか「復帰」ボタンを押します。除外は、出力の「状態」「除外日」「理由」に記録されます。</p>"},
+
+{g:"save",id:"export",t:"Excel・CSVで保存",k:"Excel エクセル CSV 保存 出力 野帳型 縦持ち R 統計 ダウンロード えくせる ほぞん しゅつりょく やちょうがた たてもち",go:"ts",b:
+"<p>「Excelで保存」は、その日の表を保存します。経時調査では、全調査日をまとめたシートも入ります。</p><ul><li><b>野帳型</b>：1行＝1個体、調査日ごとに項目を横に並べる</li><li><b>縦持ち（R用）</b>：1行＝1個体×1調査日。Rなどの統計に向く</li></ul><p>どちらを出すかは、設定の「調査の種類」の「全調査日の出力形式」で選びます。</p>"},
+{g:"save",id:"backup",t:"バックアップと読み込み（機種変更）",k:"バックアップ json 読み込み 復元 機種変更 別の端末 移行 引き継ぎ ばっくあっぷ よみこみ きしゅへんこう いこう",go:"io",b:
+"<p>「バックアップを保存」は、設定・個体リスト・全調査日・除外の記録をまるごと1つのファイル（.json）に保存します。別の端末で「ファイルを読み込む」と、そのまま続きから使えます。このアプリで保存したExcel（縦持ちシート）やCSVも読み込めます。</p><p>設定からの読み込みは、今開いている調査を置き換えます。今の調査を残したいときは、「調査一覧」の「ファイルから作る」を使います。</p>"},
+{g:"save",id:"clear",t:"全消去と調査の削除",k:"全消去 消去 削除 リセット 初期化 ぜんしょうきょ さくじょ しょきか",go:"io",b:
+"<p>設定の「この調査の測定データを全消去する」は、すべての調査日の測定データと除外の記録を消します（項目と個体リストは残ります）。調査そのものを消すときは、「調査一覧」の「削除」を使います。どちらも元に戻せないので、先にバックアップを取ってください。</p>"},
+{g:"save",id:"privacy",t:"データの保存場所",k:"保存場所 端末 プライバシー 送信 容量 消える ブラウザ ほぞんばしょ たんまつ そうしん ようりょう",b:
+"<p>入力したデータは、お使いの端末のブラウザの中にだけ保存します。開発者が集めることはありません。話した音声は、文字にするためにApple・Google・Microsoftの音声認識サービスへ送られます。</p><p>ブラウザの閲覧データを削除すると、保存したデータも消えます。調査の後は、Excelかバックアップで保存してください。保存できる容量を超えたときは、警告が出ます。</p>"},
+
+{g:"trouble",id:"mic",t:"マイクが使えない・聞き取らない",k:"マイク 使えない 許可 聞き取らない 反応しない 診断 https iPhone Android まいく つかえない きょか しんだん",b:
+"<ol><li>画面下の「マイク診断」を押します。マイク自体が止められているのか、音声認識の側が止められているのかが分かります。</li><li>iPhoneはSafari、AndroidはChrome、PCはChromeかEdgeで開きます。</li><li>マイクの使用を、ブラウザと端末の設定で許可します。iPhoneでは、音声入力（Siri・音声入力）が止められていると使えません。</li><li>電波が弱いと聞き取れないことがあります。そのときは手入力欄を使います。</li></ol>"},
+{g:"trouble",id:"tts",t:"読み上げが聞こえない",k:"聞こえない 音が出ない 読み上げ 消音 音量 テスト きこえない よみあげ おんりょう",go:"other",b:
+"<p>消音スイッチと音量を確かめ、設定の「読み上げテスト」を押します。設定の「声で入力した値を読み上げる」がオフだと、声で入れた値は読みません。手入力の値は「復唱」ボタンがオンのときだけ読みます。</p>"},
+{g:"trouble",id:"mistake",t:"間違えて入れた・取り消しが進みすぎる",k:"間違い 間違えた 取り消し 戻す 進みすぎ 間隔 直す 修正 まちがい とりけし なおす しゅうせい",go:"other",b:
+"<p>直前の値は「取り消し」で消せます。前のセルを直すときは、そのセルをタップして言い直します。表の操作（クリア・削除して詰める）の後は「元に戻す」で戻せます。</p><p>読み上げの声を拾って取り消しが続けて進むときは、設定の「声の『取り消し』を続けるときの間隔」を長くします。</p>"},
+{g:"trouble",id:"home",t:"ホーム画面に追加・複数のタブ",k:"ホーム画面 アイコン インストール アプリ タブ ウインドウ ほーむがめん あいこん たぶ",b:
+"<p>ブラウザのメニューから「ホーム画面に追加」すると、アプリのように開けます。Androidで追加したアプリはタブを複数開けないので、複数の調査は「調査一覧」で切り替えます。同じ調査を2か所で開くと、あとから変えた方の内容に揃えます。</p>"}
+];
+const HELP_GO={ts:"調査の種類",items:"調査項目",alias:"言い換え",list:"個体リスト",dir:"入力の進む順番",listen:"聞き取り方",standby:"待機のしかた",other:"読み上げ・音・その他",freeze:"表の表示",io:"データの保存・読み込み・全消去"};
+const HELP_EX=["取り消し","ノギス","言い換え","経時","Excel","除外","読み上げ"];
+/* 探す言葉を正規化（全角半角・ひらがなカタカナ・大文字小文字の違いを無視） */
+const helpNorm=s=>normJ(s);
+const helpText=h=>{ const d=document.createElement("div"); d.innerHTML=h.b; return d.textContent; };
+HELP.forEach(h=>{ h._hay=helpNorm(h.t+" "+h.k+" "+helpText(h)); h._t=helpNorm(h.t+" "+h.k); });
+/* 強調表示：ひらがな・カタカナ、大文字小文字のどちらにも当たる正規表現 */
+function helpRe(term){
+  const src=[...term].map(c=>{ const k=c.charCodeAt(0);
+    if(k>=0x3041&&k<=0x3096) return `[${c}${String.fromCharCode(k+0x60)}]`;
+    return c.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"); }).join("");
+  try{ return new RegExp(src,"gi"); }catch(e){ return null; }
+}
+function helpMark(root,terms){
+  const res=terms.map(helpRe).filter(Boolean); if(!res.length) return;
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT); const nodes=[]; while(w.nextNode()) nodes.push(w.currentNode);
+  nodes.forEach(nd=>{
+    const s=nd.nodeValue; const hits=[];
+    res.forEach(re=>{ re.lastIndex=0; let m; while((m=re.exec(s))){ if(!m[0]){ re.lastIndex++; continue; } hits.push([m.index,m.index+m[0].length]); } });
+    if(!hits.length) return;
+    hits.sort((a,b)=>a[0]-b[0]); const merged=[]; hits.forEach(h=>{ const l=merged[merged.length-1]; if(l&&h[0]<=l[1]) l[1]=Math.max(l[1],h[1]); else merged.push(h.slice()); });
+    const f=document.createDocumentFragment(); let p=0;
+    merged.forEach(([a,b])=>{ f.append(s.slice(p,a)); const mk=document.createElement("mark"); mk.textContent=s.slice(a,b); f.append(mk); p=b; });
+    f.append(s.slice(p)); nd.replaceWith(f);
+  });
+}
+function drawHelp(){
+  const q=$("#helpQ").value, terms=q.split(/[\s　、,，]+/).map(helpNorm).filter(Boolean);
+  let hits=HELP.filter(h=>terms.every(t=>h._hay.includes(t)));
+  if(terms.length) hits=hits.map((h,i)=>({h,i,s:terms.filter(t=>h._t.includes(t)).length})).sort((a,b)=>b.s-a.s||a.i-b.i).map(x=>x.h);
+  const open=terms.length&&hits.length<=6;
+  const card=h=>`<details class="fold htopic" data-h="${h.id}"${open?" open":""}><summary><span class="ftitle">${esc(h.t)}</span></summary><div class="fbody hbody">${h.b}${h.go?`<button type="button" class="ghost hgo" data-go="${h.go}">設定の「${esc(HELP_GO[h.go]||h.go)}」を開く</button>`:""}</div></details>`;
+  let html="";
+  if(!terms.length) HELP_GROUPS.forEach(([g,l])=>{ const hs=HELP.filter(h=>h.g===g); if(hs.length) html+=`<h3 class="hgrp">${esc(l)}</h3>`+hs.map(card).join(""); });
+  else html=hits.map(card).join("")||`<p class="help">「${esc(q.trim())}」に当てはまる説明は見つかりませんでした。別の言葉（例：${HELP_EX.slice(0,4).join("、")}）で探してください。</p>`;
+  $("#helpList").innerHTML=html;
+  $("#helpCount").textContent=terms.length?`${hits.length}件見つかりました`:`${HELP.length}項目`;
+  if(terms.length) $("#helpList").querySelectorAll(".htopic").forEach(el=>helpMark(el,terms));
+}
+function openHelp(q){
+  if(listening||standby) stopRec(); clearPend();
+  $("#helpQ").value=q||""; drawHelp(); $("#helpVer").textContent=APP_VER;
+  $("#helpDlg").showModal(); $("#helpList").scrollTop=0;
+}
+$("#helpChips").innerHTML=HELP_EX.map(w=>`<button type="button" class="hchip">${esc(w)}</button>`).join("");
+$("#helpChips").addEventListener("click",e=>{ const b=e.target.closest(".hchip"); if(!b) return; $("#helpQ").value=b.textContent; drawHelp(); });
+$("#helpQ").addEventListener("input",drawHelp);
+$("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").value){ e.preventDefault(); $("#helpQ").value=""; drawHelp(); } });
+$("#btnHelp").onclick=()=>openHelp();
+$("#fHelp").onclick=()=>openHelp();
+$("#helpClose").onclick=()=>$("#helpDlg").close();
+/* 説明から設定の見出しへ（設定が開いていればその見出しへ移るだけ。開いていなければ開く） */
+$("#helpList").addEventListener("click",e=>{
+  const b=e.target.closest(".hgo"); if(!b) return;
+  const key=b.dataset.go; $("#helpDlg").close();
+  if($("#dlg").open) foldGo(key); else openSettings(key);
+});
 
 if(!SR) note("このブラウザは音声認識に対応していません。AndroidはChrome、iPhoneはSafariで開いてください。");
 render();
