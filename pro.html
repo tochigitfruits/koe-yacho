@@ -347,6 +347,44 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
 .grtip .tr span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .grtip .tr small{grid-column:2 / -1;color:var(--muted);margin-top:-3px}
 .grtip b{font-family:var(--f-num)}
+/* 4.1：外れ値のお知らせ */
+td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
+.ollist{display:grid;gap:6px}
+.ollist h3{margin:4px 0 0;font-size:.95rem}
+.ollist button{text-align:left;border:1.5px solid var(--warn);border-radius:10px;background:color-mix(in srgb,var(--warn) 8%,var(--surface));padding:8px 12px;display:grid;gap:2px;font-size:.88rem}
+.ollist button small{color:var(--muted);font-size:.78rem}
+/* 4.2：調査日の予定 */
+#planBar.info .albtns button:not(.sec){background:var(--accent);color:var(--accent-ink)}
+.pbox{display:grid;gap:10px}
+.pgrid{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(9.5em,1fr))}
+.pbox input[type=date],.pbox input[type=number],.pbox input[type=time],.pbox textarea{border:1.5px solid var(--line);border-radius:10px;padding:9px 10px;background:var(--bg);width:100%;min-width:0;font-family:var(--f-num)}
+.pbox .field{min-width:0}
+.svdue{display:inline-block;font-weight:700;color:var(--warn)}
+.svnext{display:inline-block}
+.hbadge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--warn);color:#fff;font-size:.72rem;font-weight:700;vertical-align:1px}
+/* 4.3：データ統合・更新の記録 */
+#mgDlg .sheet{gap:12px}
+#mgTitle:focus{outline:none}
+.mgsrc{display:grid;grid-template-columns:minmax(0,1fr) 36px;gap:2px 8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.mgsrc b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mgsrc small{grid-column:1;color:var(--muted);font-size:.78rem}
+.mgsrc button{grid-row:1 / 3;grid-column:2;width:36px;height:36px;border:1.5px solid var(--line);border-radius:8px;background:var(--bg)}
+.mgsum ul{margin:0;padding-left:1.3em;display:grid;gap:4px;font-size:.88rem}
+.mgsum .mgwarn{color:var(--warn)}
+#mgConf{display:grid;gap:8px}
+#mgConf h3{margin:4px 0 0;font-size:.95rem}
+.mgc{border:1.5px solid var(--warn);border-radius:10px;padding:8px 10px;display:grid;gap:6px;background:color-mix(in srgb,var(--warn) 6%,var(--surface))}
+.mgcl{font-size:.85rem}
+.mgopts{display:flex;flex-wrap:wrap;gap:6px}
+.mgopts label{display:flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:999px;padding:4px 12px;min-height:40px;cursor:pointer;background:var(--surface);font-size:.85rem}
+.mgopts label:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.mgopts b{font-family:var(--f-num)}
+.mgopts input{margin:0}
+.mgopt2{display:grid;gap:6px}
+.hlog{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.hlog li{display:flex;gap:4px;align-items:flex-start}
+.hlog li::before{content:"・";flex:none;color:var(--muted)}
+.hlink{border:0;background:none;padding:0;text-align:left;color:var(--accent);text-decoration:underline;text-underline-offset:3px;font:inherit;cursor:pointer}
 </style>
 </head>
 <body>
@@ -378,6 +416,10 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
       <button class="ghost hbtn" id="btnHelp" type="button" aria-label="使い方の説明" title="使い方の説明">？</button>
     </div>
   </header>
+  <div class="alertbar info" id="planBar" role="status" hidden>
+    <div id="planMsg"></div>
+    <div class="albtns"><button type="button" id="planGo">今日の調査を始める</button><button type="button" id="planLater" class="sec">あとで</button></div>
+  </div>
   <div class="alertbar info" id="updBar" role="status" hidden>
     <div id="updMsg"></div>
     <div class="albtns"><button type="button" id="updGo">今すぐ切り替える</button><button type="button" id="updLater" class="sec">あとで</button></div>
@@ -459,7 +501,7 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
   </div>
   <pre class="diagout" id="diagOut" hidden></pre>
   <details class="terms">
-    <summary>© 2026 tochigitfruits　利用条件・免責事項</summary>
+    <summary>© 2026 栃木県農業総合研究センター果樹研究室　利用条件・免責事項</summary>
     <div class="termsbody" id="termsBody">
       <p><b>利用条件</b></p>
       <p>「声で野帳 Pro」は、調査記録の補助を目的として、利用コードをお持ちの方に提供しています。</p>
@@ -507,6 +549,7 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
       <span class="ver" id="svOut"></span>
     </fieldset>
     <p class="help">同じ調査を2つのタブ・ウインドウで同時に開くと、あとから変えた方の内容に揃えます。別々の調査なら、タブ・ウインドウごとに並行して使えます。</p>
+    <button type="button" class="add" id="svMerge">データを統合する（分担した調査を、今の調査にまとめる）</button>
     <span class="ver" id="svStore"></span>
     <div class="actions"><button type="button" id="svClose">閉じる</button></div>
   </div>
@@ -514,7 +557,7 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
 
 <dialog id="helpDlg" aria-labelledby="helpTitle">
   <div class="sheet">
-    <div class="sheethead"><h2 id="helpTitle" tabindex="-1" autofocus>使い方の説明</h2><span class="ver" id="helpVer"></span></div>
+    <div class="sheethead"><h2 id="helpTitle" tabindex="-1" autofocus>使い方の説明</h2><span class="ver" id="helpVer"></span><button type="button" class="ghost" id="helpLog">更新の記録</button></div>
     <input type="search" id="helpQ" class="hq" placeholder="単語で探す（例 取り消し、ノギス、Excel）" aria-label="説明を単語で探す" autocomplete="off" enterkeyhint="search">
     <div class="hchips" id="helpChips" aria-label="探す言葉の例"></div>
     <span class="ver" id="helpCount" aria-live="polite"></span>
@@ -555,6 +598,7 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
     </div>
     <div class="sumwrap"><table id="sumTbl" class="sumtbl"></table></div>
     <p class="help" id="sumNote"></p>
+    <div class="ollist" id="sumOl"></div>
     <div class="addrow"><button type="button" class="add" id="sumCopy">表をコピー</button><button type="button" class="add" id="sumCsv">表をCSVで保存</button></div>
     <section id="grBox" class="grbox">
       <h3>経時グラフ</h3>
@@ -568,6 +612,28 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
     </section>
     <span class="ver" id="sumOut" aria-live="polite"></span>
     <div class="actions"><button type="button" id="sumClose">閉じる</button></div>
+  </div>
+</dialog>
+
+<dialog id="mgDlg" aria-labelledby="mgTitle">
+  <div class="sheet">
+    <h2 id="mgTitle" tabindex="-1" autofocus>データを統合する</h2>
+    <p class="help">分担して調査したデータを、今開いている調査「<b id="mgTo"></b>」にまとめます。事前入力の列（樹番号・果実番号など）の値で同じ個体を見つけ、空いているセルを埋めます。値が食い違うセルは、どれを使うか選べます。</p>
+    <div class="addrow">
+      <label class="add filebtn" for="mgFile">ファイルを選ぶ<small class="ver" style="display:block">ほかの人のバックアップ（.json）。複数選べます</small><input type="file" id="mgFile" accept=".json,application/json" multiple hidden></label>
+      <label class="field" style="flex:1 1 12em"><b>この端末の別の調査から</b><select id="mgSv"></select></label>
+    </div>
+    <div id="mgSrcList" class="mgopt2"></div>
+    <span class="ver" id="mgOut" aria-live="polite"></span>
+    <div class="mgopt2">
+      <label class="toggle" for="mgAddRows"><span>個体リストにない個体は、最後に足す</span><input type="checkbox" id="mgAddRows" checked></label>
+      <label class="toggle" for="mgAddItems"><span>今の調査にない項目は、列を足す</span><input type="checkbox" id="mgAddItems" checked></label>
+    </div>
+    <div class="mgsum" id="mgSum"></div>
+    <div id="mgConf"></div>
+    <p class="help">統合の直後なら「元に戻す」で戻せます。念のため、先に今の調査のバックアップを取っておくと安心です。取り込み元のファイルや調査は変わりません。</p>
+    <div class="addrow"><button type="button" class="add" id="mgBk">先に今の調査のバックアップを保存</button></div>
+    <div class="actions"><button type="button" id="mgCancel">やめる</button><button type="button" class="primary" id="mgGo" disabled>統合する</button></div>
   </div>
 </dialog>
 
@@ -611,6 +677,33 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
           <option value="both">両方</option>
         </select>
         <p class="help">前回比のアラートは、「調査項目」の各項目（数値・音声で入力）の「前回比」で設定します。例：肥大調査なら、横径・縦径・果実重の「減った」を「注意」か「禁止」にします。「許容±」は測定誤差の幅で、この幅以内の差は「同じ」とみなします。</p>
+      </div>
+    </fieldset>
+    </details>
+    <details class="fold" data-fold="plan" id="planFold"><summary><span class="ftitle">調査日の予定・カレンダー</span><span class="fsum" data-sum="plan"></span></summary>
+    <fieldset class="fbody">
+      <legend>調査日の予定・カレンダー</legend>
+      <label class="toggle" for="pOn"><span>調査日の予定を使う<small class="ver" style="display:block">アプリを開いたときに、今日が調査日か、予定を過ぎているかを知らせます</small></span><input type="checkbox" id="pOn"></label>
+      <div class="pbox" id="pBox">
+        <div class="seg">
+          <label><input type="radio" name="pMode" value="every"><span>間隔で決める<small>初回の日から○日ごと</small></span></label>
+          <label><input type="radio" name="pMode" value="list"><span>日付を並べる<small>予定日を1行に1つずつ</small></span></label>
+        </div>
+        <div class="pgrid" id="pEveryBox">
+          <label class="field"><b>初回</b><input type="date" id="pStart"></label>
+          <label class="field"><b>間隔（日ごと）</b><input type="number" id="pEvery" min="1" max="365" step="1" inputmode="numeric"></label>
+          <label class="field"><b>回数</b><input type="number" id="pCount" min="0" max="200" step="1" inputmode="numeric" placeholder="例 8"></label>
+          <label class="field"><b>または終わりの日</b><input type="date" id="pUntil"></label>
+        </div>
+        <label class="field" id="pListBox"><b>予定日</b><textarea id="pList" rows="4" spellcheck="false" placeholder="2026-05-10&#10;2026-05-24&#10;2026-06-07"></textarea></label>
+        <div class="pgrid">
+          <label class="field"><b>時刻</b><input type="time" id="pTime"><small class="ver">空なら終日の予定</small></label>
+        </div>
+        <div class="field"><b>カレンダーの通知</b><div class="chks"><label class="chk"><input type="checkbox" name="pAl" value="eve"><span>前日の18時</span></label><label class="chk"><input type="checkbox" name="pAl" value="morn"><span>当日の朝7時</span></label><label class="chk"><input type="checkbox" name="pAl" value="hour"><span>開始の1時間前（時刻があるとき）</span></label></div></div>
+        <span class="ver" id="pPrev" aria-live="polite"></span>
+        <button type="button" class="add" id="pIcs">カレンダーに登録（.ics ファイルを保存）</button>
+        <p class="help">保存したファイルを開くと、端末のカレンダーに予定が入り、決めた時刻に通知が届きます（このアプリは閉じている間に通知を出せないため、カレンダーに任せます）。iPhoneは「すべてを追加」、Androidは Googleカレンダーなどで開きます。予定を変えたら、もう一度登録します（前の予定は手で消してください）。Googleカレンダーに取り込んだときは、通知はカレンダー側の設定になることがあります。</p>
+        <p class="help">調査した日が予定日の前後（前後の予定日との間の半分まで）にあれば、その回は済んだとみなします。</p>
       </div>
     </fieldset>
     </details>
@@ -674,6 +767,14 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
       </div>
     </fieldset>
     </details>
+    <details class="fold" data-fold="outlier"><summary><span class="ftitle">外れ値のお知らせ</span><span class="fsum" data-sum="outlier"></span></summary>
+    <fieldset class="fbody">
+      <legend>外れ値のお知らせ</legend>
+      <label class="toggle" for="sOutlier"><span>感度<small class="ver" style="display:block">高いほど小さなずれでも知らせます。「切」にすると知らせません</small></span><select id="sOutlier"><option value="off">切</option><option value="low">低</option><option value="mid">中（標準）</option><option value="high">高</option></select></label>
+      <p class="help">入力した値が、同じ調査日のほかの個体の値から大きく外れているとき、知らせます。経時調査では、前回からの伸び方がほかの個体と大きく違うときも知らせます。<b>入力は止めません。</b>言い間違い・測り間違いなら「取り消し」で直します。</p>
+      <p class="help">比べる相手は、「集計・グラフ」でまとめる列（処理区など）が同じ個体です。比べる値が少ないうち（感度 低は10個、中は8個、高は6個より少ないとき）は知らせません。表では点線の枠で示し、「集計・グラフ」に一覧が出ます。数値の「音声で入力」の項目が対象です。</p>
+    </fieldset>
+    </details>
     <details class="fold" data-fold="other"><summary><span class="ftitle">読み上げ・音・その他</span><span class="fsum" data-sum="other"></span></summary>
     <fieldset class="fbody">
       <legend>読み上げ・音・その他</legend>
@@ -716,6 +817,7 @@ td:is(.fzc,.fzr).cur{background-color:var(--mark);background-image:none;box-shad
       </div>
       <span class="ver" id="ioOut"></span>
       <span class="ver" id="ioStore"></span>
+      <button type="button" class="add" id="ioMerge">ほかの人のデータを統合する（分担した調査をまとめる）</button>
       <button type="button" class="danger" id="sClear">この調査の測定データを全消去する（個体リストは残す）</button>
       <p class="help">別の調査を始めるときは、画面上の「調査一覧」から新しい調査を作ると、今の調査を残したまま切り替えられます。設定だけをほかの人に配るときは、「調査一覧」の「共有」を使います。</p>
     </fieldset>
@@ -930,7 +1032,7 @@ async function stMigrate(){
   const old=lsList(), rows=[];
   old.list.forEach(e=>{ const j=lsRead(e.id); if(j&&j.S) rows.push([e.id,j]); });
   const at=nowStamp();
-  const list=normList({list:old.list.filter(e=>e.id==="main"||rows.some(([id])=>id===e.id)).map(e=>{ const j=rows.find(([id])=>id===e.id)?.[1]; return {...e,info:j?svInfoOf(j.S,j.D):""}; }),last:old.last});
+  const list=normList({list:old.list.filter(e=>e.id==="main"||rows.some(([id])=>id===e.id)).map(e=>{ const j=rows.find(([id])=>id===e.id)?.[1]; return {...e,info:j?svInfoOf(j.S,j.D):"",pl:j?plOf(j.S,j.D):null}; }),last:old.last});
   ST.mig={at,ver:APP_VER,n:rows.length};
   await new Promise((ok,ng)=>{
     const tx=ST.db.transaction(["surveys","meta"],"readwrite"), sv=tx.objectStore("surveys"), m=tx.objectStore("meta");
@@ -939,7 +1041,7 @@ async function stMigrate(){
     tx.oncomplete=ok; tx.onerror=()=>ng(tx.error); tx.onabort=()=>ng(tx.error||new Error("abort"));
   });
   try{ localStorage.setItem(MIG_KEY,JSON.stringify(ST.mig)); }catch(e){}
-  if(rows.length) setTimeout(()=>note(`保存先を、より多く保存できる場所（ブラウザ内の大容量領域）に移しました（${rows.length}件の調査）。これまでのデータはそのまま残してあります。`),1200);
+  ST.migNew=rows.length;
 }
 async function stInit(){
   if(window.indexedDB){
@@ -952,6 +1054,8 @@ async function stInit(){
   stReady=true;
 }
 function svGet(){ return SVL; }
+/* 一覧に持たせる予定の要約（開いていない調査も、読み込まずに状態を出すため） */
+function plOf(S0,D0){ if(!S0||!S0.ts) return null; const p=planNorm(S0.plan); return p.on?{plan:p,ad:dataDates(S0,D0)}:null; }
 /* 一覧に出す概要（個体数・調査日の回数） */
 function svInfoOf(S0,D0){
   if(!S0) return "まだ入力なし";
@@ -981,6 +1085,8 @@ function normS(){
   if(!["full","short","beep"].includes(S.rbMode)) S.rbMode="full";
   if(typeof S.fastCommit!=="boolean") S.fastCommit=false;
   if(typeof S.rbManual!=="boolean") S.rbManual=false;
+  if(!["off","low","mid","high"].includes(S.outlier)) S.outlier="mid";
+  S.plan=planNorm(S.plan);
   S.aliases=(Array.isArray(S.aliases)?S.aliases:[]).map(a=>({from:String(a?.from??"").trim(),to:String(a?.to??"").trim(),item:String(a?.item??"")})).filter(a=>a.from&&a.to);
   S.freezeCols=Math.max(0,Math.min(30,Math.floor(+S.freezeCols||0)));
   S.freezeRows=Math.max(0,Math.min(20,Math.floor(+S.freezeRows||0)));
@@ -999,10 +1105,10 @@ function save(){
 /* 一覧の名前・概要・更新日時を今の調査に合わせ、このタブで開いている調査を覚える（変わったときだけ書く） */
 function svTouch(){
   try{ sessionStorage.setItem(TAB_KEY,svId); }catch(_){}
-  const e=SVL.list.find(x=>x.id===svId), name=S.name||"調査", info=svInfoOf(S,D), up=nowStamp(), id=svId;
-  if(e&&e.name===name&&e.info===info&&e.updated===up&&SVL.last===id) return;
-  if(e){ e.name=name; e.info=info; e.updated=up; } SVL.last=id;
-  svListUpdate(o=>{ let x=o.list.find(v=>v.id===id); if(!x){ x={id,created:today()}; o.list.push(x); } x.name=name; x.info=info; x.updated=up; o.last=id; }).catch(()=>{});
+  const e=SVL.list.find(x=>x.id===svId), name=S.name||"調査", info=svInfoOf(S,D), up=nowStamp(), id=svId, pl=plOf(S,D);
+  if(e&&e.name===name&&e.info===info&&e.updated===up&&SVL.last===id&&JSON.stringify(e.pl||null)===JSON.stringify(pl)) return;
+  if(e){ e.name=name; e.info=info; e.updated=up; e.pl=pl; } SVL.last=id;
+  svListUpdate(o=>{ let x=o.list.find(v=>v.id===id); if(!x){ x={id,created:today()}; o.list.push(x); } x.name=name; x.info=info; x.updated=up; x.pl=pl; o.last=id; }).catch(()=>{});
 }
 
 const n=()=>S.items.length;
@@ -1115,6 +1221,193 @@ function checkCmp(r,it,val){
   return {level,kind,prev:p.v,date:p.d,diff};
 }
 
+/* ========= 外れ値のお知らせ（4.1〜） =========
+   入力は止めず、確かめるよう知らせるだけ。数値の「音声で入力」の項目が対象。
+   1. 同じ日の外れ：同じ調査日のほかの個体の値から大きく外れている（中央値からのずれ）。
+   2. 伸び方の外れ（経時調査）：前回からの伸び（1日あたり）が、ほかの個体と大きく違う。
+   比べる相手は「集計・グラフ」でまとめる列（処理区など）が同じ個体。まとまりごとの中央値を引いた残りで、ばらつき（MAD）をまとめて求める。
+   ずれ÷ばらつき が感度の値（低 5／中 3.5／高 2.5）以上で知らせる。比べる値が少ないうち（低 10／中 8／高 6 未満）は知らせない。 */
+const OL_LV={low:{z:5,n:10},mid:{z:3.5,n:8},high:{z:2.5,n:6}};
+const OL_NAME={off:"切",low:"低",mid:"中",high:"高"};
+const median=a=>{ const s=[...a].sort((x,y)=>x-y), m=s.length>>1; return s.length?(s.length%2?s[m]:(s[m-1]+s[m])/2):NaN; };
+/* pts：[{r,g,x}]。外れた個体だけを Map(r→{z,med}) で返す */
+function olRobust(pts,floor,lv){
+  const byG=new Map(); pts.forEach(p=>{ if(!byG.has(p.g)) byG.set(p.g,[]); byG.get(p.g).push(p); });
+  const use=[]; byG.forEach(a=>{ if(a.length<3) return; const m=median(a.map(p=>p.x)); a.forEach(p=>use.push({r:p.r,med:m,res:p.x-m})); });
+  const out=new Map(); if(use.length<lv.n) return out;
+  const absr=use.map(p=>Math.abs(p.res)); let sc=1.4826*median(absr);
+  if(!(sc>0)) sc=1.2533*absr.reduce((a,b)=>a+b,0)/absr.length;
+  sc=Math.max(sc,floor); if(!(sc>0)) return out;
+  use.forEach(p=>{ const z=p.res/sc; if(Math.abs(z)>=lv.z) out.set(p.r,{z,med:p.med}); });
+  return out;
+}
+/* date より前で、その個体・項目に値がある直近の調査日 */
+function prevAt(r,it,date){
+  const ds=allDates().filter(d=>d<date);
+  for(let i=ds.length-1;i>=0;i--){ const v=valAt(r,it,ds[i]); if(typeof v==="number"&&Number.isFinite(v)) return {v,d:ds[i]}; }
+  return null;
+}
+const dayDiff=(a,b)=>Math.round((Date.parse(b)-Date.parse(a))/864e5);
+/* 1つの項目（列 c）について調べ、out に "r:c"→{kind,...} を入れる */
+function olItem(c,date,out,gOf){
+  const lv=OL_LV[S.outlier], it=S.items[c]; if(!lv||!it||it.type!=="num"||it.role==="id") return;
+  const R=lastRowAll(), unit=Math.pow(10,-(it.dec||0)), pts=[];
+  for(let r=0;r<=R;r++){ if(exState(r,date)) continue; const v=valAt(r,it,date); if(typeof v==="number"&&Number.isFinite(v)) pts.push({r,g:gOf.get(r)??-1,x:v}); }
+  if(pts.length<lv.n) return;
+  const allMed=median(pts.map(p=>p.x));
+  olRobust(pts,Math.max(unit,Math.abs(allMed)*0.01),lv).forEach((o,r)=>out.set(r+":"+c,{kind:"day",r,c,it,date,v:pts.find(p=>p.r===r).x,med:o.med}));
+  if(!S.ts) return;
+  const gp=[];
+  pts.forEach(p=>{ const pv=prevAt(p.r,it,date); if(!pv) return; const days=Math.max(1,dayDiff(pv.d,date)); gp.push({r:p.r,g:p.g,x:(p.x-pv.v)/days,pv,days,v:p.x}); });
+  if(gp.length<lv.n) return;
+  const md=median(gp.map(p=>p.days));
+  olRobust(gp,Math.max(unit,Math.abs(median(gp.map(p=>p.x)))*0.05*md)/md,lv).forEach((o,r)=>{
+    const k=r+":"+c; if(out.has(k)) return; const p=gp.find(q=>q.r===r);
+    out.set(k,{kind:"grow",r,c,it,date,v:p.v,pv:p.pv,grow:p.v-p.pv.v,typ:o.med*p.days});
+  });
+}
+/* まとまり（集計と同じ）ごとの行の対応 */
+function olGroupMap(){ const gOf=new Map(); sumGroups(sumCfgNorm().by).forEach((g,i)=>g.rows.forEach(r=>gOf.set(r,i))); return gOf; }
+function olCompute(date){
+  const out=new Map(); if(!OL_LV[S.outlier]) return out;
+  const gOf=olGroupMap(); meas().forEach(c=>olItem(c,date,out,gOf)); return out;
+}
+const sg=(x,it)=>(x>=0?"+":"−")+fmt(Math.abs(x),it);
+/* 知らせる文（長い：画面、短い：表のセルのヒント） */
+function olText(o,short){
+  const it=o.it;
+  if(o.kind==="day") return short?`外れ値かも（同じ日の中央値 ${fmt(o.med,it)}）`:`同じ日のほかの値（中央値 ${fmt(o.med,it)}）から大きく外れています`;
+  const t=`前回（${o.pv.d}）の ${fmt(o.pv.v,it)} から ${sg(o.grow,it)}`;
+  return short?`伸び方が外れ値かも（${t}、ほかは ${sg(o.typ,it)} 前後）`:`${t}で、ほかの個体（${sg(o.typ,it)} 前後）と伸び方が大きく違います`;
+}
+/* 入力した直後に調べる。外れていれば知らせ、読み上げに足す言葉を返す */
+function olAfterPut(r,c,val){
+  if(!OL_LV[S.outlier]) return null;
+  const out=new Map(); olItem(c,S.curDate,out,olGroupMap());
+  const o=out.get(r+":"+c); if(!o) return null;
+  alerted=true; sound("info");
+  addLog(`${cellName({r,c})} ${fmt(val,o.it)} 外れ値かも（${o.kind==="day"?"同じ日":"伸び方"}）`);
+  return o;
+}
+function olNotice(r,c,val,o,extra){
+  showAlert("info",`${cellName({r,c})}：${fmt(val,o.it)}。${olText(o)}。言い間違い・測り間違いなら「取り消し」で直してください（入力はそのまま残しました）。`+(extra?" "+extra:""));
+}
+
+/* ========= 調査日の予定・お知らせ・カレンダー（4.2〜） =========
+   経時調査ごとに S.plan に予定を持つ。
+   {on, mode:"every"|"list", start, every（日）, count（回）, until（終わりの日）, list:[日付], time:"HH:MM"（空なら終日）, alarms:["eve","morn","hour"]}
+   アプリを開いているときに、今日が調査日・○日過ぎ・次の予定を知らせる（Webアプリは閉じている間に通知を出せないため、
+   決まった時刻の通知はカレンダー（.ics）に任せる）。予定の中身は端末の外へ送らない（.ics はこの端末に保存するだけ） */
+const PLAN_MAX=200;
+function isDate(s){ return /^\d{4}-\d{2}-\d{2}$/.test(String(s||""))&&!isNaN(Date.parse(s)); }
+function addDays(d,n){ return new Date(Date.parse(d)+n*864e5).toISOString().slice(0,10); }
+function planNorm(p){
+  p=p&&typeof p==="object"?p:{};
+  const list=(Array.isArray(p.list)?p.list:[]).map(String).filter(isDate);
+  return {on:!!p.on, mode:p.mode==="list"?"list":"every", start:isDate(p.start)?p.start:"",
+    every:Math.max(1,Math.min(365,Math.floor(+p.every||14))), count:Math.max(0,Math.min(200,Math.floor(+p.count||0))),
+    until:isDate(p.until)?p.until:"", list:[...new Set(list)].sort().slice(0,200),
+    time:/^\d{2}:\d{2}$/.test(p.time||"")?p.time:"", alarms:(Array.isArray(p.alarms)?p.alarms:["eve","morn"]).filter(a=>["eve","morn","hour"].includes(a))};
+}
+/* 予定の日付の並び（normS から最初に呼ばれるので、ここの関数は宣言で書き、定数を使わない） */
+function planDates(p){
+  if(!p||!p.on) return [];
+  if(p.mode==="list") return p.list.slice();
+  if(!p.start) return [];
+  const out=[]; const n=p.count||(p.until?PLAN_MAX:0); if(!n) return [p.start];
+  for(let i=0;i<n&&out.length<PLAN_MAX;i++){ const d=addDays(p.start,i*p.every); if(p.until&&d>p.until) break; out.push(d); }
+  return out;
+}
+/* 値が入っている調査日（予定を「済み」にするのに使う） */
+function dataDates(S0,D0){
+  const ids=(S0.items||[]).filter(it=>it.role!=="id").map(it=>it.id), has=o=>!!o&&ids.some(id=>hasVal(o[id]));
+  const out=Object.entries(S0.sessions||{}).filter(([,rows])=>Array.isArray(rows)&&rows.some(has)).map(([d])=>d);
+  if(S0.curDate&&(D0||[]).some(has)) out.push(S0.curDate);
+  return [...new Set(out)].sort();
+}
+/* 今日から見た予定の状態。kind：today（今日が調査日）／late（○日過ぎ）／tomorrow／next／done（予定はすべて済み）／none
+   予定日 p の前後、前後の予定との間の半分までに調査した日があれば「済み」とみなす */
+function planStatus(p,actual,t){
+  const P=planDates(p); if(!P.length) return {kind:"none"};
+  const A=actual||[], dn=d=>Date.parse(d)/864e5;
+  const lo=i=>i>0?dn(P[i])-Math.floor((dn(P[i])-dn(P[i-1]))/2):dn(P[i])-Math.floor((P.length>1?dn(P[1])-dn(P[0]):p.every||14)/2);
+  const hi=i=>i<P.length-1?dn(P[i])+Math.ceil((dn(P[i+1])-dn(P[i]))/2)-1:Infinity;
+  const done=i=>A.some(a=>dn(a)>=lo(i)&&dn(a)<=hi(i));
+  const T=dn(t), up=j=>{ while(j<P.length&&done(j)) j++; if(j>=P.length) return {kind:"done",total:P.length};
+    const days=Math.round(dn(P[j])-T); return {kind:days===0?"today":days===1?"tomorrow":"next",date:P[j],n:j+1,total:P.length,days}; };
+  /* 今日を含む回（その回の受付の始まりが今日以前の、いちばん後の回）。前の回を逃しても、次の回に入ったら次の回を知らせる */
+  let k=-1; P.forEach((d,i)=>{ if(lo(i)<=T) k=i; });
+  if(k<0) return up(0);
+  if(done(k)) return up(k+1);
+  if(P[k]>=t) return up(k);
+  return {kind:"late",date:P[k],n:k+1,total:P.length,days:Math.round(T-dn(P[k]))};
+}
+const planMD=d=>d.slice(5).replace("-","/");
+function planShort(st){
+  if(st.kind==="today") return "今日が調査日";
+  if(st.kind==="late") return `予定 ${planMD(st.date)} から${st.days}日過ぎ`;
+  if(st.kind==="tomorrow") return `明日（${planMD(st.date)}）が調査日`;
+  if(st.kind==="next") return `次の調査日 ${planMD(st.date)}（あと${st.days}日）`;
+  if(st.kind==="done") return "予定の調査はすべて済み";
+  return "";
+}
+/* 今の調査のお知らせ（画面上部）。「あとで」はその日のうちは出さない */
+const PLAN_HIDE="koe-yacho-v2-planhide";
+function planHidden(){ try{ return sessionStorage.getItem(PLAN_HIDE)===svId+"|"+today(); }catch(e){ return false; } }
+function renderPlan(){
+  const b=$("#planBar"), st=S.ts?planStatus(S.plan,dataDates(S,D),today()):{kind:"none"};
+  const show=(st.kind==="today"||st.kind==="late")&&!planHidden();
+  b.hidden=!show; if(!show) return st;
+  b.className="alertbar "+(st.kind==="late"?"warn":"info");
+  $("#planMsg").textContent=st.kind==="today"
+    ?`今日は「${S.name}」の調査日です（第${st.n}回／全${st.total}回）。`
+    :`「${S.name}」の予定日 ${st.date}（第${st.n}回）から${st.days}日過ぎています。まだ調査していません。`;
+  $("#planGo").hidden=S.curDate===today();
+  return st;
+}
+/* 調査一覧のボタンに、今日が調査日・過ぎている調査の数を出す */
+function planBadge(){
+  let k=0;
+  svGet().list.forEach(e=>{ const st=e.id===svId?(S.ts?planStatus(S.plan,dataDates(S,D),today()):{kind:"none"}):(e.pl?planStatus(planNorm(e.pl.plan),e.pl.ad,today()):{kind:"none"});
+    if(st.kind==="today"||st.kind==="late") k++; });
+  const b=$("#btnSurveys"); b.innerHTML="調査一覧"+(k?`<span class="hbadge" aria-label="今日・予定を過ぎた調査 ${k}件">${k}</span>`:"");
+  b.title=k?`今日が調査日、または予定を過ぎた調査が ${k}件あります`:"";
+}
+/* ---- カレンダー（.ics） ---- */
+const icsEsc=s=>String(s).replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n");
+/* 1行75バイトまでで折り返す（続きの行は空白で始める） */
+function icsFold(line){
+  const enc=new TextEncoder(), out=[]; let cur="", n=0;
+  for(const ch of line){ const b=enc.encode(ch).length; if(n+b>74){ out.push(cur); cur=" "; n=1; } cur+=ch; n+=b; }
+  out.push(cur); return out.join("\r\n");
+}
+const ALARM_NAME={eve:"前日の18時",morn:"当日の朝7時",hour:"開始の1時間前"};
+/* 通知の時刻を、始まり（終日なら0時）からの分に */
+function alarmMin(a,time){
+  const st=time?(+time.slice(0,2))*60+(+time.slice(3,5)):0;
+  if(a==="eve") return -(st+6*60);
+  if(a==="morn") return 7*60-st;
+  return time?-60:null;
+}
+const trig=m=>(m<0?"-":"")+"PT"+Math.abs(m)+"M";
+function planIcs(S0,id){
+  const p=planNorm(S0.plan), P=planDates(p); if(!P.length) return null;
+  const name=S0.name||"調査", stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
+  const ymd=d=>d.replace(/-/g,""), hm=p.time.replace(":","")+"00";
+  const endT=p.time?(()=>{ const m=Math.min(23*60+59,(+p.time.slice(0,2))*60+(+p.time.slice(3,5))+120); return String(Math.floor(m/60)).padStart(2,"0")+String(m%60).padStart(2,"0")+"00"; })():"";
+  const alarms=p.alarms.map(a=>[a,alarmMin(a,p.time)]).filter(([,m])=>m!==null).flatMap(([a,m])=>["BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+icsEsc(`調査日：${name}（${ALARM_NAME[a]}）`),"TRIGGER:"+trig(m),"END:VALARM"]);
+  const ev=(d,uid,title,rr)=>["BEGIN:VEVENT","UID:"+uid,"DTSTAMP:"+stamp,
+    p.time?`DTSTART:${ymd(d)}T${hm}`:`DTSTART;VALUE=DATE:${ymd(d)}`, p.time?`DTEND:${ymd(d)}T${endT}`:`DTEND;VALUE=DATE:${ymd(addDays(d,1))}`,
+    "SUMMARY:"+icsEsc(title), "DESCRIPTION:"+icsEsc(`声で野帳 Pro の調査日の予定です。アプリの「調査一覧」で「${name}」を開いて調査します。`),
+    ...(rr?["RRULE:"+rr]:[]), "TRANSP:TRANSPARENT", ...alarms, "END:VEVENT"];
+  let body=[];
+  if(p.mode==="every"&&P.length>1){
+    const rr=`FREQ=DAILY;INTERVAL=${p.every};`+(p.count?`COUNT=${P.length}`:`UNTIL=${ymd(P[P.length-1])}`+(p.time?`T${hm}`:""));
+    body=ev(P[0],`koe-${id}-plan@tochigitfruits.github.io`,`調査：${name}`,rr);
+  } else body=P.flatMap((d,i)=>ev(d,`koe-${id}-${ymd(d)}@tochigitfruits.github.io`,`調査：${name}（第${i+1}回）`));
+  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//tochigitfruits//koe-yacho Pro//JA","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:"+icsEsc("声で野帳 調査日"),...body,"END:VCALENDAR"].map(icsFold).join("\r\n")+"\r\n";
+}
+
 /* ========= 音（アラート・待機） ========= */
 let actx=null;
 function audioUnlock(){
@@ -1225,13 +1518,16 @@ function putValue(v){
       return `${said}、${vsPrev(spv,"",a.kind)}、よければ はい`;
     }
     addLog(`${cellName(cur)} ← ${fmt(val,it)}（前回比 ${KIND_S[a.kind]}）`);
-    showAlert("info",`${cellName(cur)}：${fmt(val,it)}。${what}（入力はそのまま残しました）`);
-    return `${said}、${a.kind==="same"?"前回と同じ":"前回より"+KIND_S[a.kind]}`+advance();
+    const ol=olAfterPut(cur.r,cur.c,val);
+    showAlert("info",`${cellName(cur)}：${fmt(val,it)}。${what}（入力はそのまま残しました）`+(ol?`。また、${olText(ol)}。`:""));
+    return `${said}、${a.kind==="same"?"前回と同じ":"前回より"+KIND_S[a.kind]}`+(ol?"、外れ値かも":"")+advance();
   }
   ensureRow(cur.r); D[cur.r][it.id]=val;
   flashCells.add(cur.r+":"+cur.c);
   addLog(`${cellName(cur)} ← ${fmt(val,it)}`);
+  const r0=cur.r, c0=cur.c, ol=olAfterPut(r0,c0,val);
   const suf=advance(); putCount++; lastPut={said,suf};
+  if(ol){ olNotice(r0,c0,val,ol); return `${said}、外れ値かも`+suf; }
   return (S.rbMode==="beep"&&!manualRb?"":said)+suf;
 }
 
@@ -1499,7 +1795,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.0（2026-10-29）";
+const APP_VER="Pro 4.3（2026-10-29）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -1686,13 +1982,16 @@ function render(){
   const rows=L?Math.max(L,D.length,cur.r+1):Math.max(D.length,cur.r+1)+1;
   const gStart=new Set(S.dir==="group"?groupsOf().slice(1).map(g=>g[0]):[]);
   let h="<thead><tr>"+(S.serial?'<th class="no">No.</th>':"")+S.items.map((x,ci)=>`<th class="${x.role==="id"?"idh":""}${gStart.has(ci)?" gstart":""}">${esc(x.name)}<small>${esc(typeLabel(x).replace("事前入力・","事前・"))}</small></th>`).join("")+"</tr></thead><tbody>";
+  const OLM=olCompute(S.curDate);
   for(let r=0;r<rows;r++){
     h+=`<tr class="${r===cur.r?"currow":""}${isEx(r)?" exrow":""}">`+(S.serial?`<td class="no">${isEx(r)?"✕":r+1}</td>`:"");
     S.items.forEach((x,c)=>{
       const v=D[r]?.[x.id]; const k=r+":"+c;
       const cls=["v"]; if(gStart.has(c)) cls.push("gstart"); if(x.role==="id") cls.push("idc"); if(x.type!=="num") cls.push("txt"); if(isEx(r)) cls.push("exc");
       let tip="";
-      if(S.ts&&hasVal(v)&&!isEx(r)){ const a=checkCmp(r,x,v); if(a){ cls.push("al-"+a.level); tip=` title="${esc(vsPrev(fmt(a.prev,x),a.date,a.kind,true))}"`; } }
+      if(S.ts&&hasVal(v)&&!isEx(r)){ const a=checkCmp(r,x,v); if(a){ cls.push("al-"+a.level); tip=vsPrev(fmt(a.prev,x),a.date,a.kind,true); } }
+      { const o=!isEx(r)&&OLM.get(k); if(o){ cls.push("ol"); tip=(tip?tip+"／":"")+olText(o,true); } }
+      if(tip) tip=` title="${esc(tip)}"`;
       if(inSel(r,c)) cls.push("sel");
       if(r===cur.r&&c===cur.c) cls.push("cur"); if(flashCells.has(k)) cls.push("flash"); if(badCells.has(k)) cls.push("badflash");
       const txt=isEx(r)&&x.role!=="id"?(c===firstMeas()?`${D[r]._why}（${D[r]._ex}〜）`:""):fmt(v,x);
@@ -1710,7 +2009,7 @@ function render(){
   $("#btnCsvLong").hidden=!(S.ts&&(S.outFmt==="long"||S.outFmt==="both"));
   renderDates(); renderStandby(); renderSel();
   $("#btnEx").firstChild.nodeValue=isEx(cur.r)?"復帰":"除外";
-  updateMic(); updateRb();
+  updateMic(); updateRb(); renderPlan(); planBadge();
 }
 /* ウインドウ枠の固定：左の列は left、上の行は top を、実際の幅・高さを測って積み上げる */
 let fzCapped=false;
@@ -1747,6 +2046,7 @@ function renderDates(){
   const i=ds.indexOf(S.curDate); const L=listLen(); const info=[];
   if(i>0){ const days=Math.round((new Date(S.curDate)-new Date(ds[i-1]))/864e5); info.push(`前回 ${ds[i-1]} から${days}日`); }
   if(L){ let ex=0; for(let r=0;r<L;r++) if(isEx(r)) ex++; info.push(`対象 ${L-ex}個体`+(ex?`（除外 ${ex}）`:"")); }
+  if(S.plan.on){ const t=planShort(planStatus(S.plan,dataDates(S,D),today())); if(t) info.push(t); }
   $("#dateInfo").textContent=info.join("　");
 }
 
@@ -2338,7 +2638,7 @@ $("#sItems").addEventListener("keydown",e=>{
 });
 $("#sAdd").onclick=()=>{ insertItem(draft.items.length,draft.items[draft.items.length-1]); };
 $("#sPreset").onclick=()=>{ draft.items=PRESET_FRUIT(); drawItems(); };
-document.querySelectorAll("input[name=ts]").forEach(r=>r.addEventListener("change",()=>{ draft.ts=document.querySelector("input[name=ts]:checked").value==="1"; $("#sTsBox").hidden=!draft.ts; drawItems(); }));
+document.querySelectorAll("input[name=ts]").forEach(r=>r.addEventListener("change",()=>{ draft.ts=document.querySelector("input[name=ts]:checked").value==="1"; $("#sTsBox").hidden=!draft.ts; $("#planFold").hidden=!draft.ts; drawItems(); }));
 /* 個体リスト：組み合わせで作る（例 樹 1-5 × 処理区 無処理、遮光 × 果実 1-10） */
 function expandSpec(s){
   s=(s||"").normalize("NFKC").trim(); if(!s) return [""];
@@ -2371,7 +2671,8 @@ function openSettings(go,then){
   document.querySelector(`input[name=sbm][value=${draft.standbyMode}]`).checked=true;
   $("#sRead").checked=draft.readback; $("#sSerial").checked=draft.serial; $("#sAuto").checked=!!draft.autoCommit; $("#sSound").checked=!!draft.alertSound;
   $("#sUndoGap").value=String(draft.undoGap);
-  $("#sRbMode").value=draft.rbMode; $("#sFast").checked=!!draft.fastCommit;
+  $("#sRbMode").value=draft.rbMode; $("#sFast").checked=!!draft.fastCommit; $("#sOutlier").value=draft.outlier;
+  planToForm(planNorm(draft.plan)); $("#planFold").hidden=!draft.ts;
   $("#sFzCols").value=draft.freezeCols; $("#sFzRows").value=draft.freezeRows; drawFzPrev();
   $("#sRate").value=draft.rate||1.1; $("#sRateVal").textContent="×"+(+$("#sRate").value).toFixed(1);
   listOrig=listText(); $("#sList").value=listOrig; $("#sListInfo").textContent=listOrig?`現在 ${listOrig.split("\n").length}個体`:"";
@@ -2380,7 +2681,40 @@ function openSettings(go,then){
   if(go) foldGo(go);
   if(then) then();
 }
+$("#planGo").onclick=()=>{
+  const d=today(); if(listening) stopRec(); clearPend();
+  if(!allDates().includes(d)) S.sessions[d]=[];
+  switchDate(d); save(); render(); note(`${d} の調査を始めます。除外した個体は自動で飛ばします。`);
+};
+$("#planLater").onclick=()=>{ try{ sessionStorage.setItem(PLAN_HIDE,svId+"|"+today()); }catch(e){} $("#planBar").hidden=true; };
 $("#btnSettings").onclick=()=>openSettings();
+/* 調査日の予定：設定画面との受け渡し */
+function planToForm(p){
+  $("#pOn").checked=p.on; document.querySelector(`input[name=pMode][value=${p.mode}]`).checked=true;
+  $("#pStart").value=p.start||(S.curDate||today()); $("#pEvery").value=p.every; $("#pCount").value=p.count||""; $("#pUntil").value=p.until;
+  $("#pList").value=p.list.join("\n"); $("#pTime").value=p.time;
+  document.querySelectorAll("input[name=pAl]").forEach(x=>x.checked=p.alarms.includes(x.value));
+  planFormUi();
+}
+function planFromForm(){
+  const list=$("#pList").value.normalize("NFKC").split(/[\s,、，]+/).map(s=>s.replace(/\//g,"-").replace(/^(\d{4})-(\d{1,2})-(\d{1,2})$/,(m,y,mo,d)=>`${y}-${mo.padStart(2,"0")}-${d.padStart(2,"0")}`)).filter(Boolean);
+  return planNorm({on:$("#pOn").checked,mode:document.querySelector("input[name=pMode]:checked")?.value,start:$("#pStart").value,every:$("#pEvery").value,
+    count:$("#pCount").value,until:$("#pUntil").value,list,time:$("#pTime").value,alarms:[...document.querySelectorAll("input[name=pAl]:checked")].map(x=>x.value)});
+}
+function planFormUi(){
+  const p=planFromForm(); $("#pBox").hidden=!p.on;
+  $("#pEveryBox").hidden=p.mode!=="every"; $("#pListBox").hidden=p.mode!=="list";
+  const P=planDates(p), bad=p.mode==="list"?$("#pList").value.normalize("NFKC").split(/[\s,、，]+/).filter(Boolean).length-p.list.length:0;
+  $("#pPrev").textContent=!p.on?"":P.length?`予定：${P.slice(0,8).map(planMD).join("・")}${P.length>8?"…":""}（全${P.length}回${P.length>1&&p.mode==="every"&&!p.count&&!p.until?"":""}）`+(p.mode==="every"&&!p.count&&!p.until?"。回数か終わりの日を入れると、2回目からの予定も作ります":"")+(bad>0?`。日付として読めない${bad}件は使いません（例 2026-05-10）`:""):(p.mode==="every"?"初回の日を入れてください":"予定日を入れてください");
+  $("#pIcs").disabled=!P.length;
+}
+["pOn","pStart","pEvery","pCount","pUntil","pList","pTime"].forEach(id=>$("#"+id).addEventListener("input",planFormUi));
+document.querySelectorAll("input[name=pMode],#pOn").forEach(x=>x.addEventListener("change",planFormUi));
+$("#pIcs").onclick=()=>{
+  const nm=$("#sName").value.trim()||S.name||"調査", t=planIcs({name:nm,plan:planFromForm()},svId); if(!t) return;
+  download(new Blob([t],{type:"text/calendar;charset=utf-8"}),`${nm.replace(/[\\/:*?"<>|]/g,"_")}_調査日.ics`);
+  $("#pPrev").textContent="カレンダーのファイル（.ics）を保存しました。開くとカレンダーに予定が入ります。";
+};
 /* ========= 設定の折りたたみ（見出しごと。開閉の状態は端末に覚える。調査には含めない） ========= */
 const UI_KEY="koe-yacho-v2-ui";
 const FOLD_DEFAULT={items:true,list:true};
@@ -2424,6 +2758,8 @@ function foldSums(){
   const fc=Math.max(0,Math.floor(+q("#sFzCols").value||0)), fr=Math.max(0,Math.floor(+q("#sFzRows").value||0));
   put("freeze",fc||fr?[fc?`左${fc}列`:"",fr?`上${fr}行`:""].filter(Boolean).join("・"):"固定なし");
   { const al=(draft.aliases||[]).filter(a=>String(a.from).trim()&&String(a.to).trim()); put("alias",al.length?`${al.length}件（${al.slice(0,2).map(a=>`${a.from.split(/[、,，]/)[0].trim()}→${a.to.trim()}`).join("、")}${al.length>2?"…":""}）`:"なし"); }
+  put("outlier",q("#sOutlier").value==="off"?"切":`感度 ${OL_NAME[q("#sOutlier").value]||"中"}`);
+  { const pl=planFromForm(), P=planDates(pl); put("plan",!pl.on?"使わない":P.length?`全${P.length}回・${planMD(P[0])}〜${planMD(P[P.length-1])}${pl.time?"・"+pl.time:""}`:"日付が未入力"); }
   put("io","この調査だけが対象");
 }
 $("#setForm").addEventListener("input",()=>foldSums());
@@ -2459,7 +2795,8 @@ $("#sSave").onclick=()=>{
   draft.standbyMode=document.querySelector("input[name=sbm]:checked").value;
   draft.readback=$("#sRead").checked; draft.serial=$("#sSerial").checked; draft.autoCommit=$("#sAuto").checked; draft.rate=+$("#sRate").value||1.1;
   draft.alertSound=$("#sSound").checked; draft.undoGap=+$("#sUndoGap").value;
-  draft.rbMode=$("#sRbMode").value; draft.fastCommit=$("#sFast").checked;
+  draft.rbMode=$("#sRbMode").value; draft.fastCommit=$("#sFast").checked; draft.outlier=$("#sOutlier").value;
+  draft.plan=planFromForm();
   draft.freezeCols=+String($("#sFzCols").value).normalize("NFKC")||0; draft.freezeRows=+String($("#sFzRows").value).normalize("NFKC")||0;
   draft.items.forEach((it,i)=>{ if(!String(it.name||"").trim()) it.name="項目"+(i+1); });
   draft.aliases=(draft.aliases||[]).map(a=>({from:String(a.from||"").split(/[、,，]/).map(f=>f.trim()).filter(Boolean).join("、"),to:String(a.to||"").trim(),item:draft.items.some(it=>it.id===a.item&&it.role!=="id")?a.item:""})).filter(a=>a.from&&a.to);
@@ -2531,7 +2868,7 @@ async function svCreateRaw(nS,nD){
   const id=Date.now().toString(36)+uid().slice(0,4);
   try{ await stPut(id,{S:nS,D:nD,cur:{r:0,c:0},logs:[]}); }
   catch(e){ return null; }
-  await svListUpdate(o=>{ o.list.push({id,name:nS.name,created:today(),updated:nowStamp(),info:svInfoOf(nS,nD)}); });
+  await svListUpdate(o=>{ o.list.push({id,name:nS.name,created:today(),updated:nowStamp(),info:svInfoOf(nS,nD),pl:plOf(nS,nD)}); });
   return id;
 }
 /* 新しい調査。mode：copy＝今の調査の設定と個体リストを引き継ぐ（測定データ・除外は引き継がない）／preset＝ひな形／blank＝空白から */
@@ -2578,8 +2915,10 @@ function drawSurveys(){
   const list=[...o.list].sort((a,b)=>String(b.updated).localeCompare(String(a.updated)));
   $("#svList").innerHTML=list.map(e=>{
     const isCur=e.id===svId, nm=(isCur?S.name:e.name)||"調査", info=svInfo(e);
+    const pst=isCur?(S.ts?planStatus(S.plan,dataDates(S,D),today()):{kind:"none"}):(e.pl?planStatus(planNorm(e.pl.plan),e.pl.ad,today()):{kind:"none"});
+    const ptx=["today","late","tomorrow","next"].includes(pst.kind)?`<span class="${pst.kind==="today"||pst.kind==="late"?"svdue":"svnext"}">${esc(planShort(pst))}</span>`:"";
     return `<div class="svrow${isCur?" cur":""}">
-      <button type="button" class="svopen" data-open="${esc(e.id)}"${isCur?' aria-current="true"':""}><b>${esc(nm)}${isCur?'<span class="svbadge">開いている</span>':""}</b><small>${esc(info)}${info&&e.updated?"・":""}${e.updated?`更新 ${esc(e.updated)}`:""}</small></button>
+      <button type="button" class="svopen" data-open="${esc(e.id)}"${isCur?' aria-current="true"':""}><b>${esc(nm)}${isCur?'<span class="svbadge">開いている</span>':""}</b><small>${ptx}${ptx?"　":""}${esc(info)}${info&&e.updated?"・":""}${e.updated?`更新 ${esc(e.updated)}`:""}</small></button>
       <button type="button" class="sva" data-sh="${esc(e.id)}" title="この調査の設定をひな形として配る（測定データは含まない）">共有</button>
       <button type="button" class="sva" data-bk="${esc(e.id)}" title="この調査のバックアップを保存">保存</button>
       <button type="button" class="sva del" data-del="${esc(e.id)}" title="この調査を削除"${o.list.length<=1?" disabled":""}>削除</button>
@@ -2757,7 +3096,7 @@ function importTable(rows){
    配り方：ファイル（.json）／リンク（pro.html#tpl=…）／QRコード（リンクを載せる）。リンクの # 以降はサーバーへ送られない。
    受け取ると、確かめたうえで新しい調査を作る（今の調査は変えない） */
 const TPL_APP="koe-yacho-v2-template";
-const TPL_KEYS=["name","items","aliases","ts","outFmt","dir","groups","mode","standbyMode","readback","rbMode","rate","fastCommit","serial","autoCommit","alertSound","undoGap","freezeCols","freezeRows"];
+const TPL_KEYS=["name","items","aliases","ts","outFmt","dir","groups","mode","standbyMode","readback","rbMode","rate","fastCommit","serial","autoCommit","alertSound","undoGap","freezeCols","freezeRows","outlier","plan"];
 const TPL_HOME="https://tochigitfruits.github.io/koe-yacho/pro.html";
 const QR_SRC="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
 const QR_SRI="sha384-8FWZA6BGMXhsfO+BLtrJK0We6gg5o1JyO8xQm6peWDEUs17ACA5ziE/NIAkl9z2k";
@@ -2972,6 +3311,7 @@ function sumDraw(){
     $("#sumNote").textContent=`平均は測った桁より1桁多く表示します。SDは標本標準偏差（n−1で割る）、SE＝SD÷√n。`+(ex?`除外した${ex}個体は入れていません。`:"")+`文字・選択肢の列は集計しません。`;
   }
   $("#sumCopy").disabled=$("#sumCsv").disabled=!T.rows.length;
+  sumOlDraw();
   /* 経時グラフ */
   const nums=meas().map(i=>S.items[i]).filter(it=>it.type==="num");
   $("#grBox").hidden=!S.ts||!nums.length;
@@ -3101,6 +3441,21 @@ function sumOpen(){
   requestAnimationFrame(()=>{ if(!$("#grBox").hidden) grDraw(); });
 }
 $("#btnSum").onclick=sumOpen;
+/* 外れ値の候補（集計の画面で選んだ調査日）。押すとそのセルへ */
+function sumOlDraw(){
+  const box=$("#sumOl");
+  if(!OL_LV[S.outlier]){ box.innerHTML=`<p class="help">外れ値のお知らせは「切」です（設定の「外れ値のお知らせ」で変えられます）。</p>`; return; }
+  const L=[...olCompute(sumDate).values()].sort((a,b)=>a.r-b.r||a.c-b.c);
+  box.innerHTML=`<h3>外れ値の候補（感度 ${OL_NAME[S.outlier]}）${L.length?`　${L.length}件`:""}</h3>`+(L.length?L.map(o=>`<button type="button" data-r="${o.r}" data-c="${o.c}" data-d="${o.date}"><span><b>${esc(rowLabel(o.r))}</b>　${esc(o.it.name)} <b>${esc(fmt(o.v,o.it))}</b></span><small>${esc(olText(o))}</small></button>`).join("")
+    :`<p class="help">見つかりませんでした（比べる値が少ないうちは調べません）。</p>`);
+}
+$("#sumOl").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-r]"); if(!b) return;
+  const d=b.dataset.d; $("#sumDlg").close();
+  if(d!==S.curDate){ if(listening) stopRec(); clearPend(); switchDate(d); }
+  cur={r:+b.dataset.r,c:+b.dataset.c}; sel=null; save(); render();
+  note(`${cellName(cur)}（${d}）に移りました。値を直すときは、そのまま話すか手入力します。`);
+});
 $("#sumClose").onclick=()=>$("#sumDlg").close();
 $("#sumDate").onchange=e=>{ sumDate=e.target.value; sumDraw(); };
 $("#sumBy").addEventListener("change",()=>{ S.sumCfg.by=[...$("#sumBy").querySelectorAll("input:checked")].map(x=>x.value); save(); sumDraw(); });
@@ -3157,6 +3512,203 @@ async function swStatus(){
     return `オフライン用の保存：済み（${v||"本体なし"}${xl?"・Excel部品あり":"・Excel部品はまだ"}）`;
   }catch(e){ return "オフライン用の保存：確認できませんでした"; }
 }
+/* ========= データ統合（4.3〜） =========
+   分担して調査したデータ（バックアップ .json、またはこの端末の別の調査）を、今開いている調査にまとめる。
+   1. 項目は id で合わせ、なければ同じ名前・同じ役割の項目に合わせる（3.9.2 のひな形で配った調査は id が共通）。
+   2. 個体は、事前入力の列（樹番号・果実番号など）の値で突き合わせる。事前入力の列がなければ行の番号で合わせる。
+   3. 空いているセルは埋め、同じ値はそのまま、食い違うセルはどれを使うか選んでもらう（初めは今の値）。
+   4. 調査日はそのまま合わせる。1回の調査に、調査日が2つ以上あるデータを入れるときは経時調査にする。
+   統合の直前の状態に「元に戻す」で戻せる。データは端末の外へ送らない */
+let mgSrc=[], mgPlan=null, mgUndo=null;
+const mgKey=v=>typeof v==="number"?String(+v):String(v??"").normalize("NFKC").trim();
+const mgSame=(a,b)=>typeof a==="number"&&typeof b==="number"?Math.abs(a-b)<1e-9:mgKey(a)===mgKey(b);
+/* 取り込み元の調査日ごとの行（今の調査日は D） */
+function mgDates(j){
+  const out={}; Object.entries(j.S.sessions||{}).forEach(([d,rows])=>{ if(Array.isArray(rows)) out[d]=rows; });
+  out[j.S.curDate||today()]=j.D||[]; return out;
+}
+/* 今の調査の、ある調査日・行・項目の値 */
+function mgGet(d,r,id){ return d===S.curDate?D[r]?.[id]:(S.sessions[d]||[])[r]?.[id]; }
+function mgSet(d,r,id,v){
+  if(d===S.curDate){ ensureRow(r); D[r][id]=v; return; }
+  const a=S.sessions[d]||(S.sessions[d]=[]); while(a.length<=r) a.push({}); a[r][id]=v;
+}
+/* 取り込み元の値を、今の調査の項目の型に合わせる。合わなければ null */
+function mgConv(v,it){
+  if(!hasVal(v)) return null;
+  if(it.type==="num"){ const x=typeof v==="number"?v:parseNumber(String(v)); return x===null||Number.isNaN(x)?null:roundVal(it,x); }
+  return String(v).trim()||null;
+}
+function mgBuild(){
+  const addRows=$("#mgAddRows").checked, addItems=$("#mgAddItems").checked;
+  const P={newItems:[],newRows:[],fill:[],same:0,conf:[],skipNoKey:0,skipNew:0,skipType:0,byRow:false,becomeTs:false,dates:new Set(),ex:[],dupT:0};
+  const tIds=idItems();
+  /* 新しく足す項目（ファイルをまたいで名前でまとめる） */
+  const newByName=new Map();
+  const R0=Math.max(D.length,...Object.values(S.sessions).map(a=>Array.isArray(a)?a.length:0));
+  let nextRow=Math.max(listLen(),lastRowAll()+1,0);
+  const newKeyRow=new Map();
+  /* 先に、取り込み元すべての「値のある調査日」を数える（1回の調査を経時にするか決める） */
+  const srcDays=new Set();
+  mgSrc.forEach(src=>{ const meas0=(src.j.S.items||[]).filter(x=>x.role!=="id").map(x=>x.id);
+    Object.entries(mgDates(src.j)).forEach(([d,rows])=>{ if(rows.some(r=>meas0.some(id=>hasVal(r?.[id])))) srcDays.add(d); }); });
+  if(!S.ts&&srcDays.size>1){ P.becomeTs=true; }
+  const useDate=d=>S.ts||P.becomeTs?d:S.curDate;
+  const cells=new Map();
+  mgSrc.forEach((src,si)=>{
+    const sItems=(src.j.S.items||[]).map(normItem);
+    /* 項目の対応 */
+    const map=new Map();
+    sItems.forEach(s=>{
+      let t=S.items.find(x=>x.id===s.id&&(x.role==="id")===(s.role==="id"))||S.items.find(x=>x.name===s.name&&(x.role==="id")===(s.role==="id"));
+      if(!t&&s.role!=="id"&&addItems){
+        t=newByName.get(s.name);
+        if(!t){ t=normItem({...s,id:S.items.some(x=>x.id===s.id)||P.newItems.some(x=>x.id===s.id)?uid():s.id}); newByName.set(s.name,t); P.newItems.push(t); }
+      }
+      if(t) map.set(s.id,t);
+    });
+    const kt=tIds.filter(t=>sItems.some(s=>s.role==="id"&&map.get(s.id)===t));
+    const keyItemsS=kt.map(t=>sItems.find(s=>s.role==="id"&&map.get(s.id)===t));
+    if(!kt.length) P.byRow=true;
+    /* 今の調査の個体の索引 */
+    const tIndex=new Map();
+    if(kt.length) for(let r=0;r<Math.max(R0,listLen());r++){ const k=kt.map(t=>mgKey(D[r]?.[t.id])).join("\u0001"); if(!kt.some(t=>hasVal(D[r]?.[t.id]))) continue; if(tIndex.has(k)) P.dupT++; else tIndex.set(k,r); }
+    const sD=src.j.D||[], dates=mgDates(src.j);
+    const sRows=Math.max(sD.length,...Object.values(dates).map(a=>a.length));
+    for(let r=0;r<sRows;r++){
+      const hasData=Object.values(dates).some(rows=>sItems.some(s=>s.role!=="id"&&map.has(s.id)&&hasVal(rows[r]?.[s.id])))||!!sD[r]?._ex;
+      let tr;
+      if(kt.length){
+        if(!keyItemsS.some(s=>hasVal(sD[r]?.[s.id]))){ if(hasData) P.skipNoKey++; continue; }
+        const k=keyItemsS.map(s=>mgKey(sD[r]?.[s.id])).join("\u0001");
+        if(tIndex.has(k)) tr=tIndex.get(k);
+        else if(newKeyRow.has(k)) tr=newKeyRow.get(k);
+        else if(!hasData) continue;
+        else if(addRows){ tr=nextRow++; newKeyRow.set(k,tr); const ids={}; kt.forEach((t,i)=>{ ids[t.id]=sD[r][keyItemsS[i].id]; }); P.newRows.push({r:tr,ids}); }
+        else { P.skipNew++; continue; }
+      } else tr=r;
+      /* 除外（落果など）：今の調査に記録がなければ写す */
+      if(sD[r]?._ex&&!D[tr]?._ex&&!P.ex.some(x=>x.r===tr)) P.ex.push({r:tr,ex:sD[r]._ex,why:sD[r]._why||"除外"});
+      Object.entries(dates).forEach(([sd,rows])=>{
+        const td=useDate(sd);
+        sItems.forEach(s=>{
+          if(s.role==="id") return; const t=map.get(s.id); if(!t) return;
+          const raw=rows[r]?.[s.id]; if(!hasVal(raw)) return;
+          const v=mgConv(raw,t); if(v===null){ P.skipType++; return; }
+          const key=td+"|"+tr+"|"+t.id;
+          if(!cells.has(key)) cells.set(key,{d:td,r:tr,it:t,cands:[]});
+          cells.get(key).cands.push({src:si,v});
+          P.dates.add(td);
+        });
+      });
+    }
+  });
+  /* 埋める・同じ・食い違いに分ける */
+  cells.forEach(c=>{
+    const tv=P.newItems.includes(c.it)?undefined:mgGet(c.d,c.r,c.it.id);
+    const uniq=[]; c.cands.forEach(x=>{ if(!uniq.some(u=>mgSame(u.v,x.v))) uniq.push(x); });
+    if(!hasVal(tv)){ if(uniq.length===1) P.fill.push({...c,v:uniq[0].v}); else P.conf.push({...c,tv:undefined,opts:uniq,pick:0}); }
+    else { const diff=uniq.filter(u=>!mgSame(u.v,tv)); if(!diff.length) P.same++; else P.conf.push({...c,tv,opts:[{src:-1,v:tv},...diff],pick:0}); }
+  });
+  P.conf.sort((a,b)=>a.d.localeCompare(b.d)||a.r-b.r);
+  return P;
+}
+/* 個体の名前（新しく足す個体は、取り込み元の事前入力の値で） */
+function mgRowLabel(r){
+  const nr=mgPlan?.newRows.find(x=>x.r===r);
+  if(!nr) return rowLabel(r);
+  return idItems().map(it=>{ const v=nr.ids[it.id]; return hasVal(v)?(it.type==="num"?`${it.name}${fmt(v,it)}`:fmt(v,it)):""; }).filter(Boolean).join(" ")+"（新）";
+}
+const mgSrcName=i=>i<0?"今の値":(mgSrc[i]?.label||"取り込み元");
+function mgDraw(){
+  $("#mgSrcList").innerHTML=mgSrc.length?mgSrc.map((s,i)=>`<div class="mgsrc"><b>${esc(s.label)}</b><small>${esc(s.info)}</small><button type="button" data-rm="${i}" aria-label="${esc(s.label)}を外す">✕</button></div>`).join(""):`<p class="help">まだ選んでいません。</p>`;
+  if(!mgSrc.length){ mgPlan=null; $("#mgSum").innerHTML=""; $("#mgConf").innerHTML=""; $("#mgGo").disabled=true; return; }
+  mgPlan=mgBuild(); const P=mgPlan;
+  const nCells=P.fill.length+P.conf.length;
+  const li=[];
+  li.push(P.byRow?`<li class="mgwarn">今の調査に事前入力の列がない（または取り込み元に同じ列がない）ため、<b>行の番号（No.）</b>で合わせます。個体の並びが同じか確かめてください。</li>`
+    :`<li>個体は「${esc(idItems().map(it=>it.name).join("・"))}」の値で突き合わせます。</li>`);
+  li.push(`<li>空いているセルを埋める：<b>${P.fill.length}</b>件</li>`);
+  li.push(`<li>同じ値（そのまま）：${P.same}件</li>`);
+  li.push(`<li>食い違い（下で選ぶ）：<b>${P.conf.length}</b>件</li>`);
+  if(P.newRows.length) li.push(`<li>個体リストにない個体を最後に足す：${P.newRows.length}個体</li>`);
+  if(P.skipNew) li.push(`<li class="mgwarn">個体リストにない個体 ${P.skipNew}行は入れません（上の「足す」に印を付けると入ります）</li>`);
+  if(P.newItems.length) li.push(`<li>今の調査にない項目を足す：${esc(P.newItems.map(x=>x.name).join("・"))}</li>`);
+  if(P.ex.length) li.push(`<li>除外（落果など）の記録を写す：${P.ex.length}個体</li>`);
+  if(P.becomeTs) li.push(`<li class="mgwarn">取り込むデータに調査日が${P.dates.size}つあるため、この調査を「経時調査」にして日付ごとに入れます。</li>`);
+  else if(P.dates.size) li.push(`<li>調査日：${esc([...P.dates].sort().join("・"))}${S.ts?"":"（1回の調査なので、今の表に入れます）"}</li>`);
+  if(P.skipNoKey) li.push(`<li class="mgwarn">事前入力の値が空で、どの個体か分からない ${P.skipNoKey}行は入れません</li>`);
+  if(P.skipType) li.push(`<li class="mgwarn">項目の種類に合わない値（数値の列の文字など）${P.skipType}件は入れません</li>`);
+  if(P.dupT) li.push(`<li class="mgwarn">今の調査に、事前入力の値が同じ個体が${P.dupT}組あります（最初の行に入れます）</li>`);
+  $("#mgSum").innerHTML=`<ul>${li.join("")}</ul>`;
+  const MAX=200, cs=P.conf.slice(0,MAX);
+  $("#mgConf").innerHTML=P.conf.length?`<h3>食い違うセル（${P.conf.length}件）</h3>
+    <div class="addrow"><button type="button" class="add" data-all="0">すべて「${P.conf.some(c=>hasVal(c.tv))?"今の値":esc(mgSrcName(P.conf[0].opts[0].src))}」にする</button><button type="button" class="add" data-all="1">すべて取り込む値にする</button></div>`+
+    cs.map((c,k)=>`<div class="mgc"><div class="mgcl">${S.ts||P.becomeTs?esc(c.d)+"　":""}${esc(mgRowLabel(c.r))}　<b>${esc(c.it.name)}</b></div><div class="mgopts">${c.opts.map((o,i)=>`<label><input type="radio" name="mgc${k}" data-k="${k}" value="${i}"${c.pick===i?" checked":""}><span>${esc(mgSrcName(o.src))}</span><b>${esc(fmt(o.v,c.it))}</b></label>`).join("")}</div></div>`).join("")+
+    (P.conf.length>MAX?`<p class="help">ほかに${P.conf.length-MAX}件あります（上の「すべて…」で選んだ値になります）。</p>`:""):"";
+  $("#mgGo").disabled=!(nCells||P.newRows.length||P.newItems.length||P.ex.length);
+  $("#mgGo").textContent=`統合する（${nCells}セル）`;
+}
+async function mgOpen(){
+  if(listening||standby) stopRec(); clearPend(); save();
+  mgSrc=[]; mgPlan=null; $("#mgTo").textContent=S.name; $("#mgOut").textContent="";
+  $("#mgSv").innerHTML=`<option value="">選ぶ…</option>`+svGet().list.filter(e=>e.id!==svId).map(e=>`<option value="${esc(e.id)}">${esc(e.name||"調査")}</option>`).join("");
+  $("#mgSv").disabled=svGet().list.length<2;
+  mgDraw(); if($("#svDlg").open) $("#svDlg").close(); if($("#dlg").open) $("#dlg").close(); $("#mgDlg").showModal();
+}
+function mgAdd(label,j){
+  if(!j||!j.S||!Array.isArray(j.S.items)){ $("#mgOut").textContent=`${label}：声で野帳 Pro のデータではありません。`; return; }
+  const meas0=j.S.items.filter(x=>x.role!=="id").map(x=>x.id), rowsN=(j.D||[]).length;
+  const dn=Object.entries(mgDates(j)).filter(([,rows])=>rows.some(r=>meas0.some(id=>hasVal(r?.[id])))).length;
+  mgSrc.push({label,j,info:`${j.S.name||"調査"}・${rowsN}行・値のある調査日 ${dn}回`});
+  mgDraw();
+}
+$("#mgFile").onchange=async e=>{
+  const fs=[...e.target.files]; e.target.value="";
+  for(const f of fs){
+    try{
+      const j=JSON.parse(await f.text()); const nm=f.name.replace(/\.json$/i,"");
+      if(j&&j.app===TPL_APP){ $("#mgOut").textContent=`${nm}：ひな形（設定だけ）なので、データは入っていません。調査のバックアップを選んでください。`; continue; }
+      if(!j||j.app!=="koe-yacho-v2"){ $("#mgOut").textContent=`${nm}：声で野帳 Pro のバックアップ（.json）ではありません。`; continue; }
+      mgAdd(nm,j);
+    }catch(err){ $("#mgOut").textContent=`${f.name}：読み込めませんでした（${err.message||err}）`; }
+  }
+};
+$("#mgSv").onchange=async e=>{
+  const id=e.target.value; e.target.value=""; if(!id) return;
+  let j=null; try{ j=await stGet(id); }catch(err){}
+  const ent=svGet().list.find(x=>x.id===id); mgAdd(`この端末の「${ent?.name||"調査"}」`,j);
+};
+$("#mgSrcList").addEventListener("click",e=>{ const b=e.target.closest("button[data-rm]"); if(!b) return; mgSrc.splice(+b.dataset.rm,1); mgDraw(); });
+["mgAddRows","mgAddItems"].forEach(id=>$("#"+id).addEventListener("change",mgDraw));
+$("#mgConf").addEventListener("change",e=>{ const x=e.target.closest("input[data-k]"); if(x&&mgPlan) mgPlan.conf[+x.dataset.k].pick=+x.value; });
+$("#mgConf").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-all]"); if(!b||!mgPlan) return;
+  mgPlan.conf.forEach(c=>{ c.pick=b.dataset.all==="0"?0:Math.min(1,c.opts.length-1); if(b.dataset.all==="1"&&!hasVal(c.tv)) c.pick=0; });
+  $("#mgConf").querySelectorAll("input[data-k]").forEach(x=>{ x.checked=+x.value===mgPlan.conf[+x.dataset.k].pick; });
+});
+$("#mgBk").onclick=()=>$("#ioBackup").click();
+$("#mgCancel").onclick=()=>$("#mgDlg").close();
+$("#mgGo").onclick=()=>{
+  const P=mgPlan; if(!P) return;
+  mgUndo=JSON.stringify({S,D,cur});
+  if(P.becomeTs) S.ts=true;
+  P.newItems.forEach(it=>S.items.push(it));
+  P.newRows.forEach(nr=>{ ensureRow(nr.r); Object.assign(D[nr.r],nr.ids); });
+  P.ex.forEach(x=>{ ensureRow(x.r); D[x.r]._ex=x.ex; D[x.r]._why=x.why; });
+  P.fill.forEach(c=>mgSet(c.d,c.r,c.it.id,c.v));
+  let changed=0; P.conf.forEach(c=>{ const o=c.opts[c.pick]; if(o.src>=0){ mgSet(c.d,c.r,c.it.id,o.v); changed++; } else if(!hasVal(c.tv)) mgSet(c.d,c.r,c.it.id,o.v); });
+  /* 経時調査にした・新しい調査日ができたとき：今の調査日はそのまま */
+  normS(); undoSnap=null; sel=null;
+  const msg=`${mgSrc.map(s=>s.label).join("・")} を統合しました：${P.fill.length}セルを埋め、食い違い${P.conf.length}件のうち${changed}件を取り込む値にしました`+(P.newRows.length?`。${P.newRows.length}個体を足しました`:"")+(P.newItems.length?`。項目「${P.newItems.map(x=>x.name).join("・")}」を足しました`:"");
+  addLog(`データ統合 ${P.fill.length+changed}セル`);
+  save(); render(); $("#mgDlg").close();
+  note(msg+"。間違えた場合は「元に戻す」を押してください。",true);
+  $("#note").insertAdjacentHTML("beforeend",' <button type="button" class="ghost" id="mgUndoBtn" style="padding:4px 10px">元に戻す</button>');
+  $("#mgUndoBtn").onclick=()=>{ if(!mgUndo) return; const o=JSON.parse(mgUndo); S=o.S; D=o.D; cur=o.cur; normS(); mgUndo=null; save(); render(); note("統合する前に戻しました"); };
+};
+$("#svMerge").onclick=mgOpen;
+$("#ioMerge").onclick=mgOpen;
 /* ========= 使い方の説明（3.9〜。機能を足したら、ここにも説明を足す） =========
    g：分類、t：見出し、k：探すときの言葉（言い換え）、go：設定で開く見出し（data-fold）、b：本文 */
 const HELP_GROUPS=[["start","はじめに"],["input","入力する"],["table","表と順番"],["ts","経時調査"],["save","保存と出力"],["trouble","困ったとき"]];
@@ -3169,6 +3721,8 @@ const HELP=[
 "<p>「調査一覧」で調査の「共有」を押すと、その調査の設定（項目・言い換え・入力の順番・読み上げなど）をひな形として配れます。「個体リストも含める」を外すと、項目と設定だけを配ります。<b>測定データ・調査日・除外の記録は含みません。</b></p><ul><li><b>QRコード</b>：受け取る人がカメラで読み取ると、このアプリが開きます。</li><li><b>リンクをコピー</b>：メールやチャットに貼って送ります。</li><li><b>ファイルで保存</b>：受け取る人は「調査一覧」の「ファイルから作る」で読み込みます。</li></ul><p>受け取ると、中身（項目・個体・言い換えの数）を確かめてから新しい調査として作ります。受け取る人の今の調査は変わりません。ひな形の中身はリンクの「#」より後ろに入っていて、サーバーには送られません。</p><p>個体リストが大きいとQRコードに入りきらないことがあります。そのときは個体リストを外すか、ファイルで配ります。iPhoneでホーム画面から使っている場合、QRコードやリンクはSafariで開くため、ホーム画面のアプリとは別の場所に作られます。その場合はファイルで受け取ってください。QRコードを作るときだけ、部品をインターネットから読み込みます。</p>"},
 {g:"start",id:"offline",t:"オフラインで使う・新しい版への切り替え",k:"オフライン 電波 圏外 通信 ネット インターネット 更新 新しい版 アップデート 切り替え おふらいん でんぱ けんがい こうしん",b:
 "<p>一度、電波のある所でこのアプリを開くと、アプリ本体・Excel出力の部品・QRコードの部品・アイコンを端末に保存します。その後は、電波のない畑でもアプリを開けます。</p><ul><li>電波がなくても使えるもの：手入力、ノギス・はかりからの入力、表の操作、集計・グラフ、Excel・CSV・バックアップの保存、利用コードの確認。</li><li>声での入力は、端末の音声認識が通信を使うため、電波がないと使えないことがあります（iPhoneは端末内で認識できる場合があります）。</li></ul><p>アプリは保存しておいた版をすぐに開き、電波があれば裏で新しい版を確かめます。新しい版が届くと画面の上に知らせが出るので、「今すぐ切り替える」を押します（入力したデータはそのまま残ります）。準備の状況は、画面下の「マイク診断」で確かめられます。</p>"},
+{g:"start",id:"history",t:"更新の記録（どの版で何が増えたか）",k:"更新 記録 履歴 版 バージョン 新しい機能 変更点 こうしん きろく りれき ばーじょん",b:
+"<p>この画面の上の「更新の記録」を押すと、どの版でどの機能が加わったかを一覧で見られます。項目を押すと、その機能の説明を開きます。新しい版に切り替わったときは、増えたことを画面の下に知らせます。</p>"},
 {g:"start",id:"settings",t:"設定画面の使い方",k:"設定 見出し 折りたたみ 開く 閉じる すべて開く せってい",b:
 "<p>設定は見出しごとに折りたたんであります。見出しを押すと開いたり閉じたりでき、その状態は次に設定を開いたときも残ります。閉じた見出しの右には、今の設定が短く出ます。上の「すべて開く」「すべて閉じる」でまとめて切り替えられます。変更は「保存」を押すまで反映されません。</p>"},
 {g:"start",id:"code",t:"利用コード",k:"ライセンス コード 期限 期限切れ 更新 変更 KOE りようこーど きげん",b:
@@ -3184,6 +3738,8 @@ const HELP=[
 "<p>よく聞き違える言葉や、短く言いたい言葉を登録しておくと、決めた値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>、<code>びょう</code> → <code>病害</code>。左は「、」で区切って複数書けます。</p><ul><li>話した言葉が登録した言葉と<b>そのまま同じ</b>ときだけ置き換えます（言葉の一部は置き換えません）。</li><li>ひらがな・カタカナ、全角・半角の違いは気にしません。</li><li>対象は「すべての列」か、特定の列だけを選べます。文字・選択肢・数値のどの列にも使えます。選択肢の列では、置き換えた値が候補にあるときだけ入ります。</li><li>手入力・まとめて入力・貼り付けにも効きます。</li><li>「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。</li></ul><p>置き換えたときは、聞き取った言葉の横に（言い換え むし→虫害）と出ます。言い換えは調査ごとの設定で、「今の調査の設定を使う」で作った調査とバックアップにも引き継がれます。</p>"},
 {g:"input",id:"allow",t:"入力できる値（範囲外の防止）",k:"範囲 範囲外 入力できる値 指数 0〜3 制限 はんい はんいがい しすう",go:"items",b:
 "<p>数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます。病害の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます。</p>"},
+{g:"input",id:"outlier",t:"外れ値のお知らせ",k:"外れ値 外れ 異常値 おかしい値 言い間違い 測り間違い 桁 感度 中央値 伸び方 はずれち いじょうち かんど",go:"outlier",b:
+"<p>入力した値が、ほかの個体の値から大きく外れているとき、画面と声（「外れ値かも」）で知らせます。<b>入力は止めず、値もそのまま残します。</b>言い間違い・測り間違い（例：32.5 を 325）なら「取り消し」で直します。正しい値なら、そのまま続けます。</p><ul><li><b>同じ日の外れ</b>：同じ調査日のほかの個体の値（中央値）から大きく外れている。</li><li><b>伸び方の外れ</b>（経時調査）：前回からの伸びが、ほかの個体と大きく違う。</li></ul><p>比べる相手は、「集計・グラフ」でまとめる列（処理区など）が同じ個体です。比べる値が少ないうちは知らせません（感度 低は10個、中は8個、高は6個から）。感度は設定の「外れ値のお知らせ」で 切・低・中・高 から選びます（標準は中）。</p><p>表では、外れ値の候補のセルを点線の枠で示します（PCではセルに重ねると理由が出ます）。「集計・グラフ」の画面には候補の一覧が出て、押すとそのセルへ移ります。調査の途中では比べる値が少ないため、終わったあとに一覧で見直すと確実です。</p>"},
 {g:"input",id:"commands",t:"音声コマンド",k:"取り消し スキップ 次 戻る 待機 再開 停止 除外 復帰 はい いいえ コマンド とりけし すきっぷ つぎ もどる たいき さいかい ていし じょがい ふっき こまんど",b:
 "<ul><li><code>取り消し</code>：直前の値を消す</li><li><code>スキップ</code>：空欄のまま進む</li><li><code>次</code>：次の個体（列単位では次の項目）へ</li><li><code>戻る</code>：1つ前へ</li><li><code>待機</code>（一時停止・休憩）／<code>再開</code>／<code>停止</code>（ストップ・終了）</li><li><code>除外</code>（落果・枯死・欠株）／<code>復帰</code></li><li>前回比の「注意」には <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）</li></ul><p>同じ操作は、画面のボタンでもできます。</p>"},
 {g:"input",id:"bulk",t:"まとめて入力（ゼロ 6個・残り全部）",k:"まとめて 一括 ゼロ 個 残り 全部 範囲 から まとめて いっかつ ぜろ のこり ぜんぶ",b:
@@ -3208,6 +3764,8 @@ const HELP=[
 "<p>設定の「調査の種類」を「経時調査」にすると、調査日ごとに記録します。表の上の「＋ 新しい調査日」で次の調査を始め、調査日の欄で過去の日に切り替えて見直せます。個体リストと除外の記録は、全調査日で共通です。</p>"},
 {g:"ts",id:"compare",t:"前回比アラート",k:"前回比 アラート 減った 増えた 同じ 注意 禁止 表示 許容 誤差 はい いいえ ぜんかいひ あらーと ちゅうい きんし きょよう ごさ",go:"items",b:
 "<p>経時調査では、各項目（数値・音声で入力）の「前回比」で、前回より減った・増えた・同じときの扱いを決めます。</p><ul><li><b>表示</b>：知らせるだけ</li><li><b>注意</b>：「はい」で確定、「いいえ」か正しい値で入力し直し</li><li><b>禁止</b>：入れずに、入力し直しを求める</li></ul><p>「許容±」は測定誤差の幅で、この幅以内の差は「同じ」とみなします。例：肥大調査なら、横径・縦径・果実重の「減った」を「注意」か「禁止」にします。</p>"},
+{g:"ts",id:"plan",t:"調査日の予定とカレンダー",k:"予定 調査日 お知らせ 通知 カレンダー ics 繰り返し 間隔 何日ごと 忘れ 過ぎ 今日 リマインダー よてい つうち かれんだー くりかえし かんかく",go:"plan",b:
+"<p>経時調査では、設定の「調査日の予定・カレンダー」で予定を決められます。</p><ul><li><b>間隔で決める</b>：初回の日と、何日ごとか（例 14日ごと）、回数か終わりの日。</li><li><b>日付を並べる</b>：予定日を1行に1つずつ書く。</li></ul><p>アプリを開くと、今日が調査日のときと、予定日を過ぎてまだ調査していないときに、画面の上に知らせます（「今日の調査を始める」で今日の調査日を作れます）。調査日の欄の横には次の予定が出ます。「調査一覧」には調査ごとの状態が出て、今日・過ぎている調査があるとボタンに ● と件数が付きます。</p><p>このアプリは閉じている間に通知を出せません。決まった時刻に知らせてほしいときは、「カレンダーに登録（.ics ファイルを保存）」で端末のカレンダーに予定を入れます。通知は 前日の18時・当日の朝7時・開始の1時間前 から選べます（複数可）。予定を変えたときは、もう一度登録します。</p><p>予定日の前後（前後の予定日との間の半分まで）に調査した日があれば、その回は済んだとみなします。予定はひな形にも入るので、同じ予定をほかの人に配れます。</p>"},
 {g:"ts",id:"exclude",t:"除外（落果・枯死・欠株）と復帰",k:"除外 落果 枯死 欠株 復帰 飛ばす じょがい らっか こし けっかぶ ふっき",b:
 "<p>「除外」（または「落果」「枯死」「欠株」）と言うか、「除外」ボタンを押すと、その個体をこの調査日以降は自動で飛ばします。間違えたときは、その個体のセルで「復帰」と言うか「復帰」ボタンを押します。除外は、出力の「状態」「除外日」「理由」に記録されます。</p>"},
 
@@ -3215,6 +3773,8 @@ const HELP=[
 "<p>「Excelで保存」は、その日の表を保存します。経時調査では、全調査日をまとめたシートも入ります。</p><ul><li><b>野帳型</b>：1行＝1個体、調査日ごとに項目を横に並べる</li><li><b>縦持ち（R用）</b>：1行＝1個体×1調査日。Rなどの統計に向く</li></ul><p>どちらを出すかは、設定の「調査の種類」の「全調査日の出力形式」で選びます。</p>"},
 {g:"save",id:"summary",t:"集計とグラフ（平均・n・SD・SE、経時グラフ）",k:"集計 平均 n 標準偏差 SD 標準誤差 SE グラフ 経時グラフ 折れ線 誤差棒 処理区ごと 画像 PNG しゅうけい へいきん ひょうじゅんへんさ ひょうじゅんごさ ぐらふ",b:
 "<p>表の下の「集計・グラフ」を押すと、別の画面で集計します。野帳の表は変わりません。</p><ul><li><b>まとめる列</b>：事前入力の列（処理区・品種など）を選ぶと、その値ごとに平均を出します。何も選ばなければ全体の平均です。2つ以上選ぶと組み合わせごとになります。</li><li><b>出す値</b>：ふだんは平均と n（値の数）。SD（標準偏差、n−1で割る）・SE（標準誤差）は、印を付けたときだけ出します。</li><li>平均は測った桁より1桁多く出します。除外した個体と、空のセルは入れません。文字・選択肢の列は集計しません。</li><li>「表をコピー」でExcelに貼れ、「表をCSVで保存」でファイルにできます。</li></ul><p><b>経時グラフ</b>（経時調査のとき）：項目を1つ選ぶと、まとまりごとの平均の推移を折れ線で描きます。横軸は調査日の間隔どおりです。誤差棒は なし・SE・SD から選べます。点のあたりに触れると、その日の値が出ます。「グラフを画像で保存」で、報告書に貼れる白地の画像（PNG）にします。線は8本まで描きます（それより多いときは、まとめる列を減らしてください）。</p><p>選んだまとめる列や誤差棒は、調査ごとに覚えます。</p>"},
+{g:"save",id:"merge",t:"データを統合する（分担した調査をまとめる）",k:"統合 まとめる 合わせる 分担 ほかの人 複数人 合体 マージ 突き合わせ 食い違い とうごう ぶんたん まとめる",go:"io",b:
+"<p>何人かで分担して調査したデータを、1つの調査にまとめます。</p><ol><li>まとめる前に、「調査一覧」の「共有」で同じひな形を配り、全員が同じ項目・個体リストで調査します（項目が確実に合います）。</li><li>調査が終わったら、各自が「バックアップを保存」（.json）して、まとめる人に送ります。</li><li>まとめる人は、まとめ先の調査を開き、「調査一覧」か設定の「データの保存・読み込み・全消去」にある「データを統合する」を押します。</li><li>受け取ったファイルを選びます（複数をまとめて選べます。この端末の別の調査からも選べます）。</li><li>突き合わせの結果（埋めるセル・同じ値・食い違い）を確かめ、食い違うセルはどれを使うか選んで「統合する」を押します。</li></ol><ul><li>個体は、事前入力の列（樹番号・処理区・果実番号など）の値で突き合わせます。行の順番が違っていても大丈夫です。事前入力の列がないときは、行の番号で合わせます。</li><li>項目は、ひな形で配った調査なら確実に合い、そうでなくても同じ名前の項目に合わせます。ない項目・個体リストにない個体は、足すかどうか選べます。</li><li>調査日もそのまま合わせます。1回の調査に、調査日が2つ以上あるデータを入れると経時調査になります。</li><li>直後なら「元に戻す」で統合の前に戻せます。取り込み元のファイルや調査は変わりません。</li></ul>"},
 {g:"save",id:"backup",t:"バックアップと読み込み（機種変更）",k:"バックアップ json 読み込み 復元 機種変更 別の端末 移行 引き継ぎ ばっくあっぷ よみこみ きしゅへんこう いこう",go:"io",b:
 "<p>「バックアップを保存」は、設定・個体リスト・全調査日・除外の記録をまるごと1つのファイル（.json）に保存します。別の端末で「ファイルを読み込む」と、そのまま続きから使えます。このアプリで保存したExcel（縦持ちシート）やCSVも読み込めます。</p><p>設定からの読み込みは、今開いている調査を置き換えます。今の調査を残したいときは、「調査一覧」の「ファイルから作る」を使います。</p>"},
 {g:"save",id:"clear",t:"全消去と調査の削除",k:"全消去 消去 削除 リセット 初期化 ぜんしょうきょ さくじょ しょきか",go:"io",b:
@@ -3231,8 +3791,8 @@ const HELP=[
 {g:"trouble",id:"home",t:"ホーム画面に追加・複数のタブ",k:"ホーム画面 アイコン インストール アプリ タブ ウインドウ ほーむがめん あいこん たぶ",b:
 "<p>ブラウザのメニューから「ホーム画面に追加」すると、アプリのように開けます。Androidで追加したアプリはタブを複数開けないので、複数の調査は「調査一覧」で切り替えます。同じ調査を2か所で開くと、あとから変えた方の内容に揃えます。</p>"}
 ];
-const HELP_GO={ts:"調査の種類",items:"調査項目",alias:"言い換え",list:"個体リスト",dir:"入力の進む順番",listen:"聞き取り方",standby:"待機のしかた",other:"読み上げ・音・その他",freeze:"表の表示",io:"データの保存・読み込み・全消去"};
-const HELP_EX=["取り消し","ノギス","言い換え","ひな形","集計","オフライン","経時","Excel","除外"];
+const HELP_GO={ts:"調査の種類",items:"調査項目",alias:"言い換え",list:"個体リスト",dir:"入力の進む順番",listen:"聞き取り方",standby:"待機のしかた",plan:"調査日の予定・カレンダー",outlier:"外れ値のお知らせ",other:"読み上げ・音・その他",freeze:"表の表示",io:"データの保存・読み込み・全消去"};
+const HELP_EX=["取り消し","ノギス","言い換え","外れ値","予定","統合","ひな形","集計","オフライン"];
 /* 探す言葉を正規化（全角半角・ひらがなカタカナ・大文字小文字の違いを無視） */
 const helpNorm=s=>normJ(s);
 const helpText=h=>{ const d=document.createElement("div"); d.innerHTML=h.b; return d.textContent; };
@@ -3272,6 +3832,7 @@ function drawHelp(){
 }
 function openHelp(q){
   if(listening||standby) stopRec(); clearPend();
+  helpLogMode=false; $("#helpLog").textContent="更新の記録"; $("#helpQ").hidden=false; $("#helpChips").hidden=false; $("#helpTitle").textContent="使い方の説明";
   $("#helpQ").value=q||""; drawHelp(); $("#helpVer").textContent=APP_VER;
   $("#helpDlg").showModal(); $("#helpList").scrollTop=0;
 }
@@ -3279,6 +3840,60 @@ $("#helpChips").innerHTML=HELP_EX.map(w=>`<button type="button" class="hchip">${
 $("#helpChips").addEventListener("click",e=>{ const b=e.target.closest(".hchip"); if(!b) return; $("#helpQ").value=b.textContent; drawHelp(); });
 $("#helpQ").addEventListener("input",drawHelp);
 $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").value){ e.preventDefault(); $("#helpQ").value=""; drawHelp(); } });
+/* ========= 更新の記録（4.3〜。版を出すたびに先頭に足す） =========
+   v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id] */
+const CHANGES=[
+{v:"Pro 4.3",d:"2026-10-29",a:[["データの統合（分担して調査したデータを、事前入力の列で個体を突き合わせて1つにまとめる）","merge"],["更新の記録（この画面）","history"],["著作権の表示を「栃木県農業総合研究センター果樹研究室」に変更",""]]},
+{v:"Pro 4.2",d:"2026-10-29",a:[["調査日の予定（間隔／日付を並べる）と、今日が調査日・予定を過ぎたときのお知らせ","plan"],["調査一覧に、調査ごとの予定の状態と件数","plan"],["カレンダーに登録（.ics。繰り返し・通知を複数）","plan"]]},
+{v:"Pro 4.1",d:"2026-10-29",a:[["外れ値のお知らせ（同じ日の外れ・伸び方の外れ。感度 切・低・中・高）","outlier"],["表の点線の枠と、集計画面の候補一覧","outlier"]]},
+{v:"Pro 4.0",d:"2026-10-29",a:[["保存先をブラウザ内の大容量領域へ（自動で移行、移行前のデータも残す）","privacy"],["オフラインで開ける・新しい版の知らせ","offline"],["集計・グラフ（平均・n、SD・SE、経時グラフ、画像で保存）","summary"]]},
+{v:"Pro 3.9.2",d:"2026-10-29",a:[["ひな形を配る・受け取る（ファイル・リンク・QRコード）","template"]]},
+{v:"Pro 3.9.1",d:"2026-10-29",a:[["言い換え（聞き違い・略語の登録）","alias"],["狭い画面で設定が横にはみ出す不具合を直した",""]]},
+{v:"Pro 3.9",d:"2026-10-29",a:[["使い方の説明（「？」。単語で探せる）","flow"]]},
+{v:"Pro 3.8.1",d:"2026-10-29",a:[["空白から調査を作る","surveys"],["設定画面の見出しの折りたたみ","settings"]]},
+{v:"Pro 3.8",d:"2026-10-29",a:[["調査一覧（複数の調査の保存・切り替え・削除・個別のバックアップ）","surveys"]]},
+{v:"Pro 3.7〜3.7.2",d:"2026-10-29",a:[["手入力の復唱ボタン（ノギス・はかりの値も読み上げる）","manual"],["項目の並べ替え（つかんで移動）と、上・下への挿入","flow"]]},
+{v:"Pro 3.6〜3.6.3",d:"2026-10-27",a:[["ウインドウ枠の固定","freeze"],["ノギスのEnter対策","manual"],["入力できる値（範囲外の防止）","allow"],["ホーム画面に追加したときのアイコン","home"]]},
+{v:"Pro 3.5",d:"",a:[["読み上げの内容（全部・短く・区切りだけ）","readback"],["まとめて入力（ゼロ 6個・残り全部）","bulk"],["くっついて聞こえた数値の分割","numbers"],["早めに確定する（試験的）","readback"]]},
+{v:"Pro 3.4",d:"",a:[["行を削除","tableops"],["声の「取り消し」を続けるときの間隔","mistake"]]},
+{v:"Pro 3.3",d:"",a:[["クリア・削除して詰める・範囲選択・コピー・貼り付け","tableops"],["音声コマンド「停止」","standby"]]},
+{v:"Pro 3.2",d:"",a:[["利用コードの期間指定","code"]]},
+{v:"Pro 3.1",d:"",a:[["待機・再開","standby"],["経時調査と前回比アラート","compare"],["利用条件・免責事項への同意",""]]},
+{v:"Pro 3.0",d:"2026-10-15",a:[["名前を「Pro」にして、利用コードを導入","code"]]},
+{v:"研究版2（2.0〜2.6）",d:"",a:[["列の種類（数値・文字・選択肢）と事前入力の列、個体リスト","list"],["調査日と除外（落果・枯死・欠株）","exclude"],["ファイルの読み込みと移行、貼り付け、グループ単位の入力","order"]]}
+];
+const SEEN_KEY="koe-yacho-v2-seenver";
+let helpLogMode=false;
+function drawHistory(){
+  const ids=new Set(HELP.map(h=>h.id));
+  $("#helpList").innerHTML=`<p class="help">どの版で、どの機能が加わったかの記録です。押すと、その機能の説明を開きます。</p>`+CHANGES.map((c,i)=>`<details class="fold htopic"${i<3?" open":""}><summary><span class="ftitle">${esc(c.v)}</span><span class="fsum">${esc(c.d||"")}</span></summary><div class="fbody hbody"><ul class="hlog">${c.a.map(([t,id])=>`<li>${ids.has(id)?`<button type="button" class="hlink" data-topic="${id}">${esc(t)}</button>`:esc(t)}</li>`).join("")}</ul></div></details>`).join("");
+  $("#helpCount").textContent=`${CHANGES.length}件の版`;
+}
+function setHelpLog(on){
+  helpLogMode=on; $("#helpLog").textContent=on?"説明に戻る":"更新の記録";
+  $("#helpQ").hidden=on; $("#helpChips").hidden=on; $("#helpTitle").textContent=on?"更新の記録":"使い方の説明";
+  if(on) drawHistory(); else drawHelp();
+  $("#helpList").scrollTop=0;
+}
+/* 新しい版になって初めて開いたとき：増えたことを知らせる */
+function seenCheck(){
+  let seen=""; try{ seen=localStorage.getItem(SEEN_KEY)||""; }catch(e){}
+  const cur=APP_VER.replace(/（.*$/,"");
+  if(seen===cur) return;
+  try{ localStorage.setItem(SEEN_KEY,cur); }catch(e){}
+  const k=CHANGES.findIndex(c=>c.v===seen), news=(k>0?CHANGES.slice(0,k):CHANGES.slice(0,1)).filter(c=>c.v!==seen);
+  if(!news.length||!seen&&!ST.migNew&&!svGet().list.some(e=>e.updated)) return;   /* 初めて使う人には出さない */
+  const mig=ST.migNew?`保存先を、より多く保存できる場所（ブラウザ内の大容量領域）に移しました（${ST.migNew}件の調査。これまでのデータも残してあります）。`:"";
+  note(`${mig}${cur} になりました。増えたこと：${news.flatMap(c=>c.a.map(x=>x[0].replace(/（.*?）/g,""))).slice(0,4).join("、")}${news.flatMap(c=>c.a).length>4?" など":""}。`,true);
+  $("#note").insertAdjacentHTML("beforeend",' <button type="button" class="ghost" id="seenBtn" style="padding:4px 10px">更新の記録を見る</button>');
+  $("#seenBtn").onclick=()=>{ openHelp(); setHelpLog(true); };
+}
+$("#helpLog").onclick=()=>setHelpLog(!helpLogMode);
+$("#helpList").addEventListener("click",e=>{
+  const b=e.target.closest(".hlink"); if(!b) return;
+  setHelpLog(false); $("#helpQ").value=""; drawHelp();
+  const d=$("#helpList").querySelector(`details[data-h="${b.dataset.topic}"]`); if(d){ d.open=true; d.scrollIntoView({block:"start"}); d.classList.remove("flash"); void d.offsetWidth; d.classList.add("flash"); }
+});
 $("#btnHelp").onclick=()=>openHelp();
 $("#fHelp").onclick=()=>openHelp();
 $("#helpClose").onclick=()=>$("#helpDlg").close();
@@ -3339,7 +3954,8 @@ function gateShow(msg,isErr,mode){
   try{ if(listening) stopRec(); }catch(e){}
   try{ if(typeof voskStop==="function"&&vk&&vk.on) voskStop(); }catch(e){}
 }
-function gateHide(){ $("#gate").hidden=true; if(tplPending) setTimeout(tplAfterGate,0); }
+let seenDone=false;
+function gateHide(){ $("#gate").hidden=true; if(tplPending) setTimeout(tplAfterGate,0); if(!seenDone&&stReady){ seenDone=true; setTimeout(seenCheck,800); } }
 function licShowInfo(){
   const el=$("#licInfo"); if(!el) return;
   el.textContent=licNow?("利用コード："+licText(licNow)):"利用コード：未入力";
