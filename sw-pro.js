@@ -4,8 +4,9 @@
   アプリ本体（pro.html）と、Excel出力・QRコードの部品、アイコン、文字（フォント）をこの端末に保存し、電波がなくても開けるようにします。
   入力したデータには触れません（データはアプリがブラウザ内に保存します）。外部へデータを送ることもありません。
   pro.html は保存しておいた版をすぐに出し、電波があれば裏で新しい版を確かめて入れ替えます（次に開いたときから新しい版）。
+  入れ替えるのは、版の番号が今より新しいときだけです（公開の直後は、配信元が古い版を返すことがあるため。2026-10-30 修正）。
 */
-const CACHE = "koe-pro-4.0";          // この名前を変えると、古い保存は消して取り直す
+const CACHE = "koe-pro-4.0";          // 名前は変えない（変えると保存した本体を消して取り直すため。中身は版の番号で入れ替える）
 const PAGE = new URL("./pro.html", self.registration.scope.replace(/pro\.html$/, "")).href;
 const CORE = [
   "./pro.html", "./manifest-pro.json",
@@ -23,7 +24,13 @@ const abs = u => new URL(u, base).href;
 self.addEventListener("install", e => {
   e.waitUntil((async () => {
     const c = await caches.open(CACHE);
-    await c.addAll(CORE.map(u => new Request(abs(u), { cache: "reload" })));
+    /* 本体は、保存しているものより新しいときだけ入れ替える。そのほかは取り直す */
+    await Promise.all(CORE.map(async u => {
+      const url = abs(u), r = await fetch(new Request(url, { cache: "reload" }));
+      if (!r.ok) throw new Error(url);
+      if (url === PAGE) { const hit = await c.match(PAGE); if (hit && !newer(verOf(await r.clone().text()), verOf(await hit.text()))) return; }
+      await c.put(url, r);
+    }));
     /* 外部の部品は取れなくても入れ替えを止めない（次に使ったときに保存する） */
     await Promise.all(LIBS.map(async u => { try { const r = await fetch(u, { mode: "cors", credentials: "omit" }); if (r.ok) await c.put(u, r); } catch (_) {} }));
     await self.skipWaiting();
@@ -38,6 +45,14 @@ self.addEventListener("activate", e => {
 });
 
 const verOf = t => (String(t).match(/const APP_VER="([^"]+)"/) || [])[1] || "";
+/* 版の番号（「Pro 4.3.1（…）」の 4.3.1）を比べる。a が b より新しければ true */
+const verNum = v => (String(v).match(/(\d+(?:\.\d+)*)/) || [, ""])[1].split(".").filter(Boolean).map(Number);
+function newer(a, b) {
+  const x = verNum(a), y = verNum(b);
+  if (!x.length) return false; if (!y.length) return true;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d > 0; }
+  return false;
+}
 
 /* アプリ本体：保存した版をすぐに出し、裏で新しい版を確かめる */
 async function page(req, ev) {
@@ -50,7 +65,8 @@ async function page(req, ev) {
       if (!r.ok) return null;
       const t = await r.clone().text();
       const old = await oldText;
-      if (t !== old) {
+      /* 古い版や同じ版が返ってきたときは、保存を変えない（公開の直後の配信の揺れ対策） */
+      if (!hit || newer(verOf(t), verOf(old))) {
         await c.put(PAGE, r.clone());
         if (hit) for (const cl of await self.clients.matchAll({ type: "window" })) cl.postMessage({ t: "update", ver: verOf(t) });
       }

@@ -1795,7 +1795,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.3（2026-10-29）";
+const APP_VER="Pro 4.3.1（2026-10-30）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -3491,13 +3491,22 @@ function swInit(){
   }).catch(e=>{ swState="err:"+(e&&e.message||e); });
 }
 /* 保存している本体が今より新しい版なら、切り替えを勧める（入力中は邪魔をしない位置に出す） */
+/* 版の番号を比べる（a が b より新しければ true）。古い版・同じ版は勧めない */
+function verNewer(a,b){
+  const n=v=>(String(v).match(/(\d+(?:\.\d+)*)/)||[,""])[1].split(".").filter(Boolean).map(Number), x=n(a), y=n(b);
+  if(!x.length) return false; if(!y.length) return true;
+  for(let i=0;i<Math.max(x.length,y.length);i++){ const d=(x[i]||0)-(y[i]||0); if(d) return d>0; }
+  return false;
+}
 function swOffer(ver){
-  if(!ver||ver===APP_VER||ver===swOffered) return;
+  if(!ver||!verNewer(ver,APP_VER)||ver===swOffered) return;
   swOffered=ver;
   const b=$("#updBar"); b.hidden=false;
   $("#updMsg").textContent=`新しい版 ${ver} が届きました。切り替えると、画面を開き直します（入力したデータはそのまま残ります）。`;
 }
-$("#updGo").onclick=()=>{ if(listening||standby) stopRec(); save(); setTimeout(()=>location.reload(),150); };
+$("#updGo").onclick=()=>{ if(listening||standby) stopRec(); save(); $("#updBar").hidden=true; try{ sessionStorage.setItem("koe-yacho-v2-updtry",swOffered); }catch(e){} setTimeout(()=>location.reload(),150); };
+/* 切り替えたのに古い版のままのとき（保存の入れ替えが間に合わなかった）：もう一度だけ勧めず、次に開いたときに任せる */
+try{ const t=sessionStorage.getItem("koe-yacho-v2-updtry"); if(t){ sessionStorage.removeItem("koe-yacho-v2-updtry"); if(verNewer(t,APP_VER)) swOffered=t; } }catch(e){}
 $("#updLater").onclick=()=>{ $("#updBar").hidden=true; };
 /* 診断・説明に使う：オフラインで開ける状態か */
 async function swStatus(){
@@ -3840,26 +3849,25 @@ $("#helpChips").innerHTML=HELP_EX.map(w=>`<button type="button" class="hchip">${
 $("#helpChips").addEventListener("click",e=>{ const b=e.target.closest(".hchip"); if(!b) return; $("#helpQ").value=b.textContent; drawHelp(); });
 $("#helpQ").addEventListener("input",drawHelp);
 $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").value){ e.preventDefault(); $("#helpQ").value=""; drawHelp(); } });
-/* ========= 更新の記録（4.3〜。版を出すたびに先頭に足す） =========
-   v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id] */
+/* ========= 更新の記録（4.3〜。機能が増えた版を出すたびに先頭に足す） =========
+   v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
+   載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
-{v:"Pro 4.3",d:"2026-10-29",a:[["データの統合（分担して調査したデータを、事前入力の列で個体を突き合わせて1つにまとめる）","merge"],["更新の記録（この画面）","history"],["著作権の表示を「栃木県農業総合研究センター果樹研究室」に変更",""]]},
+{v:"Pro 4.3",d:"2026-10-29",a:[["データの統合（分担して調査したデータを、事前入力の列で個体を突き合わせて1つにまとめる）","merge"],["更新の記録（この画面）","history"]]},
 {v:"Pro 4.2",d:"2026-10-29",a:[["調査日の予定（間隔／日付を並べる）と、今日が調査日・予定を過ぎたときのお知らせ","plan"],["調査一覧に、調査ごとの予定の状態と件数","plan"],["カレンダーに登録（.ics。繰り返し・通知を複数）","plan"]]},
 {v:"Pro 4.1",d:"2026-10-29",a:[["外れ値のお知らせ（同じ日の外れ・伸び方の外れ。感度 切・低・中・高）","outlier"],["表の点線の枠と、集計画面の候補一覧","outlier"]]},
 {v:"Pro 4.0",d:"2026-10-29",a:[["保存先をブラウザ内の大容量領域へ（自動で移行、移行前のデータも残す）","privacy"],["オフラインで開ける・新しい版の知らせ","offline"],["集計・グラフ（平均・n、SD・SE、経時グラフ、画像で保存）","summary"]]},
 {v:"Pro 3.9.2",d:"2026-10-29",a:[["ひな形を配る・受け取る（ファイル・リンク・QRコード）","template"]]},
-{v:"Pro 3.9.1",d:"2026-10-29",a:[["言い換え（聞き違い・略語の登録）","alias"],["狭い画面で設定が横にはみ出す不具合を直した",""]]},
+{v:"Pro 3.9.1",d:"2026-10-29",a:[["言い換え（聞き違い・略語の登録）","alias"],["その他の不具合の修正",""]]},
 {v:"Pro 3.9",d:"2026-10-29",a:[["使い方の説明（「？」。単語で探せる）","flow"]]},
 {v:"Pro 3.8.1",d:"2026-10-29",a:[["空白から調査を作る","surveys"],["設定画面の見出しの折りたたみ","settings"]]},
 {v:"Pro 3.8",d:"2026-10-29",a:[["調査一覧（複数の調査の保存・切り替え・削除・個別のバックアップ）","surveys"]]},
 {v:"Pro 3.7〜3.7.2",d:"2026-10-29",a:[["手入力の復唱ボタン（ノギス・はかりの値も読み上げる）","manual"],["項目の並べ替え（つかんで移動）と、上・下への挿入","flow"]]},
-{v:"Pro 3.6〜3.6.3",d:"2026-10-27",a:[["ウインドウ枠の固定","freeze"],["ノギスのEnter対策","manual"],["入力できる値（範囲外の防止）","allow"],["ホーム画面に追加したときのアイコン","home"]]},
+{v:"Pro 3.6〜3.6.3",d:"2026-10-27",a:[["ウインドウ枠の固定","freeze"],["ノギス・はかりからの入力への対応","manual"],["入力できる値（範囲外の防止）","allow"]]},
 {v:"Pro 3.5",d:"",a:[["読み上げの内容（全部・短く・区切りだけ）","readback"],["まとめて入力（ゼロ 6個・残り全部）","bulk"],["くっついて聞こえた数値の分割","numbers"],["早めに確定する（試験的）","readback"]]},
 {v:"Pro 3.4",d:"",a:[["行を削除","tableops"],["声の「取り消し」を続けるときの間隔","mistake"]]},
 {v:"Pro 3.3",d:"",a:[["クリア・削除して詰める・範囲選択・コピー・貼り付け","tableops"],["音声コマンド「停止」","standby"]]},
-{v:"Pro 3.2",d:"",a:[["利用コードの期間指定","code"]]},
-{v:"Pro 3.1",d:"",a:[["待機・再開","standby"],["経時調査と前回比アラート","compare"],["利用条件・免責事項への同意",""]]},
-{v:"Pro 3.0",d:"2026-10-15",a:[["名前を「Pro」にして、利用コードを導入","code"]]},
+{v:"Pro 3.1",d:"",a:[["待機・再開","standby"],["経時調査と前回比アラート","compare"]]},
 {v:"研究版2（2.0〜2.6）",d:"",a:[["列の種類（数値・文字・選択肢）と事前入力の列、個体リスト","list"],["調査日と除外（落果・枯死・欠株）","exclude"],["ファイルの読み込みと移行、貼り付け、グループ単位の入力","order"]]}
 ];
 const SEEN_KEY="koe-yacho-v2-seenver";
@@ -3878,9 +3886,10 @@ function setHelpLog(on){
 /* 新しい版になって初めて開いたとき：増えたことを知らせる */
 function seenCheck(){
   let seen=""; try{ seen=localStorage.getItem(SEEN_KEY)||""; }catch(e){}
-  const cur=APP_VER.replace(/（.*$/,"");
-  if(seen===cur) return;
-  try{ localStorage.setItem(SEEN_KEY,cur); }catch(e){}
+  /* 覚えるのは記録の先頭の版（機能が増えていない版では知らせない） */
+  const cur=APP_VER.replace(/（.*$/,""), latest=CHANGES[0].v;
+  if(seen===latest) return;
+  try{ localStorage.setItem(SEEN_KEY,latest); }catch(e){}
   const k=CHANGES.findIndex(c=>c.v===seen), news=(k>0?CHANGES.slice(0,k):CHANGES.slice(0,1)).filter(c=>c.v!==seen);
   if(!news.length||!seen&&!ST.migNew&&!svGet().list.some(e=>e.updated)) return;   /* 初めて使う人には出さない */
   const mig=ST.migNew?`保存先を、より多く保存できる場所（ブラウザ内の大容量領域）に移しました（${ST.migNew}件の調査。これまでのデータも残してあります）。`:"";
