@@ -501,7 +501,7 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
   </div>
   <pre class="diagout" id="diagOut" hidden></pre>
   <details class="terms">
-    <summary>© 2026 栃木県農業総合研究センター果樹研究室　利用条件・免責事項</summary>
+    <summary>© 2026 tochigitfruits　利用条件・免責事項</summary>
     <div class="termsbody" id="termsBody">
       <p><b>利用条件</b></p>
       <p>「声で野帳 Pro」は、調査記録の補助を目的として、利用コードをお持ちの方に提供しています。</p>
@@ -1795,7 +1795,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.3.1（2026-10-30）";
+const APP_VER="Pro 4.3.2（2026-10-30）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
