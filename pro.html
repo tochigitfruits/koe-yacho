@@ -1185,8 +1185,15 @@ function nextPos(p){
   const g=G[gi], k=g.indexOf(p.c);
   if(k+1<g.length) return {r:p.r,c:g[k+1]};
   const nr=nextRow(p.r), L=listLen();
-  if(L && nr>=L && gi+1<G.length) return {r:firstRow(),c:G[gi+1][0]};
+  if(L && nr>=L && gi+1<G.length) return firstEmptyIn(G[gi+1],L)||{r:firstRow(),c:G[gi+1][0]};
   return {r:nr,c:g[0]};
+}
+/* 4.3.3〜：次のグループ（列単位では次の列）に移るときは、そのまとまりで最初に空いているセルから始める
+   （前半を調査済みで、後から個体を足して続きを調べる場合に、調査済みの先頭へ戻らないように）。除外した個体は飛ばす。
+   すべて埋まっていれば、これまでどおり先頭の個体へ */
+function firstEmptyIn(g,L){
+  for(let r=firstRow(); r<L; r=nextRow(r)){ const c=g.find(c=>!hasVal(D[r]?.[S.items[c].id])); if(c!==undefined) return {r,c}; }
+  return null;
 }
 function lastFilledRow(c){ const id=S.items[c]?.id; let last=-1; D.forEach((row,i)=>{ if(hasVal(row[id])) last=i; }); return last; }
 function prevPos(p){
@@ -1650,7 +1657,7 @@ function doCommand(cmd){
   const M=meas(); if(!M.length) return null;
   if(cmd==="skip"){ addLog(`${cellName(cur)} スキップ`); return "スキップ"+advance(); }
   if(cmd==="next"){
-    if(S.dir==="col"){ const nx=M.find(i=>i>cur.c); if(nx!==undefined) cur={r:firstRow(),c:nx}; else { note("最後の列です"); return "最後の列です"; } }
+    if(S.dir==="col"){ const nx=M.find(i=>i>cur.c); if(nx!==undefined) cur=firstEmptyIn([nx],listLen())||{r:firstRow(),c:nx}; else { note("最後の列です"); return "最後の列です"; } }
     else { const g=groupsOf()[Math.max(0,groupIdx(cur.c))]; const gi0=groupIdx(cur.c); cur=nextPos({r:cur.r,c:g[g.length-1]});
       if(groupIdx(cur.c)!==gi0){ addLog(`次のグループへ → ${cellName(cur)}`); return "次、"+groupLabel(cur.c); } }
     addLog(`次へ → ${cellName(cur)}`); return "次、"+(S.dir==="col"?S.items[cur.c].name:rowLabel(cur.r));
@@ -1795,7 +1802,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.3.2（2026-10-30）";
+const APP_VER="Pro 4.3.3（2026-10-30）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -3763,7 +3770,7 @@ const HELP=[
 {g:"table",id:"tableops",t:"表の操作（クリア・削除して詰める・行を削除）",k:"クリア 消す 削除 詰める 行を削除 範囲選択 コピー 貼り付け 貼付 元に戻す Ctrl Delete くりあ さくじょ つめる はんいせんたく こぴー はりつけ もとにもどす",b:
 "<ul><li><b>クリア</b>：選んだセル（範囲）の値を消す</li><li><b>削除して詰める</b>：今のセルを消し、後ろの値を1つずつ前へ詰める（2回入ってしまったとき）</li><li><b>行を削除</b>：今の行を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も消える</li><li><b>範囲選択</b>：オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）</li><li><b>コピー</b>・<b>貼付</b>：Excelとの間でも使える（PCは Ctrl+C・Ctrl+V・Delete も可）</li></ul><p>操作のあとは「元に戻す」で戻せます。</p>"},
 {g:"table",id:"order",t:"入力の進む順番（行・列・グループ）",k:"順番 行単位 列単位 グループ 横 縦 進む方向 じゅんばん ぎょう れつ ぐるーぷ",go:"dir",b:
-"<ul><li><b>行単位</b>：1個体の全項目 → 次の個体</li><li><b>列単位</b>：1項目を全個体 → 次の項目</li><li><b>グループ単位</b>：決めた列数のまとまりごとに 横 → 次の個体。例 <code>2,1</code> なら、左の2列を全個体分、次の1列を全個体分</li></ul>"},
+"<ul><li><b>行単位</b>：1個体の全項目 → 次の個体</li><li><b>列単位</b>：1項目を全個体 → 次の項目</li><li><b>グループ単位</b>：決めた列数のまとまりごとに 横 → 次の個体。例 <code>2,1</code> なら、左の2列を全個体分、次の1列を全個体分</li></ul><p>列単位・グループ単位で次の列（まとまり）に移るときは、そのまとまりで最初に空いているセルから始めます。前半の個体を調べた後に個体を足して続きを調べるときも、調べ終わった先頭に戻りません。すべて埋まっているときは先頭の個体から始めます。</p>"},
 {g:"table",id:"list",t:"個体リスト（事前入力の列）",k:"個体リスト 事前入力 樹番号 処理区 果実番号 組み合わせ Excel 貼り付け こたいりすと じぜんにゅうりょく じゅばんごう しょりく",go:"list",b:
 "<p>事前入力の列（樹番号・処理区など）は、個体リストで先に入れておきます。「組み合わせで個体リストを作る」で、例えば 樹 <code>1-5</code> × 処理区 <code>無処理、遮光</code> × 果実 <code>1-10</code> の全組み合わせを作れます。Excelで事前入力の列を並べてコピーし、貼り付けることもできます。リストを減らすと、外れた行を表から消すか確かめます。</p>"},
 {g:"table",id:"freeze",t:"ウインドウ枠の固定",k:"固定 ウインドウ枠 列 行 スクロール 見出し こてい ういんどうわく",go:"freeze",b:
@@ -3853,6 +3860,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.3.3",d:"2026-10-30",a:[["列単位・グループ単位で次の列（まとまり）に移るとき、空いているセルから続ける","order"]]},
 {v:"Pro 4.3",d:"2026-10-29",a:[["データの統合（分担して調査したデータを、事前入力の列で個体を突き合わせて1つにまとめる）","merge"],["更新の記録（この画面）","history"]]},
 {v:"Pro 4.2",d:"2026-10-29",a:[["調査日の予定（間隔／日付を並べる）と、今日が調査日・予定を過ぎたときのお知らせ","plan"],["調査一覧に、調査ごとの予定の状態と件数","plan"],["カレンダーに登録（.ics。繰り返し・通知を複数）","plan"]]},
 {v:"Pro 4.1",d:"2026-10-29",a:[["外れ値のお知らせ（同じ日の外れ・伸び方の外れ。感度 切・低・中・高）","outlier"],["表の点線の枠と、集計画面の候補一覧","outlier"]]},
