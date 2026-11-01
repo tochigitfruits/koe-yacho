@@ -287,6 +287,10 @@ th.gstart,td.gstart{border-left:3px solid var(--accent)}
 .gatebox h2{margin:0;font-size:1.5rem}.gatebox h2 small{font-size:.85rem;color:var(--muted);font-weight:400;margin-left:8px}
 .gatebox p{margin:0;line-height:1.7}
 #gateCode{width:100%;min-height:7.5em;font:600 15px/1.6 var(--f-num);padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);resize:vertical;word-break:break-all}
+#gateMailBox{display:flex;flex-direction:column;gap:6px}
+#gateMailBox label{font-weight:700}
+#gateMail{width:100%;font:600 16px/1.5 var(--f-num);padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.licnow:empty{display:none}
 #gateTerms{max-height:36vh;overflow:auto;font-size:.82rem;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);line-height:1.6;display:grid;gap:6px}
 #gateTerms p{margin:0;line-height:1.6}
 #gateTerms ol,#gateTerms ul{margin:0;padding-left:1.4em;display:grid;gap:4px}
@@ -298,6 +302,9 @@ th.gstart,td.gstart{border-left:3px solid var(--accent)}
 #gateErr{color:var(--rec);font-weight:700}
 #gateData{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px}
 .gatesmall{font-size:.85rem;color:var(--muted)}
+/* 4.3.4〜：読み込みが終わるまでは、コードの欄・同意・ボタンを出さない（コード入力画面と見分けるため） */
+#gate.loading #gateCode,#gate.loading #gateMailBox,#gate.loading #gateTerms,#gate.loading .agree,#gate.loading .gatebox>.gatebtns,#gate.loading #gateErr,#gate.loading #gateData,#gate.loading .gatesmall{display:none!important}
+#gateWait{border:1.5px solid var(--warn,#b45309);border-radius:10px;padding:10px 12px;font-size:.92rem;line-height:1.7}
 #licInfo{margin-left:8px}
 /* ウインドウ枠の固定：固定したセルは不透明の地にして、下を流れる表が透けないようにする */
 th{z-index:3}
@@ -388,11 +395,17 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
 </style>
 </head>
 <body>
-<div id="gate">
+<div id="gate" class="loading">
   <div class="gatebox" role="dialog" aria-labelledby="gateTitle">
     <h2 id="gateTitle">声で野帳 Pro<small>利用コードの確認</small></h2>
-    <p id="gateMsg">利用コードを確認しています…</p>
+    <p id="gateMsg">読み込んでいます…</p>
+    <p id="gateWait" hidden>データの読み込みを待っています。Pro をほかの画面（ホーム画面のアプリと Chrome のタブなど）でも開いていると、その画面が読み書きを終えるまで待つことがあります。もう一方の画面を表示して開き直すか、閉じてください。入力したデータは消えていません。</p>
     <textarea id="gateCode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="KOE-XXXX-XXXX-…（受け取ったコードをそのまま貼り付け）" aria-label="利用コード"></textarea>
+    <div id="gateMailBox" hidden>
+      <label for="gateMail">メールアドレス（このコードを受け取ったもの）</label>
+      <input type="email" id="gateMail" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="例：name@example.jp">
+      <p class="gatesmall">このコードはメールアドレスと組になっています。メールアドレスはこの端末の中にだけ保存し、外部へは送りません。</p>
+    </div>
     <div id="gateTerms" aria-label="利用条件と免責事項"></div>
     <label class="agree" for="gateAgree"><input type="checkbox" id="gateAgree"><span>利用条件と免責事項を読み、同意します</span></label>
     <div class="gatebtns">
@@ -988,12 +1001,23 @@ function idbOpen(){
   });
 }
 /* 1回の読み書き（トランザクション）。fn(store群) が返した要求の結果を返す。書き込みは完了まで待つ */
+/* 4.3.4〜：読み書きが4秒たっても終わらないときは知らせる（待ち続ける）。
+   Android では、裏に回った画面（ホーム画面のアプリ／Chrome のタブ）が読み書きの途中で止められると、
+   ほかの画面の読み書きがその画面が戻るまで待たされるため */
 function idbRun(names,mode,fn){
-  return new Promise((ok,ng)=>{
+  return new Promise((ok0,ng0)=>{
+    const t=setTimeout(stSlow,4000), ok=v=>{ clearTimeout(t); ok0(v); }, ng=e=>{ clearTimeout(t); ng0(e); };
     let tx, req; try{ tx=ST.db.transaction(names,mode); req=fn(...names.map(n=>tx.objectStore(n))); }catch(e){ ng(e); return; }
     tx.oncomplete=()=>ok(req&&"result" in req?req.result:undefined);
     tx.onerror=()=>ng(tx.error||new Error("IndexedDB")); tx.onabort=()=>ng(tx.error||new Error("abort"));
   });
+}
+let stSlowAt=0;
+function stSlow(){
+  const g=document.getElementById("gate");
+  if(g&&g.classList.contains("loading")){ document.getElementById("gateWait").hidden=false; return; }
+  if(Date.now()-stSlowAt<60000) return; stSlowAt=Date.now();
+  try{ note("保存・読み込みが、ほかの画面で開いている Pro の終わりを待っています。もう一方の画面を表示して開き直すか、閉じてください。終わるまで、この画面は閉じないでください。",true); }catch(e){}
 }
 async function stGet(id){
   if(ST.mode==="idb") return (await idbRun(["surveys"],"readonly",s=>s.get(id)))||null;
@@ -1802,7 +1826,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.3.3（2026-10-30）";
+const APP_VER="Pro 4.4（2026-10-30）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -2128,6 +2152,7 @@ $("#btnXlsx").onclick=()=>{
     if(S.outFmt!=="long") XLSX.utils.book_append_sheet(wb,sheetFrom(aoaWide(false)),"野帳型");
     if(S.outFmt!=="wide") XLSX.utils.book_append_sheet(wb,sheetFrom(aoaLong(false)),"縦持ち(R用)");
   }
+  if(licNow&&licNow.mailMask) wb.Props={Author:licNow.mailMask};
   const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
   download(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),`${safeName()}_${S.curDate}.xlsx`);
 };
@@ -2967,8 +2992,13 @@ async function stUsage(){
   return where;
 }
 /* 同じ調査を別のタブ・ウインドウで変えたとき：最新の内容に揃える（古い内容で上書きしないため） */
+/* 4.3.4〜：裏に回っている間は、ほかの画面からの知らせを読み込まずにためておき、表示されたときに処理する
+   （裏で読み書きを始めた直後に止められて、ほかの画面を待たせないように） */
+let peerQ=[];
+document.addEventListener("visibilitychange",async()=>{ if(document.visibilityState!=="visible"||!peerQ.length) return; const q=peerQ; peerQ=[]; for(const m of q) await peerRecv(m); });
 async function peerRecv(m){
   if(!m||m.from===TAB_TOKEN||!stReady) return;
+  if(document.visibilityState==="hidden"){ if(!peerQ.some(x=>x.t===m.t&&x.id===m.id)) peerQ.push(m); return; }
   if(m.t==="list"){ try{ SVL=await stListGet(); }catch(e){} if($("#svDlg").open) drawSurveys(); return; }
   if(m.id!==svId) return;
   if(m.t==="del"){
@@ -3741,8 +3771,9 @@ const HELP=[
 "<p>この画面の上の「更新の記録」を押すと、どの版でどの機能が加わったかを一覧で見られます。項目を押すと、その機能の説明を開きます。新しい版に切り替わったときは、増えたことを画面の下に知らせます。</p>"},
 {g:"start",id:"settings",t:"設定画面の使い方",k:"設定 見出し 折りたたみ 開く 閉じる すべて開く せってい",b:
 "<p>設定は見出しごとに折りたたんであります。見出しを押すと開いたり閉じたりでき、その状態は次に設定を開いたときも残ります。閉じた見出しの右には、今の設定が短く出ます。上の「すべて開く」「すべて閉じる」でまとめて切り替えられます。変更は「保存」を押すまで反映されません。</p>"},
-{g:"start",id:"code",t:"利用コード",k:"ライセンス コード 期限 期限切れ 更新 変更 KOE りようこーど きげん",b:
-"<p>Proは利用コードを入れて使います。コードごとに使える期間が決まっていて、期限の少し前からお知らせが出ます。新しいコードは、画面下の「利用コードを変更」から入れます。期限が切れても入力したデータは消えず、Excel保存とバックアップはできます。</p>"},
+{g:"start",id:"code",t:"利用コード",k:"ライセンス コード 期限 期限切れ 更新 変更 KOE メール メールアドレス りようこーど きげん めーる",b:
+"<p>Proは利用コードを入れて使います。コードごとに使える期間が決まっていて、期限の少し前からお知らせが出ます。新しいコードは、画面下の「利用コードを変更」から入れます。期限が切れても入力したデータは消えず、Excel保存とバックアップはできます。</p>"+
+"<p>メールアドレス付きのコードは、初めて入れるときに、コードを受け取ったメールアドレスも入れます（別のメールアドレスでは使えません）。メールアドレスはこの端末の中にだけ保存し、外部へは送りません。画面やExcelのプロパティ（作成者）には一部を伏せて表示します（例 o***@example.jp）。</p><p class=\"licnow\"></p>"},
 
 {g:"input",id:"voice",t:"声で入力する（マイク）",k:"マイク 音声 話す 開始 停止 連続認識 1回ずつ 聞き取り方 セルをタップ まいく おんせい れんぞく",go:"listen",b:
 "<p>マイクを押して話すと、黄色のセルに値が入り、次のセルへ進みます。聞き取った言葉は「次に入るセル」の下に出ます。</p><ul><li><b>連続認識</b>：止めるまで聞き続けます。</li><li><b>1回ずつ</b>：押すたびに1回だけ聞きます。</li></ul><p>表のセルをタップすると、そのセルから入力を続けます。</p>"},
@@ -3804,8 +3835,8 @@ const HELP=[
 "<p>消音スイッチと音量を確かめ、設定の「読み上げテスト」を押します。設定の「声で入力した値を読み上げる」がオフだと、声で入れた値は読みません。手入力の値は「復唱」ボタンがオンのときだけ読みます。</p>"},
 {g:"trouble",id:"mistake",t:"間違えて入れた・取り消しが進みすぎる",k:"間違い 間違えた 取り消し 戻す 進みすぎ 間隔 直す 修正 まちがい とりけし なおす しゅうせい",go:"other",b:
 "<p>直前の値は「取り消し」で消せます。前のセルを直すときは、そのセルをタップして言い直します。表の操作（クリア・削除して詰める）の後は「元に戻す」で戻せます。</p><p>読み上げの声を拾って取り消しが続けて進むときは、設定の「声の『取り消し』を続けるときの間隔」を長くします。</p>"},
-{g:"trouble",id:"home",t:"ホーム画面に追加・複数のタブ",k:"ホーム画面 アイコン インストール アプリ タブ ウインドウ ほーむがめん あいこん たぶ",b:
-"<p>ブラウザのメニューから「ホーム画面に追加」すると、アプリのように開けます。Androidで追加したアプリはタブを複数開けないので、複数の調査は「調査一覧」で切り替えます。同じ調査を2か所で開くと、あとから変えた方の内容に揃えます。</p>"}
+{g:"trouble",id:"home",t:"ホーム画面に追加・複数のタブ",k:"ホーム画面 アイコン インストール アプリ タブ ウインドウ 2か所 読み込みを待って 開き直す ほーむがめん あいこん たぶ",b:
+"<p>ブラウザのメニューから「ホーム画面に追加」すると、アプリのように開けます。Androidで追加したアプリはタブを複数開けないので、複数の調査は「調査一覧」で切り替えます。同じ調査を2か所で開くと、あとから変えた方の内容に揃えます。</p><p>ホーム画面のアプリとブラウザのタブのように Pro を2か所で開いていると、開いたときに「データの読み込みを待っています」と出たり、保存を待つお知らせが出たりすることがあります。裏に回った画面が読み書きの途中で止められたためです。もう一方の画面を表示して開き直すか、閉じると続きます。入力したデータは消えていません。</p>"}
 ];
 const HELP_GO={ts:"調査の種類",items:"調査項目",alias:"言い換え",list:"個体リスト",dir:"入力の進む順番",listen:"聞き取り方",standby:"待機のしかた",plan:"調査日の予定・カレンダー",outlier:"外れ値のお知らせ",other:"読み上げ・音・その他",freeze:"表の表示",io:"データの保存・読み込み・全消去"};
 const HELP_EX=["取り消し","ノギス","言い換え","外れ値","予定","統合","ひな形","集計","オフライン"];
@@ -3843,6 +3874,7 @@ function drawHelp(){
   if(!terms.length) HELP_GROUPS.forEach(([g,l])=>{ const hs=HELP.filter(h=>h.g===g); if(hs.length) html+=`<h3 class="hgrp">${esc(l)}</h3>`+hs.map(card).join(""); });
   else html=hits.map(card).join("")||`<p class="help">「${esc(q.trim())}」に当てはまる説明は見つかりませんでした。別の言葉（例：${HELP_EX.slice(0,4).join("、")}）で探してください。</p>`;
   $("#helpList").innerHTML=html;
+  $("#helpList").querySelectorAll(".licnow").forEach(el=>{ el.textContent=licNow?"この端末の利用コード："+licText(licNow)+(licNow.mailMask?"・"+licNow.mailMask:""):""; });
   $("#helpCount").textContent=terms.length?`${hits.length}件見つかりました`:`${HELP.length}項目`;
   if(terms.length) $("#helpList").querySelectorAll(".htopic").forEach(el=>helpMark(el,terms));
 }
@@ -3924,8 +3956,18 @@ $("#helpList").addEventListener("click",e=>{
 if(!SR) note("このブラウザは音声認識に対応していません。AndroidはChrome、iPhoneはSafariで開いてください。");
 /* ========= 利用コード（共通） ========= */
 const LIC_PUB="BOudjzCP+kKh6CRo+2Yw+Mykv1uIt2ldgk/MJ5qxg5h6CSIhuvlVN7AZpuX34RgGsuDDqberT1hGfTlg0hsD2x4=";
-/* 種類：1 3か月／2 1年／3 期間指定（期限はコードに記録した日付）／9 開発者（無期限）。期限の判定はどの種類も、コードに記録した日付で行う */
-const LIC_TYPES={1:"3か月",2:"1年",3:"期間指定",9:"開発者（無期限）"};
+/* 種類：1 3か月／2 1年／3 期間指定（期限はコードに記録した日付）／9 開発者（無期限）。期限の判定はどの種類も、コードに記録した日付で行う
+   4.4〜：11・12・13 はメールアドレス付き（1・2・3 と同じ期間）。中身は 12バイト（8バイト＋メールアドレスの照合値4バイト）＋署名64バイト */
+const LIC_TYPES={1:"3か月",2:"1年",3:"期間指定",9:"開発者（無期限）",11:"3か月",12:"1年",13:"期間指定"};
+const licBase=t=>t>10?t-10:t;
+const licHasMail=t=>t>=11&&t<=13;
+/* メールアドレスの照合値：前後の空白を除き、全角を半角に、小文字にそろえ、アプリ固有の文字列を足して SHA-256 の先頭4バイト。コードからメールアドレスは読めない */
+const LIC_MAIL_SALT="koe-yacho-pro-mail-v1:";
+const mailNorm=s=>String(s||"").normalize("NFKC").trim().toLowerCase();
+async function mailHash(s){ return new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(LIC_MAIL_SALT+mailNorm(s)))).slice(0,4); }
+function mailMask(s){ const m=mailNorm(s), i=m.lastIndexOf("@"); if(i<1) return m?m[0]+"***":""; return m[0]+"***"+m.slice(i); }
+/* 貼り付けたコードがメールアドレス付きか（署名を確かめる前の目安。欄を出すかどうかだけに使う） */
+function codeHasMail(str){ const u8=b32dec(normCode(str)); return !!(u8&&u8.length>=2&&licHasMail(u8[1])); }
 const B32="0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const DAY0=Date.UTC(2026,0,1);
 function dayNum(s){ const [y,m,d]=s.split("-").map(Number); return Math.round((Date.UTC(y,m-1,d)-DAY0)/864e5); }
@@ -3936,16 +3978,26 @@ function b32dec(s){ let bits=0,val=0; const out=[]; for(const ch of s){ const i=
 function fmtCode(u8){ return "KOE-"+b32enc(u8).match(/.{1,4}/g).join("-"); }
 function normCode(s){ return String(s||"").toUpperCase().replace(/\s/g,"").replace(/^KOE-?/,"").replace(/[^0-9A-Z]/g,"").replace(/O/g,"0").replace(/[IL]/g,"1").replace(/U/g,"V"); }
 async function licPubKey(){ const raw=Uint8Array.from(atob(LIC_PUB),c=>c.charCodeAt(0)); return crypto.subtle.importKey("raw",raw,{name:"ECDSA",namedCurve:"P-256"},false,["verify"]); }
-/* コードを読み、署名を確かめる。戻り値 {type,start,exp,serial}（exp=null は無期限） */
-async function licDecode(str){
+/* コードを読み、署名を確かめる。戻り値 {type,start,exp,serial,mail}（exp=null は無期限）
+   メールアドレス付きのコードは mail（文字列）と照合する。mail が null／undefined のときは照合しない（発行ツールの確認用） */
+async function licDecode(str,mail){
   if(!window.crypto||!crypto.subtle) throw new Error("このブラウザでは利用コードを確認できません。ChromeかEdge、Safariの新しい版で開いてください。");
   const u8=b32dec(normCode(str));
   if(!u8||u8.length<72) throw new Error("利用コードが短すぎます。コード全体を貼り付けてください。");
-  const data=u8.slice(0,8), sig=u8.slice(8,72);
+  const wm=licHasMail(u8[1]), n=wm?12:8;
+  if(u8.length<n+64) throw new Error("利用コードが短すぎます。コード全体を貼り付けてください。");
+  const data=u8.slice(0,n), sig=u8.slice(n,n+64);
   const ok=await crypto.subtle.verify({name:"ECDSA",hash:"SHA-256"},await licPubKey(),sig,data);
   if(!ok||data[0]!==1||!LIC_TYPES[data[1]]) throw new Error("利用コードが正しくありません。コピーし損ねていないか確かめてください。");
   const dv=new DataView(data.buffer); const e=dv.getUint16(4);
-  return {type:data[1],start:dayStr(dv.getUint16(2)),exp:e===0xFFFF?null:dayStr(e),serial:dv.getUint16(6)};
+  const r={type:data[1],start:dayStr(dv.getUint16(2)),exp:e===0xFFFF?null:dayStr(e),serial:dv.getUint16(6),mail:wm};
+  if(wm&&mail!=null){
+    if(!mailNorm(mail)) throw new Error("このコードはメールアドレスと組になっています。コードを受け取ったメールアドレスを入れてください。");
+    const h=await mailHash(mail);
+    if(h.some((b,i)=>b!==data[8+i])) throw new Error("メールアドレスがこのコードと合いません。コードを受け取ったメールアドレスを、そのまま入れてください。");
+    r.mailMask=mailMask(mail);
+  }
+  return r;
 }
 /* ========= 利用コードの確認（Pro） ========= */
 const LIC_KEY="koe-yacho-pro-license";
@@ -3958,31 +4010,35 @@ function licSet(o){ try{ localStorage.setItem(LIC_KEY,JSON.stringify(o)); }catch
 /* 端末の時計を戻しても期限が延びないよう、これまでに見た最も新しい日付を使う */
 function licToday(){ const st=licGet()||{}; const t=localToday(); return st.seen&&st.seen>t?st.seen:t; }
 function hasData(){ try{ return D.some(r=>Object.keys(r).some(k=>!k.startsWith("_")))||Object.keys(S.sessions||{}).length>0; }catch(e){ return false; } }
-function licText(l){ return `${LIC_TYPES[l.type]}（No.${l.serial}）`+(l.type===3?`・${l.start}〜`:"")+(l.exp?`${l.type===3?"":"・"}${l.exp}まで`:""); }
+function licText(l){ const p=licBase(l.type)===3; return `${LIC_TYPES[l.type]}（No.${l.serial}）`+(p?`・${l.start}〜`:"")+(l.exp?`${p?"":"・"}${l.exp}まで`:""); }
 function gateShow(msg,isErr,mode){
   gateMode=mode||"code";
-  const g=$("#gate"); g.hidden=false;
+  const g=$("#gate"); g.hidden=false; g.classList.remove("loading"); $("#gateWait").hidden=true;
   $("#gateMsg").textContent=msg;
   $("#gateErr").hidden=!isErr; if(isErr) $("#gateErr").textContent=isErr;
   $("#gateCode").hidden=gateMode==="agree";
+  gateMailUpd();
   $("#gateGo").textContent=gateMode==="agree"?"同意して続ける":"同意して利用を開始";
   $("#gateAgree").checked=(licGet()||{}).agree===TERMS_VER;
   $("#gateData").hidden=!hasData();
   try{ if(listening) stopRec(); }catch(e){}
   try{ if(typeof voskStop==="function"&&vk&&vk.on) voskStop(); }catch(e){}
 }
+/* メールアドレスの欄は、メールアドレス付きのコードを入れたときだけ出す */
+function gateMailUpd(){ $("#gateMailBox").hidden=gateMode==="agree"||!codeHasMail($("#gateCode").value); }
+$("#gateCode").addEventListener("input",gateMailUpd);
 let seenDone=false;
-function gateHide(){ $("#gate").hidden=true; if(tplPending) setTimeout(tplAfterGate,0); if(!seenDone&&stReady){ seenDone=true; setTimeout(seenCheck,800); } }
+function gateHide(){ $("#gate").hidden=true; $("#gate").classList.remove("loading"); $("#gateWait").hidden=true; if(tplPending) setTimeout(tplAfterGate,0); if(!seenDone&&stReady){ seenDone=true; setTimeout(seenCheck,800); } }
 function licShowInfo(){
   const el=$("#licInfo"); if(!el) return;
-  el.textContent=licNow?("利用コード："+licText(licNow)):"利用コード：未入力";
+  el.textContent=licNow?("利用コード："+licText(licNow)+(licNow.mailMask?"・"+licNow.mailMask:"")):"利用コード：未入力";
 }
 /* 判定：ok / notyet / expired */
 function licState(l,today){ if(today<l.start) return "notyet"; if(l.exp&&today>l.exp) return "expired"; return "ok"; }
 async function licCheck(){
   const st=licGet();
   if(!st||!st.code){ licNow=null; licShowInfo(); gateShow("ご利用には利用コードが必要です。受け取ったコードを下の欄に貼り付け、利用条件と免責事項に同意して「同意して利用を開始」を押してください。"); return; }
-  let l; try{ l=await licDecode(st.code); }catch(e){ licNow=null; licShowInfo(); gateShow("保存されている利用コードを確認できませんでした。もう一度貼り付けてください。",e.message); return; }
+  let l; try{ l=await licDecode(st.code,st.mail||""); }catch(e){ licNow=null; licShowInfo(); gateShow("保存されている利用コードを確認できませんでした。もう一度貼り付けてください。",e.message); return; }
   const today=licToday(); licSet({...st,seen:today});
   licNow=l; licShowInfo();
   const s=licState(l,today);
@@ -3992,15 +4048,16 @@ async function licCheck(){
   gateHide();
   if(l.exp){ const left=dayNum(l.exp)-dayNum(today); /* 期間が30日以内の短いコードは3日前から、それ以外は14日前からお知らせ */ const warn=(dayNum(l.exp)-dayNum(l.start))<=30?3:14; if(left<=warn) note(`利用コードの期限まで、あと${left+1}日です（${l.exp}まで）。続けて使う場合は、新しいコードを用意してください。`); }
 }
-async function licEnter(code){
+async function licEnter(code,mail){
   $("#gateErr").hidden=true;
   try{
-    const l=await licDecode(code);
+    const l=await licDecode(code,mail||"");
     const s=licState(l,licToday());
     if(s==="expired") throw new Error(`このコードは ${l.exp} で期限が切れています。`);
     if(s==="notyet") throw new Error(`このコードは ${l.start} から使えます。`);
-    licSet({code:normCode(code),seen:licToday(),at:localToday(),agree:TERMS_VER});
-    $("#gateCode").value="";
+    const o={code:normCode(code),seen:licToday(),at:localToday(),agree:TERMS_VER}; if(l.mail) o.mail=mailNorm(mail);
+    licSet(o);
+    $("#gateCode").value=""; $("#gateMail").value="";
     await licCheck();
     note(`利用コードを確認しました：${licText(l)}`);
     return true;
@@ -4014,7 +4071,7 @@ function needAgree(){
 $("#gateGo").onclick=async()=>{
   if(needAgree()) return;
   if(gateMode==="agree"){ licSet({...(licGet()||{}),agree:TERMS_VER,agreedAt:localToday()}); await licCheck(); return; }
-  licEnter($("#gateCode").value);
+  licEnter($("#gateCode").value,$("#gateMail").value);
 };
 $("#gateXlsx").onclick=()=>$("#btnXlsx").click();
 $("#gateBk").onclick=()=>$("#ioBackup").click();
@@ -4026,11 +4083,13 @@ async function licStart(){
   if(m){
     history.replaceState(null,"",location.pathname+location.search);
     const code=decodeURIComponent(m[1]);
-    if((licGet()||{}).agree===TERMS_VER){ if(await licEnter(code)) return; }
+    const wm=codeHasMail(code);
+    if(!wm&&(licGet()||{}).agree===TERMS_VER){ if(await licEnter(code)) return; }
     const err=$("#gateErr").hidden?"":$("#gateErr").textContent;
     await licCheck();
-    gateShow("リンクの利用コードを入れました。利用条件と免責事項を確認し、「同意して利用を開始」を押してください。",err||null);
-    $("#gateCode").value=code; $("#gateClose").hidden=true;
+    $("#gateCode").value=code;
+    gateShow(wm?"リンクの利用コードを入れました。コードを受け取ったメールアドレスを入れ、利用条件と免責事項を確認して「同意して利用を開始」を押してください。":"リンクの利用コードを入れました。利用条件と免責事項を確認し、「同意して利用を開始」を押してください。",err||null);
+    $("#gateClose").hidden=true;
     return;
   }
   await licCheck();
