@@ -418,6 +418,7 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
       <div class="gatebtns"><button type="button" id="gateXlsx" class="sec">Excelで保存</button><button type="button" id="gateBk" class="sec">バックアップを保存</button></div>
     </div>
     <p class="gatesmall">利用コードごとに使える期間が決まっています。期限が切れても、入力したデータは消えません。</p>
+    <p class="gatesmall" id="gateApply">利用コードの申し込み・お問い合わせ：<a id="gateApplyLink" href="#">メールで申し込む</a></p>
   </div>
 </div>
 <div class="wrap">
@@ -1826,7 +1827,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.4（2026-10-30）";
+const APP_VER="Pro 4.4.1（2026-11-01）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -3771,9 +3772,9 @@ const HELP=[
 "<p>この画面の上の「更新の記録」を押すと、どの版でどの機能が加わったかを一覧で見られます。項目を押すと、その機能の説明を開きます。新しい版に切り替わったときは、増えたことを画面の下に知らせます。</p>"},
 {g:"start",id:"settings",t:"設定画面の使い方",k:"設定 見出し 折りたたみ 開く 閉じる すべて開く せってい",b:
 "<p>設定は見出しごとに折りたたんであります。見出しを押すと開いたり閉じたりでき、その状態は次に設定を開いたときも残ります。閉じた見出しの右には、今の設定が短く出ます。上の「すべて開く」「すべて閉じる」でまとめて切り替えられます。変更は「保存」を押すまで反映されません。</p>"},
-{g:"start",id:"code",t:"利用コード",k:"ライセンス コード 期限 期限切れ 更新 変更 KOE メール メールアドレス りようこーど きげん めーる",b:
+{g:"start",id:"code",t:"利用コード",k:"ライセンス コード 期限 期限切れ 更新 変更 KOE メール メールアドレス 試用 お試し 申し込み 申込 りようこーど きげん めーる しよう もうしこみ",b:
 "<p>Proは利用コードを入れて使います。コードごとに使える期間が決まっていて、期限の少し前からお知らせが出ます。新しいコードは、画面下の「利用コードを変更」から入れます。期限が切れても入力したデータは消えず、Excel保存とバックアップはできます。</p>"+
-"<p>メールアドレス付きのコードは、初めて入れるときに、コードを受け取ったメールアドレスも入れます（別のメールアドレスでは使えません）。メールアドレスはこの端末の中にだけ保存し、外部へは送りません。画面やExcelのプロパティ（作成者）には一部を伏せて表示します（例 o***@example.jp）。</p><p class=\"licnow\"></p>"},
+"<p>メールアドレス付きのコードは、初めて入れるときに、コードを受け取ったメールアドレスも入れます（別のメールアドレスでは使えません）。メールアドレスはこの端末の中にだけ保存し、外部へは送りません。画面やExcelのプロパティ（作成者）には一部を伏せて表示します（例 o***@example.jp）。</p><p>試用のコードは、この端末で初めて使った日から決まった日数だけ使えます（コードによっては最終の期限もあります）。同じ試用コードを同じ端末で入れ直しても、期間は延びません。続けて使うときは、利用コードの確認画面の「メールで申し込む」から申し込んでください。</p><p class=\"licnow\"></p>"},
 
 {g:"input",id:"voice",t:"声で入力する（マイク）",k:"マイク 音声 話す 開始 停止 連続認識 1回ずつ 聞き取り方 セルをタップ まいく おんせい れんぞく",go:"listen",b:
 "<p>マイクを押して話すと、黄色のセルに値が入り、次のセルへ進みます。聞き取った言葉は「次に入るセル」の下に出ます。</p><ul><li><b>連続認識</b>：止めるまで聞き続けます。</li><li><b>1回ずつ</b>：押すたびに1回だけ聞きます。</li></ul><p>表のセルをタップすると、そのセルから入力を続けます。</p>"},
@@ -3958,7 +3959,12 @@ if(!SR) note("このブラウザは音声認識に対応していません。And
 const LIC_PUB="BOudjzCP+kKh6CRo+2Yw+Mykv1uIt2ldgk/MJ5qxg5h6CSIhuvlVN7AZpuX34RgGsuDDqberT1hGfTlg0hsD2x4=";
 /* 種類：1 3か月／2 1年／3 期間指定（期限はコードに記録した日付）／9 開発者（無期限）。期限の判定はどの種類も、コードに記録した日付で行う
    4.4〜：11・12・13 はメールアドレス付き（1・2・3 と同じ期間）。中身は 12バイト（8バイト＋メールアドレスの照合値4バイト）＋署名64バイト */
-const LIC_TYPES={1:"3か月",2:"1年",3:"期間指定",9:"開発者（無期限）",11:"3か月",12:"1年",13:"期間指定"};
+const LIC_TYPES={1:"3か月",2:"1年",3:"期間指定",4:"試用",9:"開発者（無期限）",11:"3か月",12:"1年",13:"期間指定"};
+/* 4.4.1〜：4 試用。バイト2〜3＝日数（0＝日数なし）、4〜5＝最終の期限（FFFF＝なし）。この端末で初めて使った日から日数ぶん使え、
+   最終の期限があればその日まで（早い方）。初めて使った日は発行番号ごとに端末に記録し（TRIAL_KEY）、入れ直しても延びない */
+const TRIAL_KEY="koe-yacho-pro-trial";
+/* 利用コードの申し込み先（メールを開くだけ。アプリからは何も送らない） */
+const APPLY_TO="okamotoh04@pref.tochigi.lg.jp";
 const licBase=t=>t>10?t-10:t;
 const licHasMail=t=>t>=11&&t<=13;
 /* メールアドレスの照合値：前後の空白を除き、全角を半角に、小文字にそろえ、アプリ固有の文字列を足して SHA-256 の先頭4バイト。コードからメールアドレスは読めない */
@@ -3990,6 +3996,11 @@ async function licDecode(str,mail){
   const ok=await crypto.subtle.verify({name:"ECDSA",hash:"SHA-256"},await licPubKey(),sig,data);
   if(!ok||data[0]!==1||!LIC_TYPES[data[1]]) throw new Error("利用コードが正しくありません。コピーし損ねていないか確かめてください。");
   const dv=new DataView(data.buffer); const e=dv.getUint16(4);
+  if(data[1]===4){
+    const days=dv.getUint16(2), fin=e===0xFFFF?null:dayStr(e);
+    if(!days&&!fin) throw new Error("利用コードが正しくありません。コピーし損ねていないか確かめてください。");
+    return {type:4,days,fin,serial:dv.getUint16(6),start:null,exp:fin,mail:false};
+  }
   const r={type:data[1],start:dayStr(dv.getUint16(2)),exp:e===0xFFFF?null:dayStr(e),serial:dv.getUint16(6),mail:wm};
   if(wm&&mail!=null){
     if(!mailNorm(mail)) throw new Error("このコードはメールアドレスと組になっています。コードを受け取ったメールアドレスを入れてください。");
@@ -3998,6 +4009,27 @@ async function licDecode(str,mail){
     r.mailMask=mailMask(mail);
   }
   return r;
+}
+/* 試用：この端末で初めて使った日（発行番号ごと）。rec=true のとき、記録がなければ今日を記録する */
+function trialGet(){ try{ return JSON.parse(localStorage.getItem(TRIAL_KEY)||"{}")||{}; }catch(e){ return {}; } }
+function trialFirst(serial,rec){
+  const t=trialGet(), k=String(serial);
+  if(!t[k]&&rec){ t[k]=licToday(); try{ localStorage.setItem(TRIAL_KEY,JSON.stringify(t)); }catch(e){} }
+  return t[k]||null;
+}
+/* 試用のコードに、使い始めの日と期限を入れる（ほかの種類はそのまま） */
+function licResolve(l,rec){
+  if(!l||l.type!==4) return l;
+  const first=trialFirst(l.serial,rec)||licToday();
+  let exp=l.days?dayStr(dayNum(first)+l.days-1):null;
+  if(l.fin&&(!exp||l.fin<exp)) exp=l.fin;
+  return {...l,start:first,exp};
+}
+/* 申し込みのメール（宛先・件名・本文のひな形を入れて、端末のメールアプリを開く） */
+function applyHref(){
+  const cur=licNow?`\n今の利用コード：${licText(licNow)}`:"";
+  const body=`ご所属：\nお名前：\n利用コードの送り先（メールアドレス）：\n希望の期間：3か月／1年／その他（　　）\n使う予定の調査（作物など）：${cur}\n`;
+  return `mailto:${APPLY_TO}?subject=${encodeURIComponent("声で野帳 Pro 利用の申し込み")}&body=${encodeURIComponent(body)}`;
 }
 /* ========= 利用コードの確認（Pro） ========= */
 const LIC_KEY="koe-yacho-pro-license";
@@ -4010,7 +4042,9 @@ function licSet(o){ try{ localStorage.setItem(LIC_KEY,JSON.stringify(o)); }catch
 /* 端末の時計を戻しても期限が延びないよう、これまでに見た最も新しい日付を使う */
 function licToday(){ const st=licGet()||{}; const t=localToday(); return st.seen&&st.seen>t?st.seen:t; }
 function hasData(){ try{ return D.some(r=>Object.keys(r).some(k=>!k.startsWith("_")))||Object.keys(S.sessions||{}).length>0; }catch(e){ return false; } }
-function licText(l){ const p=licBase(l.type)===3; return `${LIC_TYPES[l.type]}（No.${l.serial}）`+(p?`・${l.start}〜`:"")+(l.exp?`${p?"":"・"}${l.exp}まで`:""); }
+function licText(l){
+  if(l.type===4) return `試用${l.days?l.days+"日":""}（No.${l.serial}）`+(l.start?`・${l.start}〜`:"・")+(l.exp?`${l.exp}まで`:"");
+  const p=licBase(l.type)===3; return `${LIC_TYPES[l.type]}（No.${l.serial}）`+(p?`・${l.start}〜`:"")+(l.exp?`${p?"":"・"}${l.exp}まで`:""); }
 function gateShow(msg,isErr,mode){
   gateMode=mode||"code";
   const g=$("#gate"); g.hidden=false; g.classList.remove("loading"); $("#gateWait").hidden=true;
@@ -4018,6 +4052,7 @@ function gateShow(msg,isErr,mode){
   $("#gateErr").hidden=!isErr; if(isErr) $("#gateErr").textContent=isErr;
   $("#gateCode").hidden=gateMode==="agree";
   gateMailUpd();
+  $("#gateApplyLink").href=applyHref();
   $("#gateGo").textContent=gateMode==="agree"?"同意して続ける":"同意して利用を開始";
   $("#gateAgree").checked=(licGet()||{}).agree===TERMS_VER;
   $("#gateData").hidden=!hasData();
@@ -4038,10 +4073,11 @@ function licState(l,today){ if(today<l.start) return "notyet"; if(l.exp&&today>l
 async function licCheck(){
   const st=licGet();
   if(!st||!st.code){ licNow=null; licShowInfo(); gateShow("ご利用には利用コードが必要です。受け取ったコードを下の欄に貼り付け、利用条件と免責事項に同意して「同意して利用を開始」を押してください。"); return; }
-  let l; try{ l=await licDecode(st.code,st.mail||""); }catch(e){ licNow=null; licShowInfo(); gateShow("保存されている利用コードを確認できませんでした。もう一度貼り付けてください。",e.message); return; }
+  let l; try{ l=licResolve(await licDecode(st.code,st.mail||""),true); }catch(e){ licNow=null; licShowInfo(); gateShow("保存されている利用コードを確認できませんでした。もう一度貼り付けてください。",e.message); return; }
   const today=licToday(); licSet({...st,seen:today});
   licNow=l; licShowInfo();
   const s=licState(l,today);
+  if(s==="expired"&&l.type===4){ gateShow(`試用の期間（${licText(l)}）が終わりました。続けて使う場合は、下の「メールで申し込む」から利用コードを申し込んでください。入力したデータは消えていません。`); return; }
   if(s==="expired"){ gateShow(`利用コード（${licText(l)}）の期限が切れました。新しい利用コードを貼り付けてください。入力したデータは消えていません。`); return; }
   if(s==="notyet"){ gateShow(`この利用コードは ${l.start} から使えます。`); return; }
   if(st.agree!==TERMS_VER){ gateShow(`利用条件と免責事項を改定しました（${TERMS_VER}）。内容を確認し、同意のうえ続けてください。`,null,"agree"); return; }
@@ -4051,10 +4087,11 @@ async function licCheck(){
 async function licEnter(code,mail){
   $("#gateErr").hidden=true;
   try{
-    const l=await licDecode(code,mail||"");
+    let l=licResolve(await licDecode(code,mail||""),false);
     const s=licState(l,licToday());
-    if(s==="expired") throw new Error(`このコードは ${l.exp} で期限が切れています。`);
+    if(s==="expired") throw new Error(l.type===4?`この試用コードの期間は ${l.exp} で終わっています。続けて使う場合は、下の「メールで申し込む」から申し込んでください。`:`このコードは ${l.exp} で期限が切れています。`);
     if(s==="notyet") throw new Error(`このコードは ${l.start} から使えます。`);
+    l=licResolve(l,true);   /* 試用：使い始めた日をここで記録する */
     const o={code:normCode(code),seen:licToday(),at:localToday(),agree:TERMS_VER}; if(l.mail) o.mail=mailNorm(mail);
     licSet(o);
     $("#gateCode").value=""; $("#gateMail").value="";
