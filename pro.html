@@ -16,7 +16,7 @@
 <title>声で野帳 Pro</title>
 <link rel="manifest" href="manifest-pro.json">
 <link rel="icon" type="image/png" sizes="32x32" href="pro-favicon-32.png">
-<link rel="apple-touch-icon" href="pro-apple-touch-icon.png">
+<link rel="apple-touch-icon" href="pro-apple-touch-icon.png?v=2">
 <meta name="apple-mobile-web-app-title" content="声で野帳 Pro">
 <meta name="theme-color" content="#15231d">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1827,7 +1827,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.4.1（2026-11-01）";
+const APP_VER="Pro 4.4.2（2026-11-02）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -3772,9 +3772,9 @@ const HELP=[
 "<p>この画面の上の「更新の記録」を押すと、どの版でどの機能が加わったかを一覧で見られます。項目を押すと、その機能の説明を開きます。新しい版に切り替わったときは、増えたことを画面の下に知らせます。</p>"},
 {g:"start",id:"settings",t:"設定画面の使い方",k:"設定 見出し 折りたたみ 開く 閉じる すべて開く せってい",b:
 "<p>設定は見出しごとに折りたたんであります。見出しを押すと開いたり閉じたりでき、その状態は次に設定を開いたときも残ります。閉じた見出しの右には、今の設定が短く出ます。上の「すべて開く」「すべて閉じる」でまとめて切り替えられます。変更は「保存」を押すまで反映されません。</p>"},
-{g:"start",id:"code",t:"利用コード",k:"ライセンス コード 期限 期限切れ 更新 変更 KOE メール メールアドレス 試用 お試し 申し込み 申込 りようこーど きげん めーる しよう もうしこみ",b:
+{g:"start",id:"code",t:"利用コード",k:"ライセンス コード 期限 期限切れ 更新 変更 KOE メール メールアドレス 試用 お試し 申し込み 申込 ホーム画面 引き継ぎ iPhone Safari りようこーど きげん めーる しよう もうしこみ",b:
 "<p>Proは利用コードを入れて使います。コードごとに使える期間が決まっていて、期限の少し前からお知らせが出ます。新しいコードは、画面下の「利用コードを変更」から入れます。期限が切れても入力したデータは消えず、Excel保存とバックアップはできます。</p>"+
-"<p>メールアドレス付きのコードは、初めて入れるときに、コードを受け取ったメールアドレスも入れます（別のメールアドレスでは使えません）。メールアドレスはこの端末の中にだけ保存し、外部へは送りません。画面やExcelのプロパティ（作成者）には一部を伏せて表示します（例 o***@example.jp）。</p><p>試用のコードは、この端末で初めて使った日から決まった日数だけ使えます（コードによっては最終の期限もあります）。同じ試用コードを同じ端末で入れ直しても、期間は延びません。続けて使うときは、利用コードの確認画面の「メールで申し込む」から申し込んでください。</p><p class=\"licnow\"></p>"},
+"<p>メールアドレス付きのコードは、初めて入れるときに、コードを受け取ったメールアドレスも入れます（別のメールアドレスでは使えません）。メールアドレスはこの端末の中にだけ保存し、外部へは送りません。画面やExcelのプロパティ（作成者）には一部を伏せて表示します（例 o***@example.jp）。</p><p>試用のコードは、この端末で初めて使った日から決まった日数だけ使えます（コードによっては最終の期限もあります）。同じ試用コードを同じ端末で入れ直しても、期間は延びません。続けて使うときは、利用コードの確認画面の「メールで申し込む」から申し込んでください。</p><p>iPhone・iPad では、Safari とホーム画面のアプリで保存場所が別です。Safari で利用コードを確認してから「ホーム画面に追加」すると、追加したアプリに利用コードを引き継ぎます（初めて開いたときに同意だけ求めます）。引き継がれなかったときは、アプリでもう一度コードを入れてください。入力したデータは引き継がれないので、調査はどちらか一方（ふつうはホーム画面のアプリ）で行ってください。</p><p class=\"licnow\"></p>"},
 
 {g:"input",id:"voice",t:"声で入力する（マイク）",k:"マイク 音声 話す 開始 停止 連続認識 1回ずつ 聞き取り方 セルをタップ まいく おんせい れんぞく",go:"listen",b:
 "<p>マイクを押して話すと、黄色のセルに値が入り、次のセルへ進みます。聞き取った言葉は「次に入るセル」の下に出ます。</p><ul><li><b>連続認識</b>：止めるまで聞き続けます。</li><li><b>1回ずつ</b>：押すたびに1回だけ聞きます。</li></ul><p>表のセルをタップすると、そのセルから入力を続けます。</p>"},
@@ -4072,7 +4072,7 @@ function licShowInfo(){
 function licState(l,today){ if(today<l.start) return "notyet"; if(l.exp&&today>l.exp) return "expired"; return "ok"; }
 async function licCheck(){
   const st=licGet();
-  if(!st||!st.code){ licNow=null; licShowInfo(); gateShow("ご利用には利用コードが必要です。受け取ったコードを下の欄に貼り付け、利用条件と免責事項に同意して「同意して利用を開始」を押してください。"); return; }
+  if(!st||!st.code){ licNow=null; licShowInfo(); gateShow("ご利用には利用コードが必要です。受け取ったコードを下の欄に貼り付け、利用条件と免責事項に同意して「同意して利用を開始」を押してください。"+(IOS&&STANDALONE?"（ホーム画面のアプリは Safari と保存場所が別です。Safari で入れたコードが引き継がれていないときは、ここでもう一度入れてください）":"")); return; }
   let l; try{ l=licResolve(await licDecode(st.code,st.mail||""),true); }catch(e){ licNow=null; licShowInfo(); gateShow("保存されている利用コードを確認できませんでした。もう一度貼り付けてください。",e.message); return; }
   const today=licToday(); licSet({...st,seen:today});
   licNow=l; licShowInfo();
@@ -4082,6 +4082,7 @@ async function licCheck(){
   if(s==="notyet"){ gateShow(`この利用コードは ${l.start} から使えます。`); return; }
   if(st.agree!==TERMS_VER){ gateShow(`利用条件と免責事項を改定しました（${TERMS_VER}）。内容を確認し、同意のうえ続けてください。`,null,"agree"); return; }
   gateHide();
+  licCarry();
   if(l.exp){ const left=dayNum(l.exp)-dayNum(today); /* 期間が30日以内の短いコードは3日前から、それ以外は14日前からお知らせ */ const warn=(dayNum(l.exp)-dayNum(l.start))<=30?3:14; if(left<=warn) note(`利用コードの期限まで、あと${left+1}日です（${l.exp}まで）。続けて使う場合は、新しいコードを用意してください。`); }
 }
 async function licEnter(code,mail){
@@ -4114,18 +4115,50 @@ $("#gateXlsx").onclick=()=>$("#btnXlsx").click();
 $("#gateBk").onclick=()=>$("#ioBackup").click();
 $("#licChange").onclick=()=>{ gateShow("新しい利用コードを貼り付けてください。今のコードはそのまま使えます。"); $("#gateClose").hidden=!(licNow&&licState(licNow,licToday())==="ok"&&(licGet()||{}).agree===TERMS_VER); };
 $("#gateClose").onclick=()=>gateHide();
+/* ========= ホーム画面のアプリへの引き継ぎ（iPhone・iPad、4.4.2〜） =========
+   iPhone では Safari とホーム画面のアプリで保存場所が別なので、Safari で確認済みの利用コードを
+   ホーム画面に追加するときの開始アドレス（#code=…&m=メール&t=試用の開始日&c=1）に入れておく。
+   ・アドレス欄の # 以降と、マニフェストの start_url の両方に入れる（どちらが使われても引き継げるように）。
+   ・# 以降はサーバーへは送られない。アプリ側では、まだ利用コードがないときだけ受け取る */
+const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const STANDALONE=!!(navigator.standalone||matchMedia("(display-mode: standalone)").matches);
+let carryMf=null, carryHash="";
+async function licCarry(){
+  if(!IOS||STANDALONE) return;
+  const st=licGet(); if(!st||!st.code||!licNow||licState(licNow,licToday())!=="ok") return;
+  let h="#code="+st.code+"&c=1";
+  if(st.mail) h+="&m="+encodeURIComponent(st.mail);
+  if(licNow.type===4&&licNow.start) h+="&t="+licNow.start;
+  if(!/[#&]tpl=/.test(location.hash)) history.replaceState(null,"",location.pathname+location.search+h);
+  if(h===carryHash) return; carryHash=h;
+  try{
+    if(!carryMf){ const r=await fetch("manifest-pro.json",{cache:"no-cache"}); carryMf=await r.json(); }
+    const base=new URL("./",location.href).href, page=new URL("pro.html",base).href;
+    const mf={...carryMf,id:page,start_url:page+h,scope:page,icons:(carryMf.icons||[]).map(i=>({...i,src:new URL(i.src,base).href}))};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(mf)],{type:"application/manifest+json"}));
+    const ln=document.querySelector('link[rel="manifest"]'); if(ln){ const old=ln.href; ln.href=url; if(old.startsWith("blob:")) URL.revokeObjectURL(old); }
+  }catch(e){}
+}
 /* リンク（…pro.html#code=KOE-…）で開いたときは、コードを欄に入れて同意を待つ */
 async function licStart(){
   const m=location.hash.match(/code=([^&]+)/);
   if(m){
-    history.replaceState(null,"",location.pathname+location.search);
+    const hp=new URLSearchParams(location.hash.slice(1));
+    const carried=hp.get("c")==="1", cMail=hp.get("m")||"", cTrial=hp.get("t")||"";
     const code=decodeURIComponent(m[1]);
+    const st0=licGet()||{};
+    /* 引き継ぎ用のアドレスで開いたとき、この保存場所に利用コードが既にあれば、そちらを使う（後から入れ替えたコードを古いコードで上書きしない） */
+    if(carried&&st0.code){ history.replaceState(null,"",location.pathname+location.search); await licCheck(); $("#gateClose").hidden=true; return; }
+    if(st0.code&&st0.code===normCode(code)){ await licCheck(); $("#gateClose").hidden=true; return; }
+    history.replaceState(null,"",location.pathname+location.search);
+    /* 試用：Safari で使い始めた日を引き継ぐ（アプリに移っても期間が延びないように） */
+    if(carried&&/^\d{4}-\d{2}-\d{2}$/.test(cTrial)&&cTrial<=licToday()){ try{ const u8=b32dec(normCode(code)); if(u8&&u8[1]===4){ const t=trialGet(), k=String((u8[6]<<8)|u8[7]); if(!t[k]){ t[k]=cTrial; localStorage.setItem(TRIAL_KEY,JSON.stringify(t)); } } }catch(e){} }
     const wm=codeHasMail(code);
-    if(!wm&&(licGet()||{}).agree===TERMS_VER){ if(await licEnter(code)) return; }
+    if((!wm||cMail)&&(licGet()||{}).agree===TERMS_VER){ if(await licEnter(code,cMail)) return; }
     const err=$("#gateErr").hidden?"":$("#gateErr").textContent;
     await licCheck();
-    $("#gateCode").value=code;
-    gateShow(wm?"リンクの利用コードを入れました。コードを受け取ったメールアドレスを入れ、利用条件と免責事項を確認して「同意して利用を開始」を押してください。":"リンクの利用コードを入れました。利用条件と免責事項を確認し、「同意して利用を開始」を押してください。",err||null);
+    $("#gateCode").value=code; if(cMail) $("#gateMail").value=cMail;
+    gateShow(carried?"Safari で入れた利用コードを引き継ぎました。利用条件と免責事項を確認し、「同意して利用を開始」を押してください。":wm?"リンクの利用コードを入れました。コードを受け取ったメールアドレスを入れ、利用条件と免責事項を確認して「同意して利用を開始」を押してください。":"リンクの利用コードを入れました。利用条件と免責事項を確認し、「同意して利用を開始」を押してください。",err||null);
     $("#gateClose").hidden=true;
     return;
   }
