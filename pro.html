@@ -733,7 +733,7 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
     <details class="fold" data-fold="alias"><summary><span class="ftitle">言い換え（聞き違い・略語）</span><span class="fsum" data-sum="alias"></span></summary>
     <fieldset class="fbody">
       <legend>言い換え（聞き違い・略語）</legend>
-      <p class="help">話した言葉が、登録した言葉と<b>そのまま同じ</b>ときに、右の値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>。左は「、」で区切って複数書けます。ひらがな・カタカナの違いは気にしません。「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。</p>
+      <p class="help">話した言葉が、登録した言葉と<b>そのまま同じ</b>ときに、右の値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>。左は「、」で区切って複数書けます。ひらがな・カタカナの違いは気にしません。「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。右に音声コマンドの言葉（例 <code>どこ</code>）を書くと、左の言葉でもその操作ができます（例：<code>ここは</code> → <code>どこ</code>）。</p>
       <div class="aliases" id="sAliases"></div>
       <button type="button" class="add" id="sAliasAdd">＋ 言い換えを追加</button>
     </fieldset>
@@ -816,7 +816,7 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
     </details>
     <details class="fold" data-fold="cmd"><summary><span class="ftitle">音声コマンド・まとめて入力・表の操作の説明</span></summary>
     <div class="fbody fhelp">
-    <p class="help">音声コマンド：<code>取り消し</code> 直前を消す（続けて言うときは、「読み上げ・音・その他」で決めた間隔をあける）／<code>スキップ</code> 空欄で進む／<code>次</code> 次の行・列へ／<code>戻る</code> 1つ前へ。<code>待機</code>（<code>一時停止</code>・<code>休憩</code>）聞き取りを休む／<code>再開</code> 待機から戻る／<code>停止</code>（<code>ストップ</code>・<code>終了</code>）聞き取りを止める（続けるときはマイクを押す）。<code>除外</code>（<code>落果</code>・<code>枯死</code>・<code>欠株</code>）その個体をこの調査日以降は飛ばす／<code>復帰</code> 除外を取り消す。前回比の「注意」が出たら <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）、または正しい値を言い直します。文字の列は話した言葉がそのまま入り、選択肢の列は登録した候補から一番近いものが入ります。数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます（数字の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます）。小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。表のセルをタップすると、そこから入力を再開します。</p>
+    <p class="help">音声コマンド：<code>取り消し</code> 直前を消す（続けて言うときは、「読み上げ・音・その他」で決めた間隔をあける）／<code>スキップ</code> 空欄で進む／<code>次</code> 次の行・列へ／<code>戻る</code> 1つ前へ。<code>待機</code>（<code>一時停止</code>・<code>休憩</code>）聞き取りを休む／<code>再開</code> 待機から戻る／<code>停止</code>（<code>ストップ</code>・<code>終了</code>）聞き取りを止める（続けるときはマイクを押す）。<code>除外</code>（<code>落果</code>・<code>枯死</code>・<code>欠株</code>）その個体をこの調査日以降は飛ばす／<code>復帰</code> 除外を取り消す。<code>どこ</code>（<code>今どこ</code>）今の個体・項目・入っている値を読み上げる／<code>さっき</code>（<code>直前</code>）直前に確定した値／<code>前回</code>（<code>前回値</code>）経時調査で今のセルの前回の値／<code>残り</code>（<code>あと何個</code>）今日の残りの個体数。この4つは入力も移動もせず、読み上げがオフでも、待機中でも答えます。前回比の「注意」が出たら <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）、または正しい値を言い直します。文字の列は話した言葉がそのまま入り、選択肢の列は登録した候補から一番近いものが入ります。数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます（数字の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます）。小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。表のセルをタップすると、そこから入力を再開します。</p>
     <p class="help">まとめて入力：<code>32.5 31.2 30.8</code> 続けて言うと今のセルから順に入る（値の間に少し間を置くか「と」を挟む）／<code>ゼロ 6個</code>（<code>0を6つ</code>）今の列の今の個体から6個体分（列単位では、列の最後まで来たら次の列へ続く）／<code>残り全部ゼロ</code>（<code>残りゼロ</code>）今の列の最後の個体まで／<code>5から10 ゼロ</code>（<code>5番から10番まで0</code>）今の列の No.5〜10。除外した個体は飛ばします。前回比で「禁止」になるセルには入れず、「注意」のセルは入れたうえで件数を知らせます。直後に「取り消し」と言うか「元に戻す」を押すと、まとめて入れた分をすべて戻せます。</p>
     <p class="help">表の操作：<code>クリア</code> 選んだセル（範囲）の値を消す／<code>削除して詰める</code> 今のセルを消し、入力の順番で後ろの値を1つずつ前へ詰める（2回入ってしまったとき）／<code>行を削除</code> 今の行（範囲を選んでいればその行すべて）を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も一緒に消える（余計な行を増やしてしまったとき）／<code>範囲選択</code> オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）／<code>コピー</code> 選んだ範囲の「音声で入力」の列をコピー（Excelにも貼れる）／<code>貼付</code> 今のセルを左上にして貼り付け（PCは Ctrl+C・Ctrl+V・Delete も使えます）。操作のあとは「元に戻す」で戻せます。表の左の列や上の行を固定するには、「表の表示（ウインドウ枠の固定）」で列数・行数を指定します。</p>
     </div>
@@ -913,6 +913,24 @@ function parseCommand(tok){
   if(/^(待機|たいき|タイキ|待機して|一時停止|いちじていし|休憩|きゅうけい|キュウケイ|ポーズ|pause|standby)$/i.test(t)) return "standby";
   if(isStopWord(t)) return "stop";
   if(isResumeWord(t)) return "resume";
+  /* 4.5〜：画面を見ずに確かめる（入力・移動はしない。待機中でも使える） */
+  if(/^(どこ|ドコ|何処|今どこ|いまどこ|イマドコ|ここどこ|ココドコ|どこですか|今どこですか|どこだっけ|現在地|げんざいち|今の個体|いまのこたい|今のサンプル|いまのさんぷる)$/i.test(t)) return "where";
+  if(/^(さっき|サッキ|さっきの値|さっきのあたい|さっきの|直前|ちょくぜん|直前の値|最後の値|さいごのあたい)$/i.test(t)) return "last";
+  if(/^(残り|のこり|ノコリ|残りは|残り何個|のこりなんこ|残りいくつ|のこりいくつ|あと何個|あとなんこ|あと何本|あとなんぼん|あといくつ|残数|ざんすう)$/i.test(t)) return "left";
+  if(/^(前回|ぜんかい|ゼンカイ|全開|全快|全会|前回は|ぜんかいは|前回値|前回の値|ぜんかいのあたい|ぜんかいち|前回いくつ|前回は何|前回なに|前回何)$/i.test(t)) return "prev";
+  return null;
+}
+const INFO_CMDS=new Set(["where","last","left","prev"]);
+/* 言い換えで音声コマンドを足す：言い換えた先が音声コマンドの言葉なら、その操作にする（発話全体が同じときだけ） */
+function cmdAlias(txt){
+  const t=normJ(txt); if(!t||!S.aliases||!S.aliases.length) return null;
+  const cid=S.items[cur.c]?.id;
+  for(const a of S.aliases){
+    if(a.item&&a.item!==cid) continue;
+    if(!a.from.split(/[、,，]/).some(f=>f.trim()&&normJ(f)===t)) continue;
+    const c=parseCommand(String(a.to||""));
+    if(c){ aliasHits.push(`${String(txt).trim()}→${a.to}`); return c; }
+  }
   return null;
 }
 /* 聞き取りを止める「停止」（「一時停止」は待機） */
@@ -1542,7 +1560,7 @@ function putValue(v){
       showAlert("block",`${cellName(cur)}：${fmt(val,it)} は入力できません。${what}。正しい値を入力し直してください。`);
       return `${said}、${vsPrev(spv,"",a.kind)}、入力し直してください`;
     }
-    ensureRow(cur.r); D[cur.r][it.id]=val; flashCells.add(cur.r+":"+cur.c);
+    ensureRow(cur.r); D[cur.r][it.id]=val; flashCells.add(cur.r+":"+cur.c); markCommit(cur.r,cur.c);
     if(a.level==="warn"){
       halt=true; pend={r:cur.r,c:cur.c};
       addLog(`${cellName(cur)} ← ${fmt(val,it)}（前回比 ${KIND_S[a.kind]}・確認待ち）`);
@@ -1555,7 +1573,7 @@ function putValue(v){
     return `${said}、${a.kind==="same"?"前回と同じ":"前回より"+KIND_S[a.kind]}`+(ol?"、外れ値かも":"")+advance();
   }
   ensureRow(cur.r); D[cur.r][it.id]=val;
-  flashCells.add(cur.r+":"+cur.c);
+  flashCells.add(cur.r+":"+cur.c); markCommit(cur.r,cur.c);
   addLog(`${cellName(cur)} ← ${fmt(val,it)}`);
   const r0=cur.r, c0=cur.c, ol=olAfterPut(r0,c0,val);
   const suf=advance(); putCount++; lastPut={said,suf};
@@ -1658,7 +1676,7 @@ function tryBulk(clean){
     if(a&&a.level==="warn") warn++;
     ensureRow(p.r); D[p.r][x.id]=v; flashCells.add(p.r+":"+p.c); cnt++;
   });
-  const last=cells[cells.length-1];
+  const last=cells[cells.length-1]; markCommit(last.r,last.c);
   if(b.kind==="count"&&S.dir==="col") cur=nextPos(last);
   else if(S.dir==="col"&&cells.some(p=>p.r===cur.r&&p.c===cur.c)) cur=nextPos(last);
   else if(cells.some(p=>p.r===cur.r&&p.c===cur.c)) cur=nextPos(cur);
@@ -1675,7 +1693,52 @@ function tryBulk(clean){
   offerUndo(`${where}${it.name} に ${fmt(b.val,it)} を${cnt}件入れました`+(block?`（禁止の${block}件は入れていません）`:""));
   return `${vs}、${cnt}件`+(warn?`、前回比の注意 ${warn}件`:"")+(block?`、禁止で入れなかった ${block}件`:"")+(end?"、最後の個体です":(S.rbMode==="full"?"、次は "+cellName(cur):""));
 }
+/* ========= 声で確かめる（4.5〜）：今の個体・項目・値／さっき確定した値／今日の残り ========= */
+let lastCommit=null; /* {r,c,d:調査日,sv:調査のid} */
+function markCommit(r,c){ lastCommit={r,c,d:S.curDate,sv:svId}; }
+function sayVal(v,it){ return fmt(v,it).replace(/^-/,"マイナス"); }
+function infoWhere(){
+  const it=S.items[cur.c]; if(!it) return "項目がありません";
+  const L=listLen(), r=cur.r;
+  if(L&&r>=L) return "個体リストの最後を過ぎています、"+it.name;
+  let t=rowLabel(r);
+  if(L){ let n=0, all=0; for(let x=0;x<L;x++){ if(isEx(x)) continue; all++; if(x<=r) n++; } if(!isEx(r)) t+=`、${all}個体中 ${n}番目`; }
+  t+="、"+it.name;
+  if(D[r]?._ex&&isEx(r)) return t+`、${D[r]._why||"除外"}で除外しています`;
+  const v=D[r]?.[it.id];
+  return t+(hasVal(v)?`、入力済み ${sayVal(v,it)}`:"、まだ空です");
+}
+function infoLast(){
+  const lc=lastCommit;
+  if(!lc||lc.sv!==svId||lc.d!==S.curDate||!S.items[lc.c]) return "この調査日では、まだ値を入れていません";
+  const it=S.items[lc.c], v=D[lc.r]?.[it.id];
+  return hasVal(v)?`さっきは ${cellName({r:lc.r,c:lc.c})}、${sayVal(v,it)}`:`さっきの ${cellName({r:lc.r,c:lc.c})} は、今は空です`;
+}
+function infoLeft(){
+  const M=meas(); if(!M.length) return "測定の項目がありません";
+  const L=listLen();
+  if(!L){ let n=0; D.forEach(row=>{ if(M.some(i=>hasVal(row?.[S.items[i].id]))) n++; }); return `個体リストがありません、入力済み ${n}行`; }
+  const cols=S.dir==="col"?[cur.c]:M;
+  let left=0, all=0;
+  for(let r=0;r<L;r++){ if(isEx(r)) continue; all++; if(cols.some(i=>!hasVal(D[r]?.[S.items[i].id]))) left++; }
+  const what=S.dir==="col"?S.items[cur.c].name+"、":"";
+  return left?`${what}残り ${left}個体、全部で ${all}個体`:`${what}今日の分は全部入っています、${all}個体`;
+}
+/* 前回：経時調査で、今のセル（個体・項目）の、今の調査日より前の直近の値 */
+function infoPrev(){
+  const it=S.items[cur.c]; if(!it) return "項目がありません";
+  if(!S.ts) return "経時調査ではないので、前回の値はありません";
+  const ds=allDates().filter(d=>d<S.curDate);
+  let p=null; for(let i=ds.length-1;i>=0;i--){ const v=(S.sessions[ds[i]]||[])[cur.r]?.[it.id]; if(hasVal(v)){ p={v,d:ds[i]}; break; } }
+  if(!p) return `${it.name}、前回の値はありません`;
+  const md=p.d.slice(5).split("-").map(Number), now=D[cur.r]?.[it.id];
+  return `${it.name}、前回 ${md[0]}月${md[1]}日 ${sayVal(p.v,it)}`+(hasVal(now)?`、今回 ${sayVal(now,it)}`:"");
+}
 function doCommand(cmd){
+  if(cmd==="prev") return infoPrev();
+  if(cmd==="where") return infoWhere();
+  if(cmd==="last") return infoLast();
+  if(cmd==="left") return infoLeft();
   if(cmd==="standby") return enterStandby();
   if(cmd==="resume") return standby?leaveStandby():null;
   if(cmd==="stop") return doStop();
@@ -1751,8 +1814,11 @@ function handleText(raw, fromVoice, rbNow){
   const h=$("#heard");
   /* 待機中（声で再開できる方式）：「再開」「停止」以外の声はすべて無視する */
   if(standby && fromVoice){
-    if(isResumeWord(clean)||parseCommand(clean)==="resume"){ const s=leaveStandby(); save(); render(); if(s) speak(s); }
-    else if(isStopWord(clean)){ const s=doStop(); save(); render(); if(s) speak(s); }
+    aliasHits=[];
+    const ic=parseCommand(clean)||cmdAlias(clean);
+    if(INFO_CMDS.has(ic)){ const s=doCommand(ic); h.className="heard ok"; h.textContent=`「${raw}」→ ${s}（待機中）`; speak(s,true); return; }
+    if(isResumeWord(clean)||ic==="resume"){ const s=leaveStandby(); save(); render(); if(s) speak(s); }
+    else if(isStopWord(clean)||ic==="stop"){ const s=doStop(); save(); render(); if(s) speak(s); }
     else { h.className="heard"; h.textContent=`待機中のため無視しました：「${raw}」`; }
     return;
   }
@@ -1762,7 +1828,14 @@ function handleText(raw, fromVoice, rbNow){
   voiceCtx=fromVoice?++utterSeq:0; undoBlocked=false;
   halt=false; sel=null; putCount=0; lastPut=null; alerted=false; aliasHits=[];
   if(!pend) hideAlert();
-  const whole=parseCommand(clean);
+  const whole=parseCommand(clean)||(pend?null:cmdAlias(clean));
+  /* 確かめるだけのコマンドは、値・確認待ち・取り消しに触れずに答える */
+  if(INFO_CMDS.has(whole)){
+    const s=doCommand(whole);
+    h.className="heard ok"; h.textContent=`「${raw}」`+(aliasHits.length?`（言い換え ${aliasHits.join("・")}）`:"")+` → ${s}`;
+    voiceCtx=0; manualRb=false; if(fromVoice||rbNow) speak(s,true);
+    return;
+  }
   if(whole!=="undo") bulkSnap=null;
   let done=false;
   if(pend){
@@ -1827,7 +1900,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.4.2（2026-11-02）";
+const APP_VER="Pro 4.5.1（2026-11-05）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -3783,13 +3856,15 @@ const HELP=[
 {g:"input",id:"textchoice",t:"文字・選択肢の列",k:"文字 備考 選択肢 候補 品種 テキスト もじ びこう せんたくし",go:"items",b:
 "<p>文字の列には、話した言葉がそのまま入ります。選択肢の列は、登録した候補（例 にっこり、幸水、豊水）から一番近いものが入ります。ひらがな・カタカナの違いは気にしません。うまく聞き取れない言葉や短く言いたい言葉は、「言い換え」に登録できます。</p>"},
 {g:"input",id:"alias",t:"言い換え（聞き違い・略語の登録）",k:"言い換え 置き換え 略語 聞き違い 誤変換 登録 虫害 いいかえ ききちがい りゃくご とうろく",go:"alias",b:
-"<p>よく聞き違える言葉や、短く言いたい言葉を登録しておくと、決めた値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>、<code>びょう</code> → <code>病害</code>。左は「、」で区切って複数書けます。</p><ul><li>話した言葉が登録した言葉と<b>そのまま同じ</b>ときだけ置き換えます（言葉の一部は置き換えません）。</li><li>ひらがな・カタカナ、全角・半角の違いは気にしません。</li><li>対象は「すべての列」か、特定の列だけを選べます。文字・選択肢・数値のどの列にも使えます。選択肢の列では、置き換えた値が候補にあるときだけ入ります。</li><li>手入力・まとめて入力・貼り付けにも効きます。</li><li>「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。</li></ul><p>置き換えたときは、聞き取った言葉の横に（言い換え むし→虫害）と出ます。言い換えは調査ごとの設定で、「今の調査の設定を使う」で作った調査とバックアップにも引き継がれます。</p>"},
+"<p>よく聞き違える言葉や、短く言いたい言葉を登録しておくと、決めた値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>、<code>びょう</code> → <code>病害</code>。左は「、」で区切って複数書けます。</p><ul><li>話した言葉が登録した言葉と<b>そのまま同じ</b>ときだけ置き換えます（言葉の一部は置き換えません）。</li><li>ひらがな・カタカナ、全角・半角の違いは気にしません。</li><li>対象は「すべての列」か、特定の列だけを選べます。文字・選択肢・数値のどの列にも使えます。選択肢の列では、置き換えた値が候補にあるときだけ入ります。</li><li>手入力・まとめて入力・貼り付けにも効きます。</li><li>「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。</li><li>右に音声コマンドの言葉（<code>どこ</code>・<code>次</code> など）を書くと、左の言葉でもその操作ができます（例：<code>ここは</code> → <code>どこ</code>）。</li></ul><p>置き換えたときは、聞き取った言葉の横に（言い換え むし→虫害）と出ます。言い換えは調査ごとの設定で、「今の調査の設定を使う」で作った調査とバックアップにも引き継がれます。</p>"},
 {g:"input",id:"allow",t:"入力できる値（範囲外の防止）",k:"範囲 範囲外 入力できる値 指数 0〜3 制限 はんい はんいがい しすう",go:"items",b:
 "<p>数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます。病害の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます。</p>"},
 {g:"input",id:"outlier",t:"外れ値のお知らせ",k:"外れ値 外れ 異常値 おかしい値 言い間違い 測り間違い 桁 感度 中央値 伸び方 はずれち いじょうち かんど",go:"outlier",b:
 "<p>入力した値が、ほかの個体の値から大きく外れているとき、画面と声（「外れ値かも」）で知らせます。<b>入力は止めず、値もそのまま残します。</b>言い間違い・測り間違い（例：32.5 を 325）なら「取り消し」で直します。正しい値なら、そのまま続けます。</p><ul><li><b>同じ日の外れ</b>：同じ調査日のほかの個体の値（中央値）から大きく外れている。</li><li><b>伸び方の外れ</b>（経時調査）：前回からの伸びが、ほかの個体と大きく違う。</li></ul><p>比べる相手は、「集計・グラフ」でまとめる列（処理区など）が同じ個体です。比べる値が少ないうちは知らせません（感度 低は10個、中は8個、高は6個から）。感度は設定の「外れ値のお知らせ」で 切・低・中・高 から選びます（標準は中）。</p><p>表では、外れ値の候補のセルを点線の枠で示します（PCではセルに重ねると理由が出ます）。「集計・グラフ」の画面には候補の一覧が出て、押すとそのセルへ移ります。調査の途中では比べる値が少ないため、終わったあとに一覧で見直すと確実です。</p>"},
 {g:"input",id:"commands",t:"音声コマンド",k:"取り消し スキップ 次 戻る 待機 再開 停止 除外 復帰 はい いいえ コマンド とりけし すきっぷ つぎ もどる たいき さいかい ていし じょがい ふっき こまんど",b:
-"<ul><li><code>取り消し</code>：直前の値を消す</li><li><code>スキップ</code>：空欄のまま進む</li><li><code>次</code>：次の個体（列単位では次の項目）へ</li><li><code>戻る</code>：1つ前へ</li><li><code>待機</code>（一時停止・休憩）／<code>再開</code>／<code>停止</code>（ストップ・終了）</li><li><code>除外</code>（落果・枯死・欠株）／<code>復帰</code></li><li>前回比の「注意」には <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）</li></ul><p>同じ操作は、画面のボタンでもできます。</p>"},
+"<ul><li><code>取り消し</code>：直前の値を消す</li><li><code>スキップ</code>：空欄のまま進む</li><li><code>次</code>：次の個体（列単位では次の項目）へ</li><li><code>戻る</code>：1つ前へ</li><li><code>待機</code>（一時停止・休憩）／<code>再開</code>／<code>停止</code>（ストップ・終了）</li><li><code>除外</code>（落果・枯死・欠株）／<code>復帰</code></li><li>前回比の「注意」には <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）</li><li><code>どこ</code>／<code>さっき</code>／<code>前回</code>／<code>残り</code>：今の位置・直前の値・前回の値・残りの数を読み上げる（「声で確かめる」）</li></ul><p>同じ操作は、画面のボタンでもできます（「どこ」「さっき」「前回」「残り」は声だけ）。</p>"},
+{g:"input",id:"where",t:"声で確かめる（どこ・さっき・前回・残り）",k:"どこ 今どこ 現在地 さっき 直前 前回 前回値 前の値 経時 残り あと何個 確認 確かめる 画面を見ない いまどこ げんざいち ぜんかい ちょくぜん のこり たしかめる かくにん",go:"alias",b:
+"<p>画面を見られないとき（両手がふさがっている、日差しで見えない）に、声で今の状態を聞けます。</p><ul><li><code>どこ</code>（今どこ・ここどこ・現在地）：今の個体（事前入力の列の値）、何個体中の何番目か、項目、入っている値（なければ「まだ空です」）</li><li><code>さっき</code>（さっきの値・直前）：この調査日で最後に確定した個体・項目・値。その後に消したときは「今は空です」</li><li><code>前回</code>（前回値・前回の値・前回は）：経時調査で、今のセルの個体・項目の前回の値と調査日。今回の値が入っていれば「今回 ◯」も続けます。前回比のアラートの設定とは関係なく使えます。答えたあとはそのまま入力を続けられます。</li><li><code>残り</code>（あと何個・残りいくつ）：今日まだ入っていない個体の数。列単位では今の項目について、行単位ではいずれかの項目が空の個体を数えます。除外した個体は数えません。</li></ul><p>この4つは値を入れず、今のセルも動かしません。「読み上げ」がオフでも読み上げ、待機中でも答えます（待機は続きます）。手入力の欄に書いて送ると、画面に答えが出ます（「復唱」がオンなら読み上げます）。</p><p>よく聞き違える言い方は、<b>言い換え</b>で右に <code>どこ</code> などのコマンドの言葉を書くと足せます（例：<code>ここは</code> → <code>どこ</code>）。</p>"},
 {g:"input",id:"bulk",t:"まとめて入力（ゼロ 6個・残り全部）",k:"まとめて 一括 ゼロ 個 残り 全部 範囲 から まとめて いっかつ ぜろ のこり ぜんぶ",b:
 "<ul><li><code>ゼロ 6個</code>（0を6つ）：今の列の今の個体から6個体分</li><li><code>残り全部ゼロ</code>（残りゼロ）：今の列の最後の個体まで</li><li><code>5から10 ゼロ</code>：今の列の No.5〜10</li></ul><p>除外した個体は飛ばします。前回比で「禁止」になるセルには入れず、「注意」のセルは入れたうえで件数を知らせます。直後に「取り消し」と言うか「元に戻す」を押すと、まとめて入れた分をすべて戻せます。</p>"},
 {g:"input",id:"standby",t:"待機・再開・停止",k:"待機 休憩 一時停止 再開 停止 ストップ 休む たいき きゅうけい さいかい ていし",go:"standby",b:
@@ -3893,6 +3968,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.5",d:"2026-11-05",a:[["声で確かめる（「どこ」で今の個体・項目・値、「さっき」で直前の値、「前回」で経時調査の前回の値、「残り」で今日の残りの数）","where"],["言い換えで音声コマンドの言い方を足す","alias"]]},
 {v:"Pro 4.3.3",d:"2026-10-30",a:[["列単位・グループ単位で次の列（まとまり）に移るとき、空いているセルから続ける","order"]]},
 {v:"Pro 4.3",d:"2026-10-29",a:[["データの統合（分担して調査したデータを、事前入力の列で個体を突き合わせて1つにまとめる）","merge"],["更新の記録（この画面）","history"]]},
 {v:"Pro 4.2",d:"2026-10-29",a:[["調査日の予定（間隔／日付を並べる）と、今日が調査日・予定を過ぎたときのお知らせ","plan"],["調査一覧に、調査ごとの予定の状態と件数","plan"],["カレンダーに登録（.ics。繰り返し・通知を複数）","plan"]]},
