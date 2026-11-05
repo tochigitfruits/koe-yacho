@@ -96,6 +96,8 @@ header small{display:block;color:var(--muted);font-size:.8rem;font-weight:400}
 .rbbtn.on .slash{display:none}
 .rbbtn:disabled{opacity:.4;cursor:default}
 @media (max-width:520px){.status{grid-template-columns:minmax(0,1fr)!important}.micbox{justify-self:center}}
+.iosres{display:block;width:100%;border:0;border-radius:12px;padding:16px 12px;font-size:1.15rem;font-weight:700;background:var(--rec);color:#fff;line-height:1.4}
+.iosres small{display:block;font-size:.8rem;font-weight:400;opacity:.9}
 .standbybar{border:2px dashed var(--warn);border-radius:10px;padding:10px 12px;font-weight:700;color:var(--warn);text-align:center;line-height:1.5}
 
 .alertbar{border-radius:10px;padding:10px 12px;display:grid;gap:8px;font-weight:700;line-height:1.5}
@@ -430,6 +432,29 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
 .hlog li{display:flex;gap:4px;align-items:flex-start}
 .hlog li::before{content:"・";flex:none;color:var(--muted)}
 .hlink{border:0;background:none;padding:0;text-align:left;color:var(--accent);text-decoration:underline;text-underline-offset:3px;font:inherit;cursor:pointer}
+/* 4.8〜：最終バックアップの帯（画面の下）・今日の調査を終える・自動保存 */
+body{padding-bottom:calc(52px + env(safe-area-inset-bottom))}
+.bkbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;gap:6px 10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:6px 12px calc(6px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line);font-size:.8rem;color:var(--muted);line-height:1.4}
+.bkbar.warn{background:color-mix(in srgb,var(--warn) 18%,var(--surface));border-top:2px solid var(--warn);color:var(--ink);font-weight:700}
+.bkbar.chg #bkTxt b{color:var(--ink)}
+.bkbar button{flex:none;padding:4px 10px;font-size:.78rem;border-radius:8px}
+body.kbd .bkbar{display:none}
+.out button#btnEnd{flex-basis:100%;background:var(--ink);color:var(--surface)}
+.endsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(8.5em,1fr));gap:6px}
+.endsum div{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;display:grid;gap:2px}
+.endsum div b{font-family:var(--f-num);font-size:1.3rem}
+.endsum div small{color:var(--muted);font-size:.75rem}
+.endsum div.bad{border-color:var(--warn)}
+.ollist.blank button{border-color:var(--line);background:var(--bg)}
+.endres{border-radius:10px;padding:10px 12px;font-weight:700;line-height:1.5}
+.endres.ok{background:color-mix(in srgb,var(--accent) 12%,transparent);border:1.5px solid var(--accent)}
+.endres.ng{background:color-mix(in srgb,var(--rec) 12%,transparent);border:2px solid var(--rec)}
+.svdone{display:inline-block;font-size:.7rem;font-weight:700;color:var(--muted);border:1px solid var(--muted);border-radius:999px;padding:0 8px;margin-left:6px;vertical-align:middle}
+.svrow.done .svopen{opacity:.75}
+.svbk{color:var(--muted)}.svbk.warn{color:var(--warn);font-weight:700}
+.asbox{border:1.5px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:8px}
+.asbox .asst{font-weight:700}
+.asbox .asst.warn{color:var(--warn)}
 </style>
 </head>
 <body>
@@ -496,6 +521,7 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
       </div>
     </div>
     <div class="standbybar" id="standbyBar" hidden></div>
+    <button type="button" class="iosres" id="iosResume" hidden>聞き取りが止まりました。押すと再開します<small>iPhone が自動の再開を受け付けませんでした（入力した値はそのまま残っています）</small></button>
     <div class="alertbar" id="alertBar" role="alert" hidden>
       <div id="alertMsg"></div>
       <div class="albtns" id="alBtns" hidden>
@@ -541,6 +567,7 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
   <div class="tablebox" id="tablebox"><table id="tbl"></table></div>
 
   <div class="out">
+    <button type="button" id="btnEnd">今日の調査を終える<small class="ver" style="display:block;color:inherit;opacity:.8;font-weight:400">空欄・外れ値の確認とバックアップ</small></button>
     <button type="button" id="btnSum" class="sec">集計・グラフ</button>
     <button type="button" id="btnXlsx">Excelで保存</button>
     <button type="button" id="btnCsv" class="sec">この日のCSV</button>
@@ -577,6 +604,12 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
       <p>本アプリを利用した時点で、上記に同意したものとします。（2026-10-15 改定）</p>
     </div>
   </details>
+</div>
+
+<div class="bkbar" id="bkBar" role="status" hidden>
+  <span id="bkTxt"></span>
+  <button type="button" class="ghost" id="bkPerm" hidden>自動保存を再開</button>
+  <button type="button" class="ghost" id="bkNow">今すぐ保存</button>
 </div>
 
 <dialog id="svDlg">
@@ -685,7 +718,7 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
     <h2 id="mgTitle" tabindex="-1" autofocus>データを統合する</h2>
     <p class="help">分担して調査したデータを、今開いている調査「<b id="mgTo"></b>」にまとめます。事前入力の列（樹番号・果実番号など）の値で同じ個体を見つけ、空いているセルを埋めます。値が食い違うセルは、どれを使うか選べます。</p>
     <div class="addrow">
-      <label class="add filebtn" for="mgFile">ファイルを選ぶ<small class="ver" style="display:block">ほかの人のバックアップ（.json）。複数選べます</small><input type="file" id="mgFile" accept=".json,application/json" multiple hidden></label>
+      <label class="add filebtn" for="mgFile">ファイルを選ぶ<small class="ver" style="display:block">ほかの人のバックアップ（.json）。複数選べます</small><input type="file" id="mgFile" accept=".json,.txt,application/json" multiple hidden></label>
       <label class="field" style="flex:1 1 12em"><b>この端末の別の調査から</b><select id="mgSv"></select></label>
     </div>
     <div id="mgSrcList" class="mgopt2"></div>
@@ -699,6 +732,29 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
     <p class="help">統合の直後なら「元に戻す」で戻せます。念のため、先に今の調査のバックアップを取っておくと安心です。取り込み元のファイルや調査は変わりません。</p>
     <div class="addrow"><button type="button" class="add" id="mgBk">先に今の調査のバックアップを保存</button></div>
     <div class="actions"><button type="button" id="mgCancel">やめる</button><button type="button" class="primary" id="mgGo" disabled>統合する</button></div>
+  </div>
+</dialog>
+
+<dialog id="endDlg" aria-labelledby="endTitle">
+  <div class="sheet">
+    <div class="sheethead"><h2 id="endTitle" tabindex="-1" autofocus>今日の調査を終える</h2><span class="ver" id="endSub"></span></div>
+    <div class="endsum" id="endSum"></div>
+    <div class="ollist blank" id="endBlank"></div>
+    <div class="ollist" id="endOl"></div>
+    <fieldset>
+      <legend>次回の扱い</legend>
+      <div class="seg">
+        <label><input type="radio" name="endNext" value="cont" checked><span>次回も続ける<small id="endNextInfo">この調査を続けます</small></span></label>
+        <label><input type="radio" name="endNext" value="done"><span>この調査は完了<small>調査一覧で「完了」の印を付けて下に移します。データは消えません。予定のお知らせも止めます</small></span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>バックアップ</legend>
+      <p class="help" id="endBkHow"></p>
+      <label class="toggle" for="endXlsx"><span>Excelでも保存する<small class="ver" style="display:block">報告用。バックアップ（.json）とは別に、表をExcelでも保存します</small></span><input type="checkbox" id="endXlsx"></label>
+    </fieldset>
+    <div class="endres" id="endRes" aria-live="polite" hidden></div>
+    <div class="actions"><button type="button" id="endCancel">戻る</button><button type="button" id="endShare" hidden>共有で送る</button><button type="button" class="primary" id="endGo">保存して終える</button></div>
   </div>
 </dialog>
 
@@ -852,6 +908,7 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
       <p class="help">ノギスやはかりから手入力欄に入った値は、入力画面のマイクの横にある「復唱」（話す人のマーク）を押すと、オフにするまで読み上げます。上の設定とは別に働きます。</p>
       <label class="toggle" for="sRbMode"><span>読み上げの内容<small class="ver" style="display:block">全部：値と次の個体をすべて読む／短く：値と、変わった番号だけを読む（3件以上まとめて言ったときは件数と最後の値）／区切りだけ：ふだんは「ピッ」と鳴らし、次の個体に移るとき・アラートのときだけ話す（復唱オンの手入力は値も読む）。復唱の読み上げにも同じ内容を使います</small></span><select id="sRbMode"><option value="full">全部</option><option value="short">短く</option><option value="beep">区切りだけ</option></select></label>
       <label class="toggle" for="sFast"><span>早めに確定する（試験的）<small class="ver" style="display:block">話し終わりを待たず、数値として読めた時点（約0.5秒変わらなければ）で入力します。速くなりますが、言いかけの値で確定することがあります。小数の項目は「てん」の後の数字まで聞いてから確定します。PC・Androidでは、読み上げ中に続けて話した声は拾わないため、「区切りだけ」と組み合わせると速さを生かせます</small></span><input type="checkbox" id="sFast"></label>
+      <label class="toggle" for="sIosNp"><span>iPhoneでも聞き取りを止めずに読み上げる（試験的）<small class="ver" style="display:block">iPhoneでは、読み上げのたびに聞き取りを止めて、読み終えてから再開します。オンにすると、PC・Androidと同じく止めずに読み上げ、読み上げ中に聞こえた声は無視します。切り替えが減りますが、読み上げの音が小さくなったり、受話口（耳に当てる側）から出たりすることがあります。この端末で覚えます。iPhone以外では働きません</small></span><input type="checkbox" id="sIosNp"></label>
       <label class="toggle" for="sRate"><span>読み上げの速さ <b id="sRateVal"></b><small class="ver" style="display:block">遅い 0.6 〜 2.0 速い（標準 1.1）</small></span><input type="range" id="sRate" min="0.6" max="2" step="0.1"></label>
       <div class="toggle"><button type="button" class="ghost" id="sTest">読み上げテスト</button><span class="ver" id="sTestOut"></span></div>
       <label class="toggle" for="sSound"><span>アラート・待機の音を鳴らす<small class="ver" style="display:block">Androidでは振動もします</small></span><input type="checkbox" id="sSound"></label>
@@ -887,6 +944,18 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
       </div>
       <span class="ver" id="ioOut"></span>
       <span class="ver" id="ioStore"></span>
+      <div class="asbox" id="asBox">
+        <b>自動保存（PCのフォルダー）</b>
+        <span class="asst" id="asState"></span>
+        <p class="help" id="asHelp"></p>
+        <div class="addrow" id="asBtns">
+          <button type="button" class="add" id="asPick">フォルダーを選ぶ</button>
+          <button type="button" class="add" id="asResume" hidden>自動保存を再開（許可する）</button>
+          <button type="button" class="add" id="asOff" hidden>自動保存をやめる</button>
+        </div>
+        <div class="addrow"><button type="button" class="add" id="ioShare" hidden>バックアップを共有で送る（Googleドライブなど）</button></div>
+      </div>
+      <label class="toggle" for="bkWarn"><span>バックアップを取っていないときの警告<small class="ver" style="display:block">この日数より前のバックアップしかなく、その後に変更があると、画面の下の帯の色を変えます（この端末で覚えます）</small></span><select id="bkWarn"><option value="1">1日</option><option value="3">3日</option><option value="7">7日</option><option value="0">警告しない</option></select></label>
       <button type="button" class="add" id="ioMerge">ほかの人のデータを統合する（分担した調査をまとめる）</button>
       <button type="button" class="danger" id="sClear">この調査の測定データを全消去する（個体リストは残す）</button>
       <p class="help">別の調査を始めるときは、画面上の「調査一覧」から新しい調査を作ると、今の調査を残したまま切り替えられます。設定だけをほかの人に配るときは、「調査一覧」の「共有」を使います。</p>
@@ -1026,7 +1095,8 @@ function normCmp(c){ c=c||{}; const ok=v=>LEVELS.some(([k])=>k===v)?v:"none"; re
    （手入力の復唱は項目ごとではなく、S.rbManual で全体をオン・オフ） */
 const TYPES=["num","text","choice","date","multi","count"];
 function normItem(it){ const type=TYPES.includes(it.type)?it.type:"num", cnt=type==="count";
-  return {id:it.id||uid(), name:it.name??"項目", type, dec:cnt?0:(it.dec??0), step:cnt?0:(+it.step||0), role:it.role||"meas", options:Array.isArray(it.options)?it.options:[], allow:String(it.allow??"").trim(), cmp:normCmp(it.cmp)}; }
+  /* 4.8.1〜：このアプリが知らないキー（新しい版・台帳などで足したもの）は消さずに残す */
+  return {...it, id:it.id||uid(), name:it.name??"項目", type, dec:cnt?0:(it.dec??0), step:cnt?0:(+it.step||0), role:it.role||"meas", options:Array.isArray(it.options)?it.options:[], allow:String(it.allow??"").trim(), cmp:normCmp(it.cmp)}; }
 /* 数として扱う列（数値・カウンター）。集計・外れ値・前回比・入力できる値の対象 */
 const isNum=it=>!!it&&(it.type==="num"||it.type==="count");
 /* 候補から選ぶ列（選択肢・複数選択） */
@@ -1160,7 +1230,7 @@ async function stInit(){
 }
 function svGet(){ return SVL; }
 /* 一覧に持たせる予定の要約（開いていない調査も、読み込まずに状態を出すため） */
-function plOf(S0,D0){ if(!S0||!S0.ts) return null; const p=planNorm(S0.plan); return p.on?{plan:p,ad:dataDates(S0,D0)}:null; }
+function plOf(S0,D0){ if(!S0||!S0.ts||S0.done) return null; const p=planNorm(S0.plan); return p.on?{plan:p,ad:dataDates(S0,D0)}:null; }
 /* 一覧に出す概要（個体数・調査日の回数） */
 function svInfoOf(S0,D0){
   if(!S0) return "まだ入力なし";
@@ -1195,6 +1265,7 @@ function normS(){
   S.aliases=(Array.isArray(S.aliases)?S.aliases:[]).map(a=>({from:String(a?.from??"").trim(),to:String(a?.to??"").trim(),item:String(a?.item??"")})).filter(a=>a.from&&a.to);
   S.freezeCols=Math.max(0,Math.min(30,Math.floor(+S.freezeCols||0)));
   S.freezeRows=Math.max(0,Math.min(20,Math.floor(+S.freezeRows||0)));
+  S.done=/^\d{4}-\d{2}-\d{2}$/.test(S.done||"")?S.done:"";
 }
 normS();
 let saveWarned=0;
@@ -1206,6 +1277,7 @@ function save(){
   if(ST.mode==="idb"){ let p; try{ p=stPut(id,{S,D,cur,logs}); }catch(e){ saveWarn(); return; } p.then(()=>peerSend({t:"put",id}),()=>saveWarn()); }
   else { try{ localStorage.setItem(svKey(id),JSON.stringify({S,D,cur,logs})); }catch(e){ saveWarn(); return; } peerSend({t:"put",id}); }
   svTouch();
+  try{ bkTouchSoon(); }catch(e){}
 }
 /* 一覧の名前・概要・更新日時を今の調査に合わせ、このタブで開いている調査を覚える（変わったときだけ書く） */
 function svTouch(){
@@ -1467,7 +1539,7 @@ function planShort(st){
 const PLAN_HIDE="koe-yacho-v2-planhide";
 function planHidden(){ try{ return sessionStorage.getItem(PLAN_HIDE)===svId+"|"+today(); }catch(e){ return false; } }
 function renderPlan(){
-  const b=$("#planBar"), st=S.ts?planStatus(S.plan,dataDates(S,D),today()):{kind:"none"};
+  const b=$("#planBar"), st=S.ts&&!S.done?planStatus(S.plan,dataDates(S,D),today()):{kind:"none"};
   const show=(st.kind==="today"||st.kind==="late")&&!planHidden();
   b.hidden=!show; if(!show) return st;
   b.className="alertbar "+(st.kind==="late"?"warn":"info");
@@ -1480,7 +1552,7 @@ function renderPlan(){
 /* 調査一覧のボタンに、今日が調査日・過ぎている調査の数を出す */
 function planBadge(){
   let k=0;
-  svGet().list.forEach(e=>{ const st=e.id===svId?(S.ts?planStatus(S.plan,dataDates(S,D),today()):{kind:"none"}):(e.pl?planStatus(planNorm(e.pl.plan),e.pl.ad,today()):{kind:"none"});
+  svGet().list.forEach(e=>{ const st=e.id===svId?(S.ts&&!S.done?planStatus(S.plan,dataDates(S,D),today()):{kind:"none"}):(e.pl?planStatus(planNorm(e.pl.plan),e.pl.ad,today()):{kind:"none"});
     if(st.kind==="today"||st.kind==="late") k++; });
   const b=$("#btnSurveys"); b.innerHTML="調査一覧"+(k?`<span class="hbadge" aria-label="今日・予定を過ぎた調査 ${k}件">${k}</span>`:"");
   b.title=k?`今日が調査日、または予定を過ぎた調査が ${k}件あります`:"";
@@ -1979,7 +2051,7 @@ function handleText(raw, fromVoice, rbNow){
     return;
   }
   /* アプリ自身の読み上げ（「消しました」「聞き取れません」）を拾った場合は、何もせず黙って無視する */
-  if(fromVoice && ECHO_RE.test(clean.replace(/[、,，\s]/g,""))){ h.className="heard"; h.textContent=`読み上げの声とみなして無視しました：「${raw}」`; return; }
+  if(fromVoice && (ECHO_RE.test(clean.replace(/[、,，\s]/g,""))||iosEcho(clean))){ h.className="heard"; h.textContent=`読み上げの声とみなして無視しました：「${raw}」`; if(IS_IOS) iosBump("読み上げの声を拾った"); return; }
   rbNow=!fromVoice&&!!rbNow; manualRb=rbNow;
   voiceCtx=fromVoice?++utterSeq:0; undoBlocked=false;
   halt=false; sel=null; putCount=0; lastPut=null; alerted=false; aliasHits=[];
@@ -2078,7 +2150,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.7（2026-11-05）";
+const APP_VER="Pro 4.8.1（2026-11-05）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -2086,6 +2158,7 @@ function makeRec(){
     let interim="";
     if(!listening) return;
     if(Date.now()<ignoreUntil){ for(let i=e.resultIndex;i<e.results.length;i++) if(e.results[i].isFinal){ processed.add(i); fastDone.delete(i); } fastCancel(); return; }
+    if(IS_IOS) iosHeard();
     for(let i=e.resultIndex;i<e.results.length;i++){
       const res=e.results[i];
       if(res.isFinal){ if(!processed.has(i)){ processed.add(i); if(fastDone.has(i)) fastFinal(i,res[0].transcript); else { if(fastIdx===i) fastCancel(); handleText(res[0].transcript,true); } if(!listening) return; } }
@@ -2093,10 +2166,12 @@ function makeRec(){
     }
     if(interim && !standby){ const h=$("#heard"); h.className="heard"; h.textContent="… "+interim; }
   };
-  r.onstart=()=>{ gestureStart=false; };
+  r.onstart=()=>{ gestureStart=false; IOSQ.startAt=Date.now(); IOSQ.heard=false; };
   r.onerror=e=>{
     const when=gestureStart?"ボタン操作時":"自動再開時";
     if(e.error==="not-allowed"||e.error==="service-not-allowed"){
+      /* iPhone：自動の再開を拒否されたら、止めたままにせず大きな「再開」ボタンを出す（4.8.1） */
+      if(IS_IOS&&!gestureStart){ IOSQ.denied=true; iosBump("自動の再開を拒否された"); iosNeedTap(); return; }
       listening=false; standby=false; updateMic(); releaseWake();
       if(!gestureStart){ note(`聞き取りが途切れました。もう一度マイクを押してください。（${e.error}／${when}）`); return; }
       note(`音声認識を開始できませんでした（コード：${e.error}／${when}）。下の「マイク診断」で原因を確認できます。`, true);
@@ -2105,9 +2180,13 @@ function makeRec(){
     else if(e.error==="audio-capture"){ listening=false; standby=false; note("マイクが見つかりません。"); updateMic(); }
   };
   r.onend=()=>{
-    processed=new Set(); fastDone.clear(); fastCancel();
-    if(ttsPause){ setTimeout(flushSpeak,150); return; }
-    if(listening && (S.mode==="cont"||standby)){ setTimeout(()=>{ if(listening&&!ttsPause) startRec(); },200); }
+    processed=new Set(); fastDone.clear(); fastCancel(); IOSQ.live=false;
+    if(IOSQ.denied){ IOSQ.denied=false; return; }
+    if(ttsPause){ setTimeout(flushSpeak,IS_IOS?iosLv().gap:150); return; }
+    if(listening && (S.mode==="cont"||standby)){
+      if(IS_IOS){ const w=iosEnded(); if(w<0) return; setTimeout(()=>{ if(listening&&!ttsPause) startRec(); },w); }
+      else setTimeout(()=>{ if(listening&&!ttsPause) startRec(); },200);
+    }
     else { listening=false; updateMic(); }
   };
   return r;
@@ -2151,8 +2230,11 @@ function fastFinal(i,fin){
   note(`早めの確定「${pre}」と最終の聞き取り「${fin}」が違います。違う値が入っていれば「取り消し」で直してください。`);
   addLog(`早めの確定 ${pre} ／ 最終 ${fin}`);
 }
-function startRec(){ try{ rec=makeRec(); if(standby) rec.continuous=true; processed=new Set(); rec.start(); }catch(e){ setTimeout(()=>{ if(listening&&!ttsPause){ try{rec.start();}catch(_){} } },400); } }
-function stopRec(){ listening=false; standby=false; ttsPause=false; try{ rec&&rec.abort(); }catch(e){} updateMic(); releaseWake(); }
+function startRec(){
+  if(IS_IOS){ iosStart(); return; }
+  try{ rec=makeRec(); if(standby) rec.continuous=true; processed=new Set(); rec.start(); }catch(e){ setTimeout(()=>{ if(listening&&!ttsPause){ try{rec.start();}catch(_){} } },400); }
+}
+function stopRec(){ listening=false; standby=false; ttsPause=false; try{ iosStopped(); }catch(e){} try{ rec&&rec.abort(); }catch(e){} updateMic(); releaseWake(); }
 /* 停止：聞き取りを完全に止める（待機中でも止める）。続けるときはマイクを押す */
 function doStop(){
   if(!listening && !standby) return null;
@@ -2211,24 +2293,17 @@ function speak(text,force){
   /* 「区切りだけ」：声の代わりに短い音（ほぼ遅れなし） */
   if(text==="#tick"){ if(on){ audioUnlock(); beep(SND.tick); } return; }
   if(!on||!HAS_TTS) return;
+  /* iPhone（4.8.1〜）：続けて入った値はまとめて1回で読み、聞き取りの止め・再開を減らす */
+  if(IS_IOS&&!(listening&&rec&&iosNoPause())){ iosSay(text); return; }
   const u=utter(text);
-  if(listening && rec && !IS_IOS){
+  if(listening && rec && (!IS_IOS||iosNoPause())){
     /* PC・Android：認識は止めずに、読み上げ中に聞こえた声だけを無視する（止めると再開のたびに許可を聞かれるため） */
     ignoreUntil=Infinity;
     const fin=()=>{ ignoreUntil=Date.now()+400; };
     u.onend=fin; u.onerror=fin; setTimeout(()=>{ if(ignoreUntil===Infinity) fin(); },3000+text.length*300);
     say(u); return;
   }
-  if(listening && rec){
-    ttsPause=true;
-    let done=false;
-    const resume=()=>{ if(done) return; done=true; ttsPause=false;
-      if(!listening) return;
-      if(S.mode==="cont"||standby) setTimeout(startRec,200); else { listening=false; updateMic(); } };
-    u.onend=resume; u.onerror=resume; setTimeout(resume,3000+text.length*300);
-    pendingUtter=u; try{ rec.abort(); }catch(e){}
-    setTimeout(flushSpeak,500); // onend が来ない場合の保険
-  } else say(u);
+  say(u);
 }
 function updateMic(){
   const b=$("#mic"); b.classList.toggle("on",listening&&!standby); b.classList.toggle("standby",standby); b.setAttribute("aria-pressed",String(listening));
@@ -2244,6 +2319,129 @@ function updateRb(){
   b.title="手入力（ノギス・はかり等）した値を読み上げる（押すたびにオン・オフ）";
 }
 
+/* ========= iPhone の聞き取りと読み上げ（4.8.1〜。IS_IOS のときだけ。PC・Android は今のまま） =========
+   iPhone では読み上げのたびに聞き取りを止め（abort）、読み終えてから再開する（聞き取り中は音が出ない・小さくなるため）。
+   ・待ち時間：止め終わってから話すまで gap、読み終えてから再開まで res。150＋200ms から始め、
+     再開の失敗・読み上げの声を拾った・再開の直後に何も聞かずに終わったときだけ、その調査の間、段階的に延ばす（合計 350→600→900ms）。
+     読み上げの後の再開で声を聞けたことが5回続くと1段戻す。再開の直後 ign ms は聞こえた声を無視する。値の確定は遅らせない。
+   ・聞き取りの部品は使い回す（毎回 new しない）。続けて失敗するときは再開の間隔を1秒、2秒と延ばし、4回続いたら「再開」ボタンを出す。
+   ・自動の再開を拒否されたら（not-allowed）、大きな「再開」ボタンを出す（押せばボタン操作として始まるので通りやすい）。
+   ・読み上げは少し（IOS_GATHER）待ってまとめ、止めている間・読んでいる間に来た分も続けて読んでから再開する（復唱にも効く）。
+   ・試験的な設定（koe-yacho-v2-iosnopause、端末ごと）をオンにすると、PC・Android と同じく止めずに読み上げる */
+const IOS_LV=[{gap:150,res:200,ign:200},{gap:250,res:350,ign:350},{gap:400,res:500,ign:500}];
+const IOSQ={live:false,lv:0,good:0,fail:0,startAt:0,heard:false,afterTts:false,resumedAt:0,lastSaid:"",q:[],gather:null,cycle:false,own:false,denied:false,wasStandby:false};
+const IOS_NP_KEY="koe-yacho-v2-iosnopause", IOS_HINT_KEY="koe-yacho-v2-ioshint", IOS_GATHER=250;
+const IOS_ALERT_RE=/(注意|禁止|範囲外|外れ値|聞き取れ|入力できません|減って|増えて|変わって|除外|確認|はい)/;
+function iosNoPause(){ try{ return localStorage.getItem(IOS_NP_KEY)==="1"; }catch(e){ return false; } }
+const iosApp=()=>!!(navigator.standalone||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches));
+const iosLv=()=>IOS_LV[IOSQ.lv];
+const iosTotal=()=>iosLv().gap+iosLv().res;
+function iosReset(){ IOSQ.lv=0; IOSQ.good=0; IOSQ.fail=0; }
+function iosBump(why){
+  IOSQ.good=0;
+  if(IOSQ.lv<IOS_LV.length-1){ IOSQ.lv++; addLog(`iPhone：${why}ため、切り替えの待ち時間を合計${iosTotal()}msに`); }
+}
+/* 声が聞こえた（無視の時間の後）：読み上げの後の再開がうまくいった */
+function iosHeard(){
+  IOSQ.heard=true; IOSQ.fail=0;
+  if(IOSQ.afterTts){ IOSQ.afterTts=false; if(IOSQ.lv&&++IOSQ.good>=5){ IOSQ.lv--; IOSQ.good=0; addLog(`iPhone：切り替えが安定したため、待ち時間を合計${iosTotal()}msに`); } }
+}
+/* 聞き取りを始める（部品を使い回す） */
+function iosStart(){
+  if(IOSQ.live&&rec) return;   /* もう聞き取っている（古い予約の再開など） */
+  IOSQ.startAt=Date.now(); IOSQ.heard=false;
+  if(!rec) rec=makeRec();
+  rec.continuous=(S.mode==="cont")||standby; processed=new Set();
+  try{ rec.start(); IOSQ.live=true; }
+  catch(e){
+    if(e&&e.name==="InvalidStateError"){   /* 前の聞き取りがまだ終わりきっていない */
+      setTimeout(()=>{ if(!listening||ttsPause) return; try{ rec.start(); IOSQ.live=true; }catch(_){ rec=makeRec(); rec.continuous=(S.mode==="cont")||standby; try{ rec.start(); IOSQ.live=true; }catch(__){ iosStartFail(); } } },300);
+      return;
+    }
+    rec=null; iosStartFail();
+  }
+}
+function iosStartFail(){
+  iosBump("再開でエラーが出た"); IOSQ.fail++;
+  if(IOSQ.fail>=4){ iosNeedTap(); return; }
+  setTimeout(()=>{ if(listening&&!ttsPause) iosStart(); },IOSQ.fail>=2?2000:1000);
+}
+/* 聞き取りが終わった（続けるとき）：次に始めるまでの間隔。-1 は「再開」ボタンを出した */
+function iosEnded(){
+  const quick=!IOSQ.heard&&Date.now()-IOSQ.startAt<1200;
+  if(quick&&IOSQ.afterTts&&Date.now()-IOSQ.resumedAt<2500){ IOSQ.afterTts=false; iosBump("再開の直後に何も聞き取れずに終わった"); }
+  if(quick) IOSQ.fail++; else IOSQ.fail=0;
+  if(IOSQ.fail>=4){ iosNeedTap(); return -1; }
+  return IOSQ.fail>=2?2000:IOSQ.fail===1?1000:200;
+}
+/* 自動では戻れない：止めたままにせず、大きな「再開」ボタンを出す */
+function iosNeedTap(){
+  IOSQ.wasStandby=standby; IOSQ.afterTts=false;
+  listening=false; standby=false; ttsPause=false; IOSQ.cycle=false; clearTimeout(IOSQ.gather);
+  const r0=rec; rec=null; IOSQ.live=false; try{ r0&&r0.abort(); }catch(e){}
+  updateMic(); renderStandby(); releaseWake();
+  $("#iosResume").hidden=false;
+  let hint="";
+  if(iosApp()){ let d=""; try{ d=localStorage.getItem(IOS_HINT_KEY)||""; }catch(e){}
+    if(d!==today()){ try{ localStorage.setItem(IOS_HINT_KEY,today()); }catch(e){} hint="ホーム画面のアプリで不安定な場合は、Safari でお試しください（説明書「iPhoneで聞き取りが止まる・不安定なとき」）。"; } }
+  note("聞き取りが止まりました。赤い「押すと再開します」を押すと戻ります。入力した値はそのまま残っています。"+hint,!!hint);
+  addLog("iPhone：自動の再開ができず、聞き取りが止まりました");
+  if(IOSQ.q.length&&!IOSQ.own){ IOSQ.own=true; say(iosUtter()); }
+}
+function iosHideTap(){ const b=$("#iosResume"); if(b) b.hidden=true; }
+function iosStopped(){
+  iosHideTap(); clearTimeout(IOSQ.gather); IOSQ.gather=null;
+  /* 止める前にためていた読み上げは、聞き取りを止めたまま読む */
+  if(IS_IOS&&IOSQ.q.length&&!IOSQ.cycle&&!IOSQ.own){ IOSQ.own=true; say(iosUtter()); }
+}
+/* 読み上げをためる（少し待ってまとめて読む） */
+function iosSay(text){
+  IOSQ.q.push(text);
+  if(IOSQ.cycle||IOSQ.own) return;   /* 止めている間・読んでいる間に来た分は、続けて読む */
+  if(IOSQ.gather) return;            /* まとめる時間の中：最初の分から数えて IOS_GATHER 後に読む */
+  IOSQ.gather=setTimeout(iosBegin,IOS_GATHER);
+}
+function iosBegin(){
+  IOSQ.gather=null; if(!IOSQ.q.length) return;
+  if(listening&&rec&&!iosNoPause()){
+    IOSQ.cycle=true; ttsPause=true;
+    pendingUtter=iosUtter();          /* 聞き取りが止まったら（onend）、gap ms 後に flushSpeak で読む */
+    try{ rec.abort(); }catch(e){}
+    setTimeout(()=>{ if(pendingUtter){ IOSQ.live=false; flushSpeak(); } },Math.max(500,iosLv().gap+350));   /* onend が来ない場合の保険 */
+  } else { IOSQ.own=true; say(iosUtter()); }
+}
+/* ためた言葉を1つの読み上げにする。4件以上は「◯件、（アラートの言葉）、最後の値」 */
+function iosJoin(){
+  const q=IOSQ.q.splice(0); if(q.length<=3) return q.join("、");
+  const al=q.slice(0,-1).filter(t=>IOS_ALERT_RE.test(t));
+  return [`${q.length}件`,...al,q[q.length-1]].join("、");
+}
+function iosUtter(){
+  const t=iosJoin(); IOSQ.lastSaid=t;
+  const u=utter(t); let done=false;
+  const fin=()=>{ if(done) return; done=true;
+    if(IOSQ.q.length){ say(iosUtter()); return; }   /* 読んでいる間に来た分を続けて読む（聞き取りは止めたまま） */
+    IOSQ.own=false;
+    if(IOSQ.cycle){ IOSQ.cycle=false; iosResume(); } };
+  u.onend=fin; u.onerror=fin; setTimeout(fin,3000+t.length*300);
+  return u;
+}
+/* 読み終えた：res ms 待って聞き取りを再開する */
+function iosResume(){
+  ttsPause=false;
+  if(!listening) return;
+  if(S.mode==="cont"||standby){
+    const L=iosLv();
+    setTimeout(()=>{ if(!listening||ttsPause) return; IOSQ.afterTts=true; IOSQ.resumedAt=Date.now(); ignoreUntil=Date.now()+L.ign; startRec(); },L.res);
+  } else { listening=false; updateMic(); }
+}
+/* 再開の直後に、さっき読み上げた言葉とそっくり同じ声を拾ったか（数字だけの言葉は、同じ値を続けて言うことがあるので対象外） */
+function iosEcho(clean){
+  if(!IS_IOS||!IOSQ.lastSaid||Date.now()-IOSQ.resumedAt>2500) return false;
+  const nz=x=>String(x).normalize("NFKC").replace(/[\s、。,.，]/g,"");
+  const a=nz(clean), b=nz(IOSQ.lastSaid);
+  return a.length>=2&&/[^\d\-]/.test(a)&&a===b;
+}
 /* ========= 表示 ========= */
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -2294,6 +2492,7 @@ function render(){
   renderDates(); renderStandby(); renderSel();
   $("#btnEx").firstChild.nodeValue=isEx(cur.r)?"復帰":"除外";
   updateMic(); updateRb(); renderPlan(); planBadge();
+  try{ bkRender(); }catch(e){}
 }
 /* 4.6〜：今の列に合わせたボタン（カウンター＝−1・＋1、日付＝今日・昨日、複数選択＝候補） */
 function renderQuick(it){
@@ -2436,11 +2635,19 @@ $("#btnCsvWide").onclick=()=>download(new Blob([toCsv(aoaWide(true))],{type:"tex
 $("#mic").onclick=()=>{
   if(!SR){ note("このブラウザは音声認識に対応していません。AndroidはChrome、iPhoneはSafariで開いてください。手入力欄は使えます。"); return; }
   audioUnlock();
+  iosHideTap(); if(IS_IOS&&IOSQ.live&&!listening){ rec=null; IOSQ.live=false; }
   if(listening){ stopRec(); renderStandby(); return; }
   if(standby){ const s=leaveStandby(); if(s) speak(s); return; }
   /* iPhone：画面に触れたときに読み上げを一度始めておかないと、後から鳴らない。「読み上げ」がオフでも「どこ」などは読むので、常に準備する（4.5.2） */
   unlockTTS();
   gestureStart=true; listening=true; updateMic(); startRec(); holdWake();
+};
+/* iPhone：自動で戻れなかったときの「再開」ボタン（4.8.1） */
+$("#iosResume").onclick=()=>{
+  iosHideTap(); audioUnlock(); unlockTTS();
+  IOSQ.fail=0; standby=IOSQ.wasStandby; gestureStart=true; listening=true;
+  rec=null; startRec(); holdWake(); updateMic(); renderStandby();
+  const h=$("#heard"); h.className="heard ok"; h.textContent="再開しました";
 };
 $("#btnStandby").onclick=()=>{
   audioUnlock();
@@ -2478,6 +2685,10 @@ $("#diag").onclick=async()=>{
   else{
     try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); st.getTracks().forEach(t=>t.stop()); lines.push("マイク：使えます → 止められているのは音声認識（Siri・音声入力）側です"); }
     catch(err){ lines.push(`マイク：使えません（${err.name}）→ マイク自体の許可が拒否されています`); }
+  }
+  if(IS_IOS){
+    lines.push(`iPhone の聞き取りと読み上げ：${iosNoPause()?"聞き取りを止めずに読み上げる（試験的な設定）":`読み上げのたびに止めて再開（切り替えの待ち時間 合計 ${iosTotal()}ms・段階 ${IOSQ.lv+1}/${IOS_LV.length}）`}`);
+    if(iosApp()) lines.push("ホーム画面のアプリで開いています：聞き取りが止まる・不安定なときは、Safari のタブで開くと安定することがあります。保存場所が別なので、バックアップで移します（説明書「iPhoneで聞き取りが止まる・不安定なとき」）");
   }
   lines.push(await stUsage());
   if(ST.mode==="idb"&&ST.mig) lines.push(`保存先の移行：${ST.mig.at}（${ST.mig.n}件。移行前のデータも残しています）`);
@@ -3030,6 +3241,7 @@ function openSettings(go,then){
   $("#sRead").checked=draft.readback; $("#sSerial").checked=draft.serial; $("#sAuto").checked=!!draft.autoCommit; $("#sSound").checked=!!draft.alertSound;
   $("#sUndoGap").value=String(draft.undoGap);
   $("#sRbMode").value=draft.rbMode; $("#sFast").checked=!!draft.fastCommit; $("#sOutlier").value=draft.outlier;
+  $("#sIosNp").checked=iosNoPause();
   planToForm(planNorm(draft.plan)); $("#planFold").hidden=!draft.ts;
   $("#sFzCols").value=draft.freezeCols; $("#sFzRows").value=draft.freezeRows; drawFzPrev();
   $("#sRate").value=draft.rate||1.1; $("#sRateVal").textContent="×"+(+$("#sRate").value).toFixed(1);
@@ -3155,6 +3367,7 @@ $("#sSave").onclick=()=>{
   draft.readback=$("#sRead").checked; draft.serial=$("#sSerial").checked; draft.autoCommit=$("#sAuto").checked; draft.rate=+$("#sRate").value||1.1;
   draft.alertSound=$("#sSound").checked; draft.undoGap=+$("#sUndoGap").value;
   draft.rbMode=$("#sRbMode").value; draft.fastCommit=$("#sFast").checked; draft.outlier=$("#sOutlier").value;
+  try{ if($("#sIosNp").checked) localStorage.setItem(IOS_NP_KEY,"1"); else localStorage.removeItem(IOS_NP_KEY); }catch(e){}
   draft.plan=planFromForm();
   draft.freezeCols=+String($("#sFzCols").value).normalize("NFKC")||0; draft.freezeRows=+String($("#sFzRows").value).normalize("NFKC")||0;
   draft.items.forEach((it,i)=>{ if(!String(it.name||"").trim()) it.name="項目"+(i+1); });
@@ -3210,6 +3423,7 @@ $("#sClear").onclick=()=>{
 /* ========= 調査の一覧・切り替え ========= */
 /* 読み込んだ中身 j を今の調査にする（入力中の状態はリセット） */
 function svApply(j){
+  try{ iosReset(); }catch(e){}
   S=S_DEFAULT(); D=[]; cur={r:0,c:0}; logs=[];
   if(j&&j.S){ S=Object.assign(S,j.S); D=j.D||[]; cur=j.cur||cur; logs=j.logs||[]; }
   normS(); if(cur.c>=n()||S.items[cur.c]?.role==="id") cur.c=firstMeas();
@@ -3219,12 +3433,15 @@ function svApply(j){
 async function svOpen(id,msg){
   if(listening||standby) stopRec();
   if(id!==svId) save();
+  try{ if(bkTimer) bkTouchNow(); }catch(e){}
   let j=null; try{ j=await stGet(id); }catch(e){ note("調査を読み込めませんでした："+(e.message||e),true); return false; }
   svId=id; svApply(j);
   try{ sessionStorage.setItem(TAB_KEY,id); }catch(e){}
   svListUpdate(o=>{ o.last=id; }).catch(()=>{});
   const h=$("#heard"); h.className="heard"; h.textContent="マイクを押して話してください";
   render(); note(msg||`「${S.name}」を開きました`);
+  try{ bkTouchNow(); }catch(e){}
+  if(S.done) doneNote();
   return true;
 }
 /* 新しい調査を保存して一覧に加える（開くのは呼んだ側）。失敗したら null */
@@ -3239,7 +3456,7 @@ async function svCreateRaw(nS,nD){
 async function svNew(mode,name){
   let nS, nD=[];
   if(mode==="copy"){
-    nS=JSON.parse(JSON.stringify(S)); nS.sessions={}; nS.curDate=today(); nS.freezeRows=S.freezeRows;
+    nS=JSON.parse(JSON.stringify(S)); nS.sessions={}; nS.curDate=today(); nS.freezeRows=S.freezeRows; nS.done="";
     const ids=idItems(); nD=D.slice(0,listLen()).map(row=>{ const o={}; ids.forEach(it=>{ if(hasVal(row?.[it.id])) o[it.id]=row[it.id]; }); return o; });
   } else if(mode==="blank"){
     /* 空白から：標準の項目を使わない。項目は1つ以上必要なので、名前だけの項目を1つ置く */
@@ -3267,22 +3484,21 @@ async function svDelete(id){
 }
 /* 一覧の「保存」：その調査のバックアップ（.json）。開いていない調査も保存できる */
 async function svBackup(id){
-  let j=null; if(id===svId) j={S,D,cur}; else { try{ j=await stGet(id); }catch(e){} }
-  if(!j||!j.S){ svMsg("この調査にはまだデータがありません。"); return; }
-  const nm=String(j.S.name||"調査").replace(/[\\/:*?"<>|]/g,"_");
-  download(new Blob([JSON.stringify({app:"koe-yacho-v2",ver:APP_VER,saved:new Date().toISOString(),S:j.S,D:j.D||[],cur:j.cur})],{type:"application/json"}),`${nm}_バックアップ_${today()}.json`);
+  const r=await bkRun(id,"file");
+  svMsg(r.ok?bkDoneText(r):r.msg); if(r.ok) drawSurveys();
 }
 function svMsg(t){ $("#svOut").textContent=t; }
 function svInfo(e){ return e.id===svId?svInfoOf(S,D):(e.info||""); }
 function drawSurveys(){
   const o=svGet();
-  const list=[...o.list].sort((a,b)=>String(b.updated).localeCompare(String(a.updated)));
+  const dn=e=>(e.id===svId?S.done:e.done)?1:0;
+  const list=[...o.list].sort((a,b)=>dn(a)-dn(b)||String(b.updated).localeCompare(String(a.updated)));
   $("#svList").innerHTML=list.map(e=>{
-    const isCur=e.id===svId, nm=(isCur?S.name:e.name)||"調査", info=svInfo(e);
+    const isCur=e.id===svId, nm=(isCur?S.name:e.name)||"調査", info=svInfo(e), done=isCur?S.done:e.done, bs=bkState(e), bt=bkShort(bs);
     const pst=isCur?(S.ts?planStatus(S.plan,dataDates(S,D),today()):{kind:"none"}):(e.pl?planStatus(planNorm(e.pl.plan),e.pl.ad,today()):{kind:"none"});
     const ptx=["today","late","tomorrow","next"].includes(pst.kind)?`<span class="${pst.kind==="today"||pst.kind==="late"?"svdue":"svnext"}">${esc(planShort(pst))}</span>`:"";
-    return `<div class="svrow${isCur?" cur":""}">
-      <button type="button" class="svopen" data-open="${esc(e.id)}"${isCur?' aria-current="true"':""}><b>${esc(nm)}${isCur?'<span class="svbadge">開いている</span>':""}</b><small>${ptx}${ptx?"　":""}${esc(info)}${info&&e.updated?"・":""}${e.updated?`更新 ${esc(e.updated)}`:""}</small></button>
+    return `<div class="svrow${isCur?" cur":""}${done?" done":""}">
+      <button type="button" class="svopen" data-open="${esc(e.id)}"${isCur?' aria-current="true"':""}><b>${esc(nm)}${isCur?'<span class="svbadge">開いている</span>':""}${done?`<span class="svdone">完了 ${esc(done)}</span>`:""}</b><small>${ptx}${ptx?"　":""}${esc(info)}${info&&e.updated?"・":""}${e.updated?`更新 ${esc(e.updated)}`:""}${bt?`<span class="svbk${bs.kind==="warn"?" warn":""}">　${esc(bt)}</span>`:""}</small></button>
       <button type="button" class="sva" data-sh="${esc(e.id)}" title="この調査の設定をひな形として配る（測定データは含まない）">共有</button>
       <button type="button" class="sva" data-bk="${esc(e.id)}" title="この調査のバックアップを保存">保存</button>
       <button type="button" class="sva del" data-del="${esc(e.id)}" title="この調査を削除"${o.list.length<=1?" disabled":""}>削除</button>
@@ -3355,10 +3571,10 @@ if(peerCh) peerCh.onmessage=e=>peerRecv(e.data);
 else window.addEventListener("storage",e=>{ if(e.storageArea===localStorage&&e.key===PING_KEY&&e.newValue){ try{ peerRecv(JSON.parse(e.newValue)); }catch(_){} } });
 
 /* ========= バックアップと読み込み ========= */
-$("#ioBackup").onclick=()=>{
+$("#ioBackup").onclick=async()=>{
   if(listening) stopRec();
-  const data={app:"koe-yacho-v2",ver:APP_VER,saved:new Date().toISOString(),S,D,cur};
-  download(new Blob([JSON.stringify(data)],{type:"application/json"}),`${safeName()}_バックアップ_${today()}.json`);
+  const r=await bkRun(svId,"file");
+  ioMsg(r.ok?bkDoneText(r):r.msg);
 };
 $("#ioFile").onchange=async e=>{
   const f=e.target.files[0]; e.target.value=""; if(!f) return;
@@ -3369,8 +3585,10 @@ let importNoAsk=false;
 async function importFile(f,asNew){
   try{
     const name=f.name.toLowerCase(); let job=null;
-    if(name.endsWith(".json")){
-      const j=JSON.parse(await f.text());
+    /* 4.8〜：共有で送ったバックアップ（Android では .txt になる）も読む */
+    let txt0=null; if(name.endsWith(".txt")){ const t=await f.text(); if(/^\s*\{/.test(t)) txt0=t; }
+    if(name.endsWith(".json")||txt0!==null){
+      const j=JSON.parse(txt0??await f.text());
       if(j&&j.app===TPL_APP){ if($("#dlg").open) $("#dlg").close(); if($("#svDlg").open) $("#svDlg").close(); tplReceive(j,"ファイル"); return; }
       if(!j||j.app!=="koe-yacho-v2"||!j.S||!Array.isArray(j.D)){ ioMsg("声で野帳 Pro（2）のバックアップファイルではありません。"); return; }
       job=()=>importJson(j);
@@ -4402,7 +4620,7 @@ $("#mgFile").onchange=async e=>{
   const fs=[...e.target.files]; e.target.value="";
   for(const f of fs){
     try{
-      const j=JSON.parse(await f.text()); const nm=f.name.replace(/\.json$/i,"");
+      const j=JSON.parse(await f.text()); const nm=f.name.replace(/\.(json|txt)$/i,"");
       if(j&&j.app===TPL_APP){ $("#mgOut").textContent=`${nm}：ひな形（設定だけ）なので、データは入っていません。調査のバックアップを選んでください。`; continue; }
       if(!j||j.app!=="koe-yacho-v2"){ $("#mgOut").textContent=`${nm}：声で野帳 Pro のバックアップ（.json）ではありません。`; continue; }
       mgAdd(nm,j);
@@ -4523,8 +4741,12 @@ const HELP=[
 "<p>表の下の「集計・グラフ」を押すと、別の画面で集計します。野帳の表は変わりません。</p><ul><li><b>まとめる列</b>：事前入力の列（処理区・品種など）を選ぶと、その値ごとに平均を出します。何も選ばなければ全体の平均です。2つ以上選ぶと組み合わせごとになります。</li><li><b>出す値</b>：ふだんは平均と n（値の数）。SD（標準偏差、n−1で割る）・SE（標準誤差）は、印を付けたときだけ出します。</li><li>平均は測った桁より1桁多く出します。除外した個体と、空のセルは入れません。文字・選択肢の列は集計しません。</li><li>「表をコピー」でExcelに貼れ、「表をCSVで保存」でファイルにできます。</li></ul><p><b>経時グラフ</b>（経時調査のとき）：項目を1つ選ぶと、まとまりごとの平均の推移を折れ線で描きます。横軸は調査日の間隔どおりです。誤差棒は なし・SE・SD から選べます。点のあたりに触れると、その日の値が出ます。「グラフを画像で保存」で、報告書に貼れる白地の画像（PNG）にします。線は8本まで描きます（それより多いときは、まとめる列を減らしてください）。</p><p>選んだまとめる列や誤差棒は、調査ごとに覚えます。</p>"},
 {g:"save",id:"merge",t:"データを統合する（分担した調査をまとめる）",k:"統合 まとめる 合わせる 分担 ほかの人 複数人 合体 マージ 突き合わせ 食い違い とうごう ぶんたん まとめる",go:"io",b:
 "<p>何人かで分担して調査したデータを、1つの調査にまとめます。</p><ol><li>まとめる前に、「調査一覧」の「共有」で同じひな形を配り、全員が同じ項目・個体リストで調査します（項目が確実に合います）。</li><li>調査が終わったら、各自が「バックアップを保存」（.json）して、まとめる人に送ります。</li><li>まとめる人は、まとめ先の調査を開き、「調査一覧」か設定の「データの保存・読み込み・全消去」にある「データを統合する」を押します。</li><li>受け取ったファイルを選びます（複数をまとめて選べます。この端末の別の調査からも選べます）。</li><li>突き合わせの結果（埋めるセル・同じ値・食い違い）を確かめ、食い違うセルはどれを使うか選んで「統合する」を押します。</li></ol><ul><li>個体は、事前入力の列（樹番号・処理区・果実番号など）の値で突き合わせます。行の順番が違っていても大丈夫です。事前入力の列がないときは、行の番号で合わせます。</li><li>項目は、ひな形で配った調査なら確実に合い、そうでなくても同じ名前の項目に合わせます。ない項目・個体リストにない個体は、足すかどうか選べます。</li><li>調査日もそのまま合わせます。1回の調査に、調査日が2つ以上あるデータを入れると経時調査になります。</li><li>直後なら「元に戻す」で統合の前に戻せます。取り込み元のファイルや調査は変わりません。</li></ul>"},
+{g:"save",id:"end",t:"今日の調査を終える（確認とバックアップ）",k:"今日の調査を終える 終わる 終了 空欄 入れ忘れ 確認 完了 次回 続ける バックアップ きょうのちょうさをおえる おわる しゅうりょう くうらん いれわすれ かんりょう じかい",b:
+"<p>その日の調査が終わったら、表の下の「今日の調査を終える」を押します。</p><ol><li><b>今日のまとめ</b>：入力した値の数、空欄の数、外れ値の候補の数が出ます。空欄・候補を押すと、そのセルへ移って直せます（除外した個体は数えません）。</li><li><b>次回の扱い</b>：「次回も続ける」か「この調査は完了」を選びます。完了にすると、調査一覧で「完了」の印が付いて下に移ります。データは消えず、予定のお知らせだけが止まります。完了の調査を開くと「完了の印を外す」が出ます。</li><li><b>バックアップ</b>：「保存して終える」を押すと、バックアップ（.json）を作り、読み直して中身（値の数・個体の数・調査日の数）が合うことを確かめてから保存します。自動保存のフォルダーを選んでいるPCではそのフォルダーへ書き込み、書き込んだファイルを読み直して確かめます。「Excelでも保存する」に印を付けると、表もExcelで保存します。</li></ol><p>Android・iPhoneでは「共有で送る」で、Googleドライブ・メールなどへ直接送れます。ブラウザのダウンロードでは、端末に保存されたかどうかまではアプリから確かめられません（確かめられるのは、作ったファイルの中身が正しいところまでです）。</p>"},
+{g:"save",id:"autosave",t:"最終バックアップの表示・警告と、PCの自動保存",k:"自動保存 最終バックアップ 警告 フォルダー 同期 Googleドライブ OneDrive クラウド 共有 消える 備え じどうほぞん さいしゅう けいこく ふぉるだー どうき くらうど きょうゆう",go:"io",b:
+"<p>画面の下の帯に、今の調査の最後のバックアップの日時を出します。その後に変更があると「その後に変更あり」と出し、決めた日数（標準3日）より前のバックアップしかないときは帯の色を変えます。日数は設定の「データの保存・読み込み・全消去」で変えられます（1日・3日・7日・警告しない）。調査一覧にも、調査ごとのバックアップの日時が出ます。</p><p>数えるのはバックアップ（.json）だけです（「今日の調査を終える」、画面の下の「今すぐ保存」、設定の「バックアップを保存」、調査一覧の「保存」、自動保存）。Excel・CSVは数えません。</p><p><b>自動保存（PCの Chrome・Edge）</b>：設定の「データの保存・読み込み・全消去」で「フォルダーを選ぶ」と、入力が止まって1分たったとき（入力が続くときも5分ごと）と、画面を閉じる・切り替えるときに、そのフォルダーへバックアップを書き込みます。ファイルは調査ごと・日ごとに1つ（同じ日は上書き）で、書き込んだ後に読み直して確かめます。Googleドライブ・OneDrive などの同期フォルダーを選べば、そのままクラウドにも入ります（アプリから外へ送ることはしません）。</p><ul><li>ブラウザを開き直すと、書き込みの許可を取り直すことがあります。そのときは画面の下の「自動保存を再開」を押して許可します。</li><li>Android・iPhone のブラウザは、フォルダーへの自動保存に対応していません。「今日の調査を終える」か設定の「バックアップを共有で送る」で、Googleドライブなどへ送ってください。</li></ul>"},
 {g:"save",id:"backup",t:"バックアップと読み込み（機種変更）",k:"バックアップ json 読み込み 復元 機種変更 別の端末 移行 引き継ぎ ばっくあっぷ よみこみ きしゅへんこう いこう",go:"io",b:
-"<p>「バックアップを保存」は、設定・個体リスト・全調査日・除外の記録をまるごと1つのファイル（.json）に保存します。別の端末で「ファイルを読み込む」と、そのまま続きから使えます。このアプリで保存したExcel（縦持ちシート）やCSVも読み込めます。</p><p>設定からの読み込みは、今開いている調査を置き換えます。今の調査を残したいときは、「調査一覧」の「ファイルから作る」を使います。</p>"},
+"<p>「バックアップを保存」は、設定・個体リスト・全調査日・除外の記録をまるごと1つのファイル（.json）に保存します。保存する前に、作ったファイルを読み直して中身が合うことを確かめます。別の端末で「ファイルを読み込む」と、そのまま続きから使えます。このアプリで保存したExcel（縦持ちシート）やCSVも読み込めます。</p><p>設定からの読み込みは、今開いている調査を置き換えます。今の調査を残したいときは、「調査一覧」の「ファイルから作る」を使います。</p><p>最後にバックアップした日時は画面の下に出ます。PCでは、決めたフォルダーへの自動保存もできます（「最終バックアップの表示・警告と、PCの自動保存」）。</p>"},
 {g:"save",id:"clear",t:"全消去と調査の削除",k:"全消去 消去 削除 リセット 初期化 ぜんしょうきょ さくじょ しょきか",go:"io",b:
 "<p>設定の「この調査の測定データを全消去する」は、すべての調査日の測定データと除外の記録を消します（項目と個体リストは残ります）。調査そのものを消すときは、「調査一覧」の「削除」を使います。どちらも元に戻せないので、先にバックアップを取ってください。</p>"},
 {g:"save",id:"privacy",t:"データの保存場所",k:"保存場所 端末 プライバシー 送信 容量 消える ブラウザ IndexedDB 移行 大容量 ほぞんばしょ たんまつ そうしん ようりょう",b:
@@ -4532,6 +4754,8 @@ const HELP=[
 
 {g:"trouble",id:"mic",t:"マイクが使えない・聞き取らない",k:"マイク 使えない 許可 聞き取らない 反応しない 診断 https iPhone Android まいく つかえない きょか しんだん",b:
 "<ol><li>画面下の「マイク診断」を押します。マイク自体が止められているのか、音声認識の側が止められているのかが分かります。</li><li>iPhoneはSafari、AndroidはChrome、PCはChromeかEdgeで開きます。</li><li>マイクの使用を、ブラウザと端末の設定で許可します。iPhoneでは、音声入力（Siri・音声入力）が止められていると使えません。</li><li>電波が弱いと聞き取れないことがあります。そのときは手入力欄を使います。</li></ol>"},
+{g:"trouble",id:"iosmic",t:"iPhoneで聞き取りが止まる・不安定なとき",k:"iPhone アイフォン ホーム画面 アプリ Safari サファリ 止まる 途切れる 不安定 再開 消音 マナーモード サイレント 復唱 読み上げ 鳴らない 移す あいふぉん ほーむがめん さふぁり とまる ふあんてい さいかい しょうおん まなーもーど",go:"other",b:
+"<p>iPhoneでは、値を読み上げるたびに聞き取りをいったん止め、読み終えてから再開します（聞き取り中は読み上げの音が出ない・小さくなるため）。4.8.1からは次のように動きます。</p><ul><li>再開がうまくいかない・読み上げの声を拾ったときは、その調査の間、止めてから再開するまでの待ち時間を自動で少し延ばします。うまくいき続けると元に戻します。値の記録は遅れません。</li><li>iPhoneが自動の再開を受け付けなかったときは、赤い「押すと再開します」のボタンが出ます。1回押せば聞き取りに戻ります。入力した値は残っています。</li><li>ノギス・はかりなどで続けて入った値や、まとめて入力した値の読み上げは、まとめて1回で読みます。</li></ul><p><b>ホーム画面のアプリで不安定なとき</b>は、Safari のタブで開くと安定することがあります。ホーム画面のアプリと Safari は保存場所が別なので、次の手順で移します。</p><ol><li>ホーム画面のアプリで、「調査一覧」の「保存」（または設定の「バックアップを保存」）でバックアップを保存します（「ファイル」アプリに保存されます）。</li><li>Safari で Pro のページを開きます。利用コードを入れ直す必要がある場合があります。</li><li>Safari で「調査一覧」→「ファイルから作る」を押し、保存したバックアップを選びます。</li></ol><p>読み上げや音が鳴らないときは、<b>消音スイッチ（マナーモード）</b>がオンになっていないか確かめてください。オンだと鳴らない場合があります。音量も確かめます。</p><p>試験的な設定「iPhoneでも聞き取りを止めずに読み上げる」（設定の「読み上げ・音・その他」）をオンにすると、止めずに読み上げます。切り替えは減りますが、読み上げの音が小さくなったり、受話口から出たりすることがあります。</p>"},
 {g:"trouble",id:"tts",t:"読み上げが聞こえない",k:"聞こえない 音が出ない 読み上げ 消音 音量 テスト きこえない よみあげ おんりょう",go:"other",b:
 "<p>消音スイッチと音量を確かめ、設定の「読み上げテスト」を押します。設定の「声で入力した値を読み上げる」がオフだと、声で入れた値は読みません。手入力の値は「復唱」ボタンがオンのときだけ読みます。</p>"},
 {g:"trouble",id:"mistake",t:"間違えて入れた・取り消しが進みすぎる",k:"間違い 間違えた 取り消し 戻す 進みすぎ 間隔 直す 修正 まちがい とりけし なおす しゅうせい",go:"other",b:
@@ -4540,7 +4764,7 @@ const HELP=[
 "<p>ブラウザのメニューから「ホーム画面に追加」すると、アプリのように開けます。Androidで追加したアプリはタブを複数開けないので、複数の調査は「調査一覧」で切り替えます。同じ調査を2か所で開くと、あとから変えた方の内容に揃えます。</p><p>ホーム画面のアプリとブラウザのタブのように Pro を2か所で開いていると、開いたときに「データの読み込みを待っています」と出たり、保存を待つお知らせが出たりすることがあります。裏に回った画面が読み書きの途中で止められたためです。もう一方の画面を表示して開き直すか、閉じると続きます。入力したデータは消えていません。</p>"}
 ];
 const HELP_GO={ts:"調査の種類",items:"調査項目",alias:"言い換え",list:"個体リスト",dir:"入力の進む順番",listen:"聞き取り方",standby:"待機のしかた",plan:"調査日の予定・カレンダー",outlier:"外れ値のお知らせ",other:"読み上げ・音・その他",freeze:"表の表示",io:"データの保存・読み込み・全消去"};
-const HELP_EX=["ガイド","取り消し","ノギス","言い換え","外れ値","予定","統合","ひな形","集計","オフライン"];
+const HELP_EX=["ガイド","取り消し","ノギス","言い換え","外れ値","予定","統合","ひな形","集計","自動保存"];
 /* 探す言葉を正規化（全角半角・ひらがなカタカナ・大文字小文字の違いを無視） */
 const helpNorm=s=>normJ(s);
 const helpText=h=>{ const d=document.createElement("div"); d.innerHTML=h.b; return d.textContent; };
@@ -4593,6 +4817,8 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.8.1",d:"2026-11-05",a:[["iPhone の聞き取りと読み上げの安定化（止まったときの「再開」ボタン、続けて入った値の読み上げをまとめる、試験的な設定「iPhoneでも聞き取りを止めずに読み上げる」）","iosmic"],["その他の不具合の修正",""]]},
+{v:"Pro 4.8",d:"2026-11-05",a:[["今日の調査を終える（空欄・外れ値の確認、次回も続ける／完了、中身を確かめたバックアップ）","end"],["画面の下に最終バックアップの日時（しばらく取っていないときは色を変えて知らせる）","autosave"],["PCでは選んだフォルダーへ自動で保存（Googleドライブなどの同期フォルダーを選べばクラウドにも入る）","autosave"],["調査一覧に完了の印とバックアップの日時","surveys"]]},
 {v:"Pro 4.7",d:"2026-11-05",a:[["ガイドで調査を作る（調べること・作物を選ぶと、項目と個体リストの候補が出る。野菜・水稲・麦・大豆・花き・土壌の項目も）","guide"],["手元の調査・ひな形のファイルから、ガイドの最初の画面で作る","guide"],["アプリを開いたときの画面を選ぶ（前回の調査・調査一覧・ガイド）","startup"]]},
 {v:"Pro 4.6.1",d:"2026-11-05",a:[["音声コマンドの言い方を登録する欄（設定の「言い換え」の中。聞き違いや言いやすい言葉で操作できる）","alias"],["その他の不具合の修正",""]]},
 {v:"Pro 4.6",d:"2026-11-05",a:[["複数選択の列（1つのセルに候補をいくつでも。声で続けて言う・ボタンで入れる外す）","multi"],["日付の列（「今日」「11月5日」などで日付を記録）","date"],["カウンターの列（「プラス」「プラス3」で数える）","count"]]},
@@ -4660,6 +4886,341 @@ $("#helpList").addEventListener("click",e=>{
 });
 
 if(!SR) note("このブラウザは音声認識に対応していません。AndroidはChrome、iPhoneはSafariで開いてください。");
+/* ========= バックアップの記録・今日の調査を終える・自動保存（4.8〜） =========
+   ・バックアップ（.json）を作るたびに、読み直して中身（値の数・行の数・調査日の数）が合うことを確かめ、
+     調査一覧の項目に日時（bk）・その時点の中身の照合値（bkh）・保存のしかた（bkw：file／share／folder）を記録する。
+     一覧の項目には、今の中身の照合値（h）・測定値の数（nm）・完了の印（done）・フォルダーへ最後に書いた中身（ash）も持つ。
+   ・画面の下の帯に、今の調査の最終バックアップを出す。決めた日数より前のものしかなく、その後に変更があれば色を変える。
+   ・PC（Chrome・Edge）では、選んだフォルダーへ自動で書き込む（File System Access API）。フォルダーの指定は
+     この端末の IndexedDB（meta の "autosave"）にだけ置き、バックアップには入れない。外部へは何も送らない。
+   ・数えるのはバックアップ（.json）だけ（Excel・CSV は設定が入らないため数えない） */
+const BKW_KEY="koe-yacho-v2-bkwarn";
+function bkWarnDays(){ try{ const v=localStorage.getItem(BKW_KEY); return v===null?3:Math.max(0,Math.floor(+v||0)); }catch(e){ return 3; } }
+/* 中身の照合値（FNV-1a 32bit＋長さ）。S と D から作る（入力位置・ログは含めない） */
+function bkHash(S0,D0){
+  const t=JSON.stringify([S0,D0||[]]); let h=0x811c9dc5;
+  for(let i=0;i<t.length;i++){ h^=t.charCodeAt(i); h=Math.imul(h,0x01000193); }
+  return (h>>>0).toString(36)+"."+t.length.toString(36);
+}
+/* 値の数（v：全部、m：測定の値）・行の数・調査日の数 */
+function bkCount(S0,D0){
+  const idIds=new Set((S0?.items||[]).filter(it=>it.role==="id").map(it=>it.id)); let v=0, m=0;
+  const cnt=(row,inD)=>{ if(!row||typeof row!=="object") return; for(const k in row){ if(k[0]==="_"||!hasVal(row[k])) continue; v++; if(!(inD&&idIds.has(k))) m++; } };
+  (D0||[]).forEach(r=>cnt(r,true));
+  Object.values(S0?.sessions||{}).forEach(rs=>{ if(Array.isArray(rs)) rs.forEach(r=>cnt(r,false)); });
+  const dates=new Set([...Object.keys(S0?.sessions||{}),S0?.curDate].filter(Boolean)).size;
+  return {v,m,rows:(D0||[]).length,dates};
+}
+function bkPayload(j){ return {app:"koe-yacho-v2",ver:APP_VER,saved:new Date().toISOString(),S:j.S,D:j.D||[],cur:j.cur}; }
+/* 作った文字列を読み直し、元の中身と値の数・行の数・調査日の数・項目の数が合うかを確かめる */
+function bkVerify(text,j){
+  let p; try{ p=JSON.parse(text); }catch(e){ return {ok:false,msg:"作ったファイルを読み直せませんでした"}; }
+  if(!p||p.app!=="koe-yacho-v2"||!p.S||!Array.isArray(p.D)||!Array.isArray(p.S.items)) return {ok:false,msg:"作ったファイルの形式が正しくありません"};
+  const a=bkCount(j.S,j.D), b=bkCount(p.S,p.D);
+  if(a.v!==b.v||a.rows!==b.rows||a.dates!==b.dates||(j.S.items||[]).length!==p.S.items.length)
+    return {ok:false,msg:`読み直した中身が合いません（値 ${a.v}→${b.v}、行 ${a.rows}→${b.rows}、調査日 ${a.dates}→${b.dates}）`};
+  return {ok:true,...b,items:p.S.items.length};
+}
+/* ファイル名：調査名_バックアップ_日付.json（同じ名前の調査がほかにあれば id を足して、自動保存で上書きし合わないようにする） */
+function bkFileName(id,S0){
+  const nm=(S0&&S0.name)||"調査"; let base=String(nm).replace(/[\\/:*?"<>|]/g,"_");
+  if(svGet().list.some(e=>e.id!==id&&((e.id===svId?S.name:e.name)||"調査")===nm)) base+="_"+id;
+  return `${base}_バックアップ_${today()}.json`;
+}
+async function bkData(id){
+  if(id===svId){ save(); bkTouchNow(); return {S,D,cur}; }
+  let j=null; try{ j=await stGet(id); }catch(e){} return j&&j.S?j:null;
+}
+/* 共有で送るファイル。Android の Chrome は .json を共有できないため、そのときは .txt にする（読み込みでは .txt のバックアップも受け付ける） */
+function bkShareFile(name,text){
+  if(!navigator.share||!navigator.canShare) return null;
+  for(const [n,t] of [[name,"application/json"],[name.replace(/\.json$/,".txt"),"text/plain"]]){
+    const f=new File([text],n,{type:t}); try{ if(navigator.canShare({files:[f]})) return f; }catch(e){}
+  }
+  return null;
+}
+const bkCanShare=()=>!!bkShareFile("a.json","{}");
+/* バックアップを作る。how：auto（自動保存のフォルダーが使えればそこへ、なければダウンロード）／file（ダウンロード）／share（共有）／folder（フォルダーだけ）
+   戻り値 {ok,where,name,chk,at} または {ok:false,msg} */
+async function bkRun(id,how){
+  const j=await bkData(id); if(!j) return {ok:false,msg:"この調査にはまだデータがありません。"};
+  let text, name=bkFileName(id,j.S);
+  try{ text=JSON.stringify(bkPayload(j)); }catch(e){ return {ok:false,msg:"バックアップを作れませんでした："+(e.message||e)}; }
+  const chk=bkVerify(text,j);
+  if(!chk.ok) return {ok:false,msg:`バックアップを保存しませんでした：${chk.msg}。もう一度試し、続くときはExcelでも保存してください。`};
+  let where="file";
+  if(how==="folder"||(how==="auto"&&asReady())){
+    const r=await asWrite(name,text);
+    if(r.ok) where="folder";
+    else if(how==="folder") return r;
+    else { download(new Blob([text],{type:"application/json"}),name); chk.warn=r.msg; }
+  } else if(how==="share"){
+    const f=bkShareFile(name,text); if(!f) return {ok:false,msg:"この端末では共有で送れません。ダウンロードで保存してください。"};
+    try{ await navigator.share({files:[f],title:f.name}); where="share"; name=f.name; }
+    catch(e){ return {ok:false,msg:e&&e.name==="AbortError"?"共有をやめました（バックアップの記録は変えていません）。":"共有できませんでした："+(e&&e.message||e)}; }
+  } else download(new Blob([text],{type:"application/json"}),name);
+  const h=bkHash(j.S,j.D), at=nowStamp(), nm=bkCount(j.S,j.D).m;
+  try{ await svListUpdate(o=>{ const x=o.list.find(v=>v.id===id); if(x){ x.bk=at; x.bkh=h; x.bkw=where; x.h=h; x.nm=nm; if(where==="folder") x.ash=h; } }); }catch(e){}
+  bkRender();
+  return {ok:true,where,name,chk,at};
+}
+function bkDoneText(r){
+  const c=r.chk, w=r.where==="folder"?`フォルダー「${AS.name}」に保存し、読み直して確かめました`:r.where==="share"?"共有で送りました":"ダウンロードしました（端末の「ダウンロード」などに入ります）";
+  return `バックアップ「${r.name}」を${w}。中身：値 ${c.v.toLocaleString()}個・${c.rows}行・調査日 ${c.dates}回（${r.at}）`+(c.warn?`。フォルダーには書き込めなかったため、ダウンロードにしました（${c.warn}）`:"");
+}
+/* 今の調査の照合値（h）・測定値の数（nm）・完了の印（done）・値のある最初の調査日（d0）を一覧に写す。
+   大きな調査で入力のたびに計算しないよう、保存のあと少し待ってから行う（調査を開いた・切り替えたときはすぐに） */
+let bkTimer=null;
+function bkTouchSoon(){ clearTimeout(bkTimer); bkTimer=setTimeout(bkTouchNow,700); }
+function bkTouchNow(){
+  clearTimeout(bkTimer); bkTimer=null;
+  if(!stReady) return;
+  const id=svId, h=bkHash(S,D), nm=bkCount(S,D).m, done=S.done||"", d0=dataDates(S,D)[0]||"";
+  const e=SVL.list.find(x=>x.id===id);
+  if(!(e&&e.h===h&&e.nm===nm&&(e.done||"")===done&&(e.d0||"")===d0)){
+    if(e){ e.h=h; e.nm=nm; e.done=done; e.d0=d0; }
+    svListUpdate(o=>{ const x=o.list.find(v=>v.id===id); if(x){ x.h=h; x.nm=nm; x.done=done; x.d0=d0; } }).catch(()=>{});
+  }
+  bkRender(); asSchedule(id);
+}
+window.addEventListener("pagehide",()=>{ if(bkTimer) try{ bkTouchNow(); }catch(e){} });
+/* 一覧の項目 e のバックアップの状態。kind：empty（測定データなし）／ok（その後の変更なし）／chg（変更あり）／warn（決めた日数を過ぎて変更あり） */
+function bkState(e){
+  if(!e) return {kind:"empty"};
+  if(e.id===svId&&(e.h===undefined||e.nm===undefined||e.d0===undefined)){ e.h=bkHash(S,D); e.nm=bkCount(S,D).m; e.d0=dataDates(S,D)[0]||""; }
+  if(!e.nm&&!e.bk) return {kind:"empty"};
+  if(e.bk&&e.h!==undefined&&e.bkh===e.h) return {kind:"ok",at:e.bk,w:e.bkw};
+  /* 日数は、最後のバックアップの日から。バックアップがなければ、値のある最初の調査日（なければ調査を作った日）から */
+  const W=bkWarnDays(), base=e.bk?String(e.bk).slice(0,10):(e.d0||e.created||"");
+  const days=base?Math.max(0,dayDiff(base,today())):Infinity;   /* 日付の手がかりがない古い調査は、すぐに知らせる */
+  return {kind:W&&days>=W?"warn":"chg",at:e.bk||"",days};
+}
+function bkShort(st){
+  if(st.kind==="empty") return "";
+  if(st.kind==="ok") return `バックアップ ${st.at}`;
+  if(!st.at) return "バックアップなし";
+  return `バックアップ ${st.at}`+(st.kind==="warn"?`（${st.days}日前）`:"")+"・その後に変更あり";
+}
+function bkRender(){
+  const bar=$("#bkBar"); if(!bar) return;
+  const st=bkState(svGet().list.find(x=>x.id===svId));
+  let t;
+  if(st.kind==="empty") t="まだ測定データはありません";
+  else if(st.kind==="ok") t=`最終バックアップ <b>${esc(st.at)}</b>（その後の変更なし）`;
+  else if(st.at) t=`最終バックアップ <b>${esc(st.at)}</b>`+(st.kind==="warn"?`（${st.days}日前。その後に変更あり）`:"（その後に変更あり）");
+  else t=st.kind==="warn"?"<b>この調査のバックアップの記録がありません</b>":"まだバックアップを取っていません";
+  const as=asLabel(); if(as) t+=`<span>　${as}</span>`;
+  $("#bkTxt").innerHTML=t;
+  bar.className="bkbar"+(st.kind==="warn"||(AS.on&&AS.dir&&(AS.perm!=="granted"||AS.err))?" warn":st.kind==="chg"?" chg":"");
+  $("#bkPerm").hidden=!(AS.on&&AS.dir&&AS.perm!=="granted");
+  bar.hidden=false;
+  asDraw();
+}
+
+/* ---- 自動保存（PCの Chrome・Edge） ---- */
+const AS={sup:false,dir:null,on:false,perm:"",name:"",err:"",pend:new Set(),timer:null,since:0,busy:false,errAt:0};
+try{ AS.sup=typeof window.showDirectoryPicker==="function"&&window.isSecureContext&&window.top===window; }catch(e){}
+const asReady=()=>!!(AS.on&&AS.dir&&AS.perm==="granted");
+const AS_IDLE=60000, AS_MAX=300000;   /* 入力が1分止まったら書く。入力が続いても5分ごとに書く */
+function asLabel(){
+  if(!AS.on||!AS.dir) return "";
+  if(AS.perm!=="granted") return "自動保存は止まっています（許可が必要）";
+  if(AS.err) return "自動保存できませんでした";
+  return `自動保存 オン（${esc(AS.name)}）`;
+}
+/* フォルダーの指定（ハンドル）を読む途中でアプリが止まったときに、次に開いたとき同じことを繰り返さないための印 */
+const AS_LOAD="koe-yacho-v2-asload";
+async function asInit(){
+  if(!AS.sup||ST.mode!=="idb"){ bkRender(); return; }
+  let has=false; try{ has=(await idbRun(["meta"],"readonly",m=>m.getAllKeys())).includes("autosave"); }catch(e){}
+  if(!has){ bkRender(); return; }
+  let bad=false; try{ bad=localStorage.getItem(AS_LOAD)==="1"; }catch(e){}
+  if(bad){
+    try{ localStorage.removeItem(AS_LOAD); await idbRun(["meta"],"readwrite",m=>m.delete("autosave")); }catch(e){}
+    note("前回、自動保存のフォルダーの指定を読み込む途中でアプリが止まったため、自動保存をオフにしました。設定の「データの保存・読み込み・全消去」でフォルダーを選び直してください。入力したデータは消えていません。",true);
+    bkRender(); return;
+  }
+  try{ localStorage.setItem(AS_LOAD,"1"); }catch(e){}
+  await new Promise(r=>setTimeout(r,1500));   /* 印が確実に書き込まれてから読む */
+  let c=null; try{ c=await idbRun(["meta"],"readonly",m=>m.get("autosave")); }catch(e){}
+  try{ localStorage.removeItem(AS_LOAD); }catch(e){}
+  if(c&&c.dir){
+    AS.dir=c.dir; AS.on=c.on!==false; AS.name=c.dir.name||"";
+    try{ AS.perm=await c.dir.queryPermission({mode:"readwrite"}); }catch(e){ AS.perm="prompt"; }
+  }
+  bkRender();
+  if(asReady()) asSchedule(svId,true);
+}
+async function asSaveCfg(){ await idbRun(["meta"],"readwrite",m=>AS.dir?m.put({on:AS.on,dir:AS.dir},"autosave"):m.delete("autosave")); }
+function asMsg(t){ ioMsg(t); note(t); }
+async function asPick(){
+  if(!AS.sup) return;
+  let h; try{ h=await window.showDirectoryPicker({id:"koe-yacho-backup",mode:"readwrite",startIn:"documents"}); }
+  catch(e){ if(!e||e.name!=="AbortError") asMsg("フォルダーを選べませんでした："+(e&&e.message||e)); return; }
+  AS.dir=h; AS.name=h.name; AS.on=true; AS.err="";
+  try{ AS.perm=await h.queryPermission({mode:"readwrite"}); if(AS.perm!=="granted") AS.perm=await h.requestPermission({mode:"readwrite"}); }catch(e){ AS.perm="prompt"; }
+  let mem=true; try{ if(ST.mode!=="idb") throw 0; await asSaveCfg(); }catch(e){ mem=false; }
+  bkRender();
+  if(!asReady()){ asMsg("フォルダーへの書き込みが許可されませんでした。自動保存はオフのままです。"); return; }
+  const r=await bkRun(svId,"folder");
+  asMsg((r.ok?`自動保存をオンにしました。${bkDoneText(r)}`:r.msg)+(mem?"":"（このブラウザでは、フォルダーの指定を次回まで覚えられません）"));
+}
+async function asResume(){
+  if(!AS.dir) return;
+  try{ AS.perm=await AS.dir.requestPermission({mode:"readwrite"}); }catch(e){ AS.perm="prompt"; }
+  AS.err=""; bkRender();
+  if(!asReady()){ note("フォルダーへの書き込みが許可されませんでした。自動保存は止まったままです。"); return; }
+  AS.pend.add(svId); await asFlush();
+  note(AS.err?`自動保存できませんでした：${AS.err}`:`自動保存を再開しました（フォルダー「${AS.name}」）`);
+}
+async function asOff(){
+  AS.on=false; AS.dir=null; AS.name=""; AS.perm=""; AS.err=""; clearTimeout(AS.timer); AS.timer=null; AS.pend.clear();
+  try{ await asSaveCfg(); }catch(e){}
+  bkRender(); asMsg("自動保存をやめました（フォルダーにあるファイルはそのまま残ります）。");
+}
+/* フォルダーへ書き込み、読み直して同じ中身かを確かめる */
+async function asWrite(name,text){
+  if(!AS.dir) return {ok:false,msg:"自動保存のフォルダーが決まっていません"};
+  try{
+    if(AS.perm!=="granted"){ AS.perm=await AS.dir.queryPermission({mode:"readwrite"}); if(AS.perm!=="granted") return {ok:false,msg:"フォルダーへの書き込みの許可がありません（画面の下の「自動保存を再開」を押してください）"}; }
+    const fh=await AS.dir.getFileHandle(name,{create:true}), w=await fh.createWritable();
+    await w.write(text); await w.close();
+    const back=await (await fh.getFile()).text();
+    if(back!==text) return {ok:false,msg:"書き込んだファイルを読み直すと、中身が合いませんでした"};
+    return {ok:true};
+  }catch(e){
+    if(e&&(e.name==="NotAllowedError"||e.name==="SecurityError")) AS.perm="prompt";
+    return {ok:false,msg:e&&e.name==="NotFoundError"?"フォルダーが見つかりません（移動・削除された可能性があります。フォルダーを選び直してください）":"フォルダーに書き込めませんでした："+(e&&e.message||e)};
+  }
+}
+/* 変更があったら書き込みを予約する（now：すぐに） */
+function asSchedule(id,now){
+  if(!asReady()) return;
+  const e=svGet().list.find(x=>x.id===id); if(!e||(e.h!==undefined&&e.ash===e.h)) return;
+  AS.pend.add(id); if(!AS.since) AS.since=Date.now();
+  clearTimeout(AS.timer);
+  AS.timer=setTimeout(asFlush,now?1500:Math.max(0,Math.min(AS_IDLE,AS.since+AS_MAX-Date.now())));
+}
+async function asFlush(){
+  clearTimeout(AS.timer); AS.timer=null;
+  if(!asReady()||!AS.pend.size) return;
+  if(AS.busy){ AS.timer=setTimeout(asFlush,3000); return; }
+  AS.busy=true; AS.since=0;
+  try{
+    for(const id of [...AS.pend]){
+      AS.pend.delete(id);
+      const e=svGet().list.find(x=>x.id===id); if(!e) continue;
+      if(id===svId&&(e.h===undefined||e.nm===undefined)) bkState(e);
+      if(!e.nm&&!e.bk) continue;                    /* 測定データのない調査は書かない */
+      if(e.h!==undefined&&e.ash===e.h) continue;    /* フォルダーの中身と同じ */
+      const r=await bkRun(id,"folder");
+      if(!r.ok){
+        AS.err=r.msg; AS.pend.add(id);
+        if(Date.now()-AS.errAt>600000){ AS.errAt=Date.now(); note(`自動保存できませんでした：${r.msg}`,true); }
+        break;
+      }
+      AS.err="";
+    }
+  } finally{ AS.busy=false; bkRender(); }
+}
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden"&&AS.pend.size) asFlush(); });
+window.addEventListener("pagehide",()=>{ if(AS.pend.size) asFlush(); });
+/* 設定「データの保存・読み込み・全消去」の自動保存の欄 */
+function asDraw(){
+  const st=$("#asState"); if(!st) return;
+  if(!AS.sup){
+    st.textContent="この端末・ブラウザでは使えません"; st.className="asst";
+    $("#asHelp").textContent="フォルダーへの自動保存は、PCの Chrome・Edge で使えます。Android・iPhone では、「今日の調査を終える」か、下の「バックアップを共有で送る」で、Googleドライブ・メールなどへ送ってください。";
+    $("#asBtns").hidden=true;
+  } else {
+    const on=!!(AS.on&&AS.dir);
+    st.textContent=!on?"オフ":AS.perm!=="granted"?`止まっています：フォルダー「${AS.name}」への書き込みの許可が必要です`:AS.err?`書き込めませんでした：${AS.err}`:`オン：フォルダー「${AS.name}」`;
+    st.className="asst"+(on&&(AS.perm!=="granted"||AS.err)?" warn":"");
+    $("#asHelp").textContent="選んだフォルダーへ、入力が止まって1分たったとき（続けて入力しているときも5分ごと）と、画面を閉じる・切り替えるときに、バックアップ（.json）を書き込みます。調査ごと・日ごとに1つのファイルで、同じ日は上書きします。書き込んだ後に読み直して確かめます。Googleドライブ・OneDrive などの同期フォルダーを選べば、そのままクラウドにも入ります。";
+    $("#asBtns").hidden=false;
+    $("#asPick").textContent=on?"フォルダーを選び直す":"フォルダーを選ぶ";
+    $("#asResume").hidden=!(on&&AS.perm!=="granted"); $("#asOff").hidden=!on;
+  }
+  $("#ioShare").hidden=AS.sup||!bkCanShare();
+  const w=String(bkWarnDays()); if($("#bkWarn").value!==w) $("#bkWarn").value=[...$("#bkWarn").options].some(o=>o.value===w)?w:"3";
+}
+$("#asPick").onclick=asPick; $("#asResume").onclick=asResume; $("#asOff").onclick=asOff; $("#bkPerm").onclick=asResume;
+$("#ioShare").onclick=async()=>{ const r=await bkRun(svId,"share"); ioMsg(r.ok?bkDoneText(r):r.msg); };
+$("#bkWarn").onchange=e=>{ try{ localStorage.setItem(BKW_KEY,e.target.value); }catch(_){} bkRender(); };
+$("#bkNow").onclick=async()=>{
+  if(listening||standby) stopRec(); clearPend();
+  const r=await bkRun(svId,"auto"); note(r.ok?bkDoneText(r):r.msg,!r.ok);
+};
+/* 画面のキーボードが出ている間（スマホ・タブレット）は帯を隠す */
+document.addEventListener("focusin",e=>{ const t=e.target; if(t&&t.matches&&t.matches("input:not([type=checkbox]):not([type=radio]):not([type=file]),textarea")&&matchMedia("(pointer:coarse)").matches) document.body.classList.add("kbd"); });
+document.addEventListener("focusout",()=>document.body.classList.remove("kbd"));
+
+/* ---- 今日の調査を終える ---- */
+let endDone=false;
+function endOpen(){
+  if(listening||standby) stopRec(); clearPend(); save();
+  endDone=false;
+  const L=listLen(), R=L||lastRow()+1, M=meas(), blanks=[]; let filled=0, live=0;
+  for(let r=0;r<R;r++){ if(isEx(r)) continue; live++; M.forEach(c=>{ if(hasVal(D[r]?.[S.items[c].id])) filled++; else blanks.push({r,c}); }); }
+  const ol=[...olCompute(S.curDate).values()].filter(o=>!isEx(o.r)).sort((a,b)=>a.r-b.r||a.c-b.c);
+  $("#endSub").textContent=(S.name||"調査")+(S.ts?`・調査日 ${S.curDate}`:"");
+  const box=(v,l,bad)=>`<div${bad?' class="bad"':""}><b>${v.toLocaleString()}</b><small>${esc(l)}</small></div>`;
+  $("#endSum").innerHTML=box(filled,S.ts?"この調査日に入力した値":"入力した値")+box(blanks.length,"空欄",filled&&blanks.length)
+    +box(ol.length,OL_LV[S.outlier]?"外れ値の候補":"外れ値（お知らせは切）",ol.length)+box(live,"個体（除外を除く）");
+  const MAXB=40;
+  let bh="";
+  if(!filled) bh=`<p class="help">${S.ts?`この調査日（${esc(S.curDate)}）には`:""}まだ値が入っていません。</p>`;
+  else if(blanks.length){
+    const per=new Map(); M.forEach(c=>per.set(c,0)); blanks.forEach(b=>per.set(b.c,per.get(b.c)+1));
+    bh=`<h3>空欄（押すとそのセルへ）　${blanks.length}件</h3><p class="help">${[...per].filter(([,k])=>k).map(([c,k])=>`${esc(S.items[c].name)} ${k}`).join("・")}</p>`
+      +blanks.slice(0,MAXB).map(b=>`<button type="button" data-r="${b.r}" data-c="${b.c}"><span><b>${esc(rowLabel(b.r))}</b>　${esc(S.items[b.c].name)}</span></button>`).join("")
+      +(blanks.length>MAXB?`<p class="help">ほか ${blanks.length-MAXB}件</p>`:"");
+  } else bh=`<p class="help">空欄はありません。</p>`;
+  $("#endBlank").innerHTML=bh;
+  $("#endOl").innerHTML=ol.length?`<h3>外れ値の候補（感度 ${OL_NAME[S.outlier]}）　${ol.length}件</h3>`+ol.map(o=>`<button type="button" data-r="${o.r}" data-c="${o.c}"><span><b>${esc(rowLabel(o.r))}</b>　${esc(o.it.name)} <b>${esc(fmt(o.v,o.it))}</b></span><small>${esc(olText(o))}</small></button>`).join(""):"";
+  const nx=S.ts&&S.plan.on?planDates(S.plan).find(d=>d>today()):null;
+  $("#endNextInfo").textContent=nx?`次の予定 ${nx}。この調査を続けます`:S.ts?"次の調査日も、この調査に記録します":"この調査を続けます（印は付けません）";
+  document.querySelector(`input[name=endNext][value=${S.done?"done":"cont"}]`).checked=true;
+  $("#endBkHow").textContent=asReady()?`自動保存のフォルダー「${AS.name}」に書き込み、読み直して確かめます。`
+    :AS.sup?"バックアップ（.json）をダウンロードとして保存します。作ったファイルを読み直して、中身が合うことを確かめてから保存します。PCでは、設定の「データの保存・読み込み・全消去」でフォルダーを選ぶと、自動で保存できます。"
+    :"バックアップ（.json）をダウンロードとして保存します。作ったファイルを読み直して、中身が合うことを確かめてから保存します。Googleドライブ・メールなどへ直接送るときは「共有で送る」を使います。";
+  $("#endShare").hidden=AS.sup||!bkCanShare();
+  $("#endRes").hidden=true; $("#endCancel").hidden=false;
+  $("#endGo").textContent="保存して終える"; $("#endGo").disabled=false; $("#endShare").disabled=false;
+  $("#endDlg").showModal();
+}
+async function endFinish(how){
+  if(endDone){ $("#endDlg").close(); return; }
+  const done=document.querySelector("input[name=endNext]:checked")?.value==="done";
+  S.done=done?(S.done||today()):""; save(); render();
+  $("#endGo").disabled=true; $("#endShare").disabled=true;
+  const r=await bkRun(svId,how);
+  $("#endGo").disabled=false; $("#endShare").disabled=false;
+  const box=$("#endRes"); box.hidden=false; box.className="endres "+(r.ok?"ok":"ng");
+  box.textContent=r.ok?bkDoneText(r)+(done?"。この調査に完了の印を付けました。":"。"):r.msg;
+  if(!r.ok) return;
+  if($("#endXlsx").checked) $("#btnXlsx").click();
+  addLog(`今日の調査を終える（バックアップ：${r.where==="folder"?"フォルダー":r.where==="share"?"共有":"ダウンロード"}）`); render();
+  endDone=true; $("#endGo").textContent="閉じる"; $("#endShare").hidden=true; $("#endCancel").hidden=true;
+}
+function endJump(e){
+  const b=e.target.closest("button[data-r]"); if(!b) return;
+  $("#endDlg").close();
+  cur={r:+b.dataset.r,c:+b.dataset.c}; sel=null; save(); render();
+  note(`${cellName(cur)} に移りました。値を入れるときは、そのまま話すか手入力します。`);
+}
+$("#btnEnd").onclick=endOpen;
+$("#endCancel").onclick=()=>$("#endDlg").close();
+$("#endGo").onclick=()=>endFinish("auto");
+$("#endShare").onclick=()=>endFinish("share");
+$("#endBlank").addEventListener("click",endJump);
+$("#endOl").addEventListener("click",endJump);
+/* 完了の印がある調査を開いたとき */
+function doneNote(){
+  note(`この調査は ${S.done} に完了の印を付けています（予定のお知らせは止めています）。`,true);
+  $("#note").insertAdjacentHTML("beforeend",' <button type="button" class="ghost" id="undoneBtn" style="padding:4px 10px">完了の印を外す</button>');
+  $("#undoneBtn").onclick=()=>{ S.done=""; save(); render(); note("完了の印を外しました。この調査を続けられます。"); };
+}
 /* ========= 利用コード（共通） ========= */
 const LIC_PUB="BOudjzCP+kKh6CRo+2Yw+Mykv1uIt2ldgk/MJ5qxg5h6CSIhuvlVN7AZpuX34RgGsuDDqberT1hGfTlg0hsD2x4=";
 /* 種類：1 3か月／2 1年／3 期間指定（期限はコードに記録した日付）／9 開発者（無期限）。期限の判定はどの種類も、コードに記録した日付で行う
@@ -4881,6 +5442,8 @@ async function boot(){
   svId=id; svApply(j); try{ sessionStorage.setItem(TAB_KEY,id); }catch(e){}
   render();
   swInit();
+  try{ bkTouchNow(); }catch(e){}
+  try{ await asInit(); }catch(e){}
   await licStart();
 }
 boot();
