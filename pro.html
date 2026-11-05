@@ -258,6 +258,36 @@ details.fold.flash>summary{animation:flash 1.2s ease-out}
 .arow.crow select{grid-column:auto;padding:8px 4px}
 @media (max-width:520px){ .arow.crow{grid-template-columns:auto minmax(0,1fr) 36px} .arow.crow input{grid-column:1 / -1} }
 .ahead{font-weight:700;margin:10px 0 0}
+/* ガイド（4.7） */
+#gdDlg{width:min(720px,100%)}
+#gdDlg .sheet{gap:12px}
+#gdStep{font-weight:700;font-size:.95rem}#gdStep:focus{outline:none}
+.gdbar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}.gdbar span{display:block;height:100%;background:var(--accent);transition:width .2s}
+#gdBody{display:grid;gap:12px;min-width:0}
+.gdq{margin:0;font-size:1.15rem;font-weight:700}
+.gdlist{display:grid;gap:6px}
+.gditem{display:grid;gap:6px;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px}
+.gditem.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.gdck{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.gdck input{width:22px;height:22px;flex:none;margin-top:2px}
+#gdDlg .actions{flex-wrap:wrap}#gdDlg .actions button{white-space:nowrap;padding:10px 14px}
+@media (max-width:420px){#gdDlg .actions button{flex:1 1 auto;padding:10px 8px}}
+.gditem small{display:block;color:var(--muted);font-size:.75rem;font-weight:400}
+.gditem input[type=text],.gdadd input,.gdadd select,#gdBody .field input{min-width:0;width:100%;border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);color:var(--ink)}
+.gdadd{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center}
+.gdadd select{width:auto}
+.gdown{border:1px solid var(--line);border-radius:12px}
+.gdown>summary{cursor:pointer;padding:10px 12px;font-weight:700}
+.gdownb{display:grid;gap:8px;padding:0 12px 12px}
+.gdsv{text-align:left}
+.gdsum{margin:0;padding-left:1.3em;display:grid;gap:4px;font-size:.9rem}
+.gdprev{overflow:auto;border:1px solid var(--line);border-radius:8px;max-width:100%}
+.gdprev table{border-collapse:collapse;font-size:.82rem;white-space:nowrap}
+.gdprev th,.gdprev td{border:1px solid var(--line);padding:4px 8px;min-width:3.5em}
+.hchip[aria-pressed=true]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);font-weight:700}
+.svtop{display:grid;gap:4px}
+.svtop .add{font-weight:700;border-style:solid;border-color:var(--accent);color:var(--ink)}
+@media (max-width:420px){.gdadd{grid-template-columns:minmax(0,1fr) auto}.gdadd input{grid-column:1 / -1}}
 /* ひな形の共有（3.9.2） */
 .qrbox{display:grid;justify-items:center;gap:6px}
 #tplCanvas{width:min(340px,100%);height:auto;image-rendering:pixelated;background:#fff;border-radius:8px}
@@ -556,6 +586,7 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
     <div class="svlist" id="svList"></div>
     <fieldset>
       <legend>新しい調査を作る</legend>
+      <div class="svtop"><button type="button" class="add" id="svGuide">ガイドで作る<small class="ver" style="display:block">調べること・作物を選ぶと、項目と個体リストの候補が出ます</small></button></div>
       <div class="field">
         <label for="svName"><b>調査名</b></label>
         <input type="text" id="svName" placeholder="例 幸水 果実肥大調査">
@@ -574,7 +605,18 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
     <p class="help">同じ調査を2つのタブ・ウインドウで同時に開くと、あとから変えた方の内容に揃えます。別々の調査なら、タブ・ウインドウごとに並行して使えます。</p>
     <button type="button" class="add" id="svMerge">データを統合する（分担した調査を、今の調査にまとめる）</button>
     <span class="ver" id="svStore"></span>
+    <label class="toggle" for="svStart"><span>アプリを開いたときの画面<small class="ver" style="display:block">この端末で覚えます。調査一覧からも、いつでもガイドを開けます</small></span><select id="svStart"><option value="last">前回の調査</option><option value="list">調査一覧</option><option value="guide">ガイド（新しい調査を作る）</option></select></label>
     <div class="actions"><button type="button" id="svClose">閉じる</button></div>
+  </div>
+</dialog>
+
+<dialog id="gdDlg" aria-labelledby="gdTitle">
+  <div class="sheet">
+    <div class="sheethead"><h2 id="gdTitle">ガイドで調査を作る</h2><span class="ver">今の調査はそのまま残ります</span></div>
+    <div class="gdbar" aria-hidden="true"><span id="gdBar"></span></div>
+    <span id="gdStep" tabindex="-1" aria-live="polite"></span>
+    <div id="gdBody"></div>
+    <div class="actions"><button type="button" id="gdClose">閉じる</button><button type="button" id="gdBack">戻る</button><button type="button" id="gdTpl" hidden>ひな形を保存</button><button type="button" class="primary" id="gdNext">次へ</button><button type="button" class="primary" id="gdMake" hidden>この内容で作る</button></div>
   </div>
 </dialog>
 
@@ -2036,7 +2078,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.6.1（2026-11-05）";
+const APP_VER="Pro 4.7（2026-11-05）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -3251,7 +3293,7 @@ function drawSurveys(){
 $("#btnSurveys").onclick=()=>{
   if(listening||standby) stopRec(); clearPend();
   save();
-  svMsg(""); $("#svName").value=""; document.querySelector('input[name=svMode][value=copy]').checked=true; drawSurveys(); $("#svDlg").showModal();
+  svMsg(""); $("#svName").value=""; document.querySelector('input[name=svMode][value=copy]').checked=true; $("#svStart").value=startGet(); drawSurveys(); $("#svDlg").showModal();
 };
 $("#svClose").onclick=()=>$("#svDlg").close();
 $("#svList").addEventListener("click",async e=>{
@@ -3560,6 +3602,358 @@ async function tplAfterGate(){
   if(!tplPending) return; const c=tplPending; tplPending=null;
   try{ await tplReceive(await tplDecode(c),"リンク"); }catch(e){ note("リンクのひな形を開けませんでした："+(e.message||e),true); }
 }
+/* ========= ガイド（4.7〜） =========
+   1画面に1つの質問（何を調べるか → 作物・分野 → 項目 → 個体の構成 → 調べ方（1回／経時） → 入力のしかた → 見本で確認）。
+   最後にひな形と同じ形式の設定を作り、ひな形の受け取りと同じ処理（tplSanitize → svCreateRaw → svOpen）で新しい調査にする。
+   項目の候補は GD_ITEMS（調べること×作物・分野ごとの項目の表）から出す。今の調査は変えない */
+const GD_PURPOSES=[
+  ["fq","果実・収穫物の品質","大きさ・重さ・糖度・色など（収穫時に1回）","品質調査"],
+  ["grow","生育調査","草丈・新梢長・葉数・果実の肥大などを調査日ごとに","生育調査"],
+  ["yield","収量調査","収穫日・収穫数・重さ・等級","収量調査"],
+  ["dis","病害虫・障害の発生","発病程度・発病数・害虫の種類と数","病害虫調査"],
+  ["phen","開花・生育ステージ","発芽・開花・収穫などの日付","生育ステージ調査"],
+  ["soil","土壌・サンプルの採取記録","地点・深さ・採取日・pH・EC など","採取記録"],
+  ["other","そのほか（自分で項目を作る）","番号とメモだけから始める","調査"]];
+const GD_CROPS=[
+  ["fruit","果樹",["ナシ","リンゴ","モモ","ブドウ","カキ","ウメ","クリ","ブルーベリー"]],
+  ["veg","果菜類",["トマト","イチゴ","キュウリ","ナス","ピーマン","メロン"]],
+  ["leaf","葉茎菜・根菜類",["ホウレンソウ","キャベツ","レタス","ネギ","タマネギ","ダイコン"]],
+  ["grain","水稲・麦・大豆",["水稲","小麦","大麦","大豆","そば"]],
+  ["flower","花き",["キク","バラ","カーネーション","リンドウ","トルコギキョウ"]],
+  ["none","作物を決めない","",[]]].map(([k,l,cs])=>[k,l,cs||[]]);
+/* 項目の表。p＝調べること、c＝作物・分野（"*"はすべて）、n 名前、t 種類、d 小数の桁、s 刻み、o 候補（作物ごとに変えるときは {作物:[…]}）、
+   a 入力できる値、id 事前入力の列、sp 個体リストの作り方の例、on 初めから選ぶ、cmp 前回比、u 単位の目安（表示だけ） */
+const GD_ITEMS=[
+  /* 事前入力の列（個体の構成） */
+  {p:"*",c:"*",n:"処理区名",t:"text",id:1,sp:"無処理、処理",on:1},
+  {p:"*",c:"fruit",n:"樹番号",t:"num",id:1,sp:"1-3",on:1},
+  {p:"fq",c:"fruit",n:"果実番号",t:"num",id:1,sp:"1-10",on:1},
+  {p:"grow dis",c:"fruit",n:"枝番号",t:"num",id:1,sp:"1-5"},
+  {p:"*",c:"veg leaf grain flower none",n:"反復",t:"num",id:1,sp:"1-3",on:1},
+  {p:"*",c:"veg leaf flower none",n:"株番号",t:"num",id:1,sp:"1-5",on:1},
+  {p:"*",c:"grain",n:"株番号",t:"num",id:1,sp:"1-10",on:1},
+  {p:"fq",c:"veg",n:"果実番号",t:"num",id:1,sp:"1-3"},
+  {p:"*",c:"*",n:"品種",t:"text",id:1,sp:""},
+  /* 果実・収穫物の品質 */
+  {p:"fq",c:"fruit veg",n:"横径",t:"num",d:1,on:1,u:"mm"},
+  {p:"fq",c:"fruit veg",n:"縦径",t:"num",d:1,on:1,u:"mm"},
+  {p:"fq",c:"fruit veg",n:"果実重",t:"num",d:0,on:1,u:"g"},
+  {p:"fq",c:"fruit",n:"表面色",t:"num",d:1,s:0.5,on:1,u:"カラーチャート値"},
+  {p:"fq",c:"fruit",n:"地色",t:"num",d:1,s:0.5,u:"カラーチャート値"},
+  {p:"fq",c:"fruit veg",n:"硬度",t:"num",d:1,on:1,u:"N・lbs など"},
+  {p:"fq",c:"fruit veg leaf",n:"糖度",t:"num",d:1,on:1,u:"Brix %"},
+  {p:"fq",c:"fruit veg",n:"酸度",t:"num",d:2,u:"%"},
+  {p:"fq",c:"fruit veg",n:"pH",t:"num",d:2},
+  {p:"fq",c:"fruit",n:"種子数",t:"count"},
+  {p:"fq",c:"fruit",n:"水浸状障害",t:"num",d:0,a:"0〜3",u:"指数"},
+  {p:"fq",c:"fruit",n:"果皮の障害",t:"multi",o:["さび","日焼け","虫害","傷","裂果"]},
+  {p:"fq",c:"veg",n:"果色",t:"choice",o:["緑","催色","桃","赤"]},
+  {p:"fq",c:"veg",n:"障害",t:"multi",o:["裂果","尻腐れ","空洞","すじ腐れ","奇形"]},
+  {p:"fq",c:"leaf",n:"株重",t:"num",d:0,on:1,u:"g"},
+  {p:"fq",c:"leaf",n:"葉数",t:"count",on:1},
+  {p:"fq",c:"leaf",n:"葉色",t:"num",d:1,u:"SPAD"},
+  {p:"fq",c:"leaf",n:"硝酸イオン",t:"num",d:0,u:"ppm"},
+  {p:"fq",c:"grain",n:"千粒重",t:"num",d:1,on:1,u:"g"},
+  {p:"fq",c:"grain",n:"水分",t:"num",d:1,on:1,u:"%"},
+  {p:"fq",c:"grain",n:"タンパク質含量",t:"num",d:1,on:1,u:"%"},
+  {p:"fq",c:"grain",n:"整粒歩合",t:"num",d:1,u:"%"},
+  {p:"fq",c:"flower",n:"切り花長",t:"num",d:0,on:1,u:"cm"},
+  {p:"fq",c:"flower",n:"切り花重",t:"num",d:0,on:1,u:"g"},
+  {p:"fq",c:"flower",n:"花径",t:"num",d:1,on:1,u:"cm"},
+  {p:"fq",c:"flower",n:"花数",t:"count",on:1},
+  {p:"fq",c:"flower",n:"日持ち日数",t:"num",d:0,u:"日"},
+  {p:"fq",c:"leaf flower",n:"等級",t:"choice",o:["秀","優","良","規格外"]},
+  {p:"fq",c:"veg",n:"規格",t:"choice",o:["秀","優","良","規格外"]},
+  {p:"fq",c:"none",n:"重さ",t:"num",d:1,on:1,u:"g"},
+  {p:"fq",c:"none",n:"長さ",t:"num",d:1,on:1,u:"mm"},
+  /* 生育調査 */
+  {p:"grow",c:"fruit",n:"新梢長",t:"num",d:0,on:1,u:"cm",cmp:{dec:"warn",tol:1}},
+  {p:"grow",c:"fruit",n:"果実横径",t:"num",d:1,on:1,u:"mm",cmp:{dec:"warn",tol:0.5}},
+  {p:"grow",c:"fruit",n:"果実縦径",t:"num",d:1,u:"mm",cmp:{dec:"warn",tol:0.5}},
+  {p:"grow",c:"fruit",n:"幹周",t:"num",d:1,u:"cm",cmp:{dec:"warn",tol:0.5}},
+  {p:"grow",c:"fruit veg leaf grain flower",n:"葉数",t:"count",on:1,cmp:{dec:"info"}},
+  {p:"grow",c:"veg leaf grain flower none",n:"草丈",t:"num",d:1,on:1,u:"cm",cmp:{dec:"warn",tol:1}},
+  {p:"grow",c:"veg flower",n:"茎径",t:"num",d:1,on:1,u:"mm"},
+  {p:"grow",c:"veg",n:"節数",t:"count"},
+  {p:"grow",c:"veg",n:"開花花房数",t:"count"},
+  {p:"grow",c:"veg",n:"着果数",t:"count",on:1},
+  {p:"grow",c:"leaf",n:"最大葉長",t:"num",d:1,u:"cm"},
+  {p:"grow",c:"leaf",n:"最大葉幅",t:"num",d:1,u:"cm"},
+  {p:"grow",c:"grain",n:"茎数",t:"count",on:1},
+  {p:"grow",c:"grain",n:"葉齢",t:"num",d:1},
+  {p:"grow",c:"flower",n:"花蕾数",t:"count"},
+  {p:"grow",c:"*",n:"葉色",t:"num",d:1,on:1,u:"SPAD"},
+  /* 収量調査 */
+  {p:"yield",c:"fruit veg leaf",n:"収穫日",t:"date",on:1},
+  {p:"yield",c:"fruit veg",n:"収穫果数",t:"count",on:1},
+  {p:"yield",c:"fruit veg",n:"収穫果重",t:"num",d:0,on:1,u:"g（合計）"},
+  {p:"yield",c:"veg",n:"可販果数",t:"count",on:1},
+  {p:"yield",c:"veg",n:"可販果重",t:"num",d:0,on:1,u:"g"},
+  {p:"yield",c:"veg",n:"規格外果数",t:"count"},
+  {p:"yield",c:"fruit",n:"階級",t:"choice",o:["3L","2L","L","M","S"]},
+  {p:"yield",c:"fruit",n:"等級",t:"choice",o:["秀","優","良","規格外"]},
+  {p:"yield",c:"leaf",n:"株重",t:"num",d:0,on:1,u:"g"},
+  {p:"yield",c:"leaf",n:"調製重",t:"num",d:0,on:1,u:"g"},
+  {p:"yield",c:"leaf",n:"可販株数",t:"count"},
+  {p:"yield",c:"grain",n:"穂数",t:"count",on:1},
+  {p:"yield",c:"grain",n:"全重",t:"num",d:1,on:1,u:"g"},
+  {p:"yield",c:"grain",n:"子実重",t:"num",d:1,on:1,u:"g（精玄米重など）"},
+  {p:"yield",c:"grain",n:"千粒重",t:"num",d:1,u:"g"},
+  {p:"yield",c:"grain",n:"倒伏程度",t:"num",d:0,a:"0〜5",u:"0（無）〜5（甚）"},
+  {p:"yield",c:"flower",n:"採花日",t:"date",on:1},
+  {p:"yield",c:"flower",n:"採花本数",t:"count",on:1},
+  {p:"yield",c:"flower",n:"等級",t:"choice",o:["秀","優","良","規格外"]},
+  {p:"yield",c:"none",n:"収穫日",t:"date",on:1},
+  {p:"yield",c:"none",n:"収量",t:"num",d:1,on:1,u:"kg"},
+  /* 病害虫・障害の発生 */
+  {p:"dis",c:"*",n:"病害の種類",t:"multi",on:1,o:{fruit:["黒星病","赤星病","うどんこ病","炭疽病","灰星病"],veg:["うどんこ病","灰色かび病","葉かび病","べと病","疫病"],leaf:["べと病","軟腐病","萎黄病","白さび病"],grain:["いもち病","紋枯病","赤かび病","紫斑病"],flower:["白さび病","灰色かび病","うどんこ病"],none:["病害A","病害B"]}},
+  {p:"dis",c:"*",n:"発病程度",t:"num",d:0,a:"0〜4",on:1,u:"0（無）〜4（甚）",cmp:{dec:"info"}},
+  {p:"dis",c:"*",n:"調査葉数",t:"count"},
+  {p:"dis",c:"*",n:"発病葉数",t:"count",on:1},
+  {p:"dis",c:"fruit veg",n:"発病果数",t:"count"},
+  {p:"dis",c:"*",n:"害虫の種類",t:"multi",o:{fruit:["アブラムシ","ハダニ","カメムシ","シンクイムシ","ハマキムシ"],veg:["アブラムシ","アザミウマ","コナジラミ","ハダニ","ヨトウムシ"],leaf:["アブラムシ","コナガ","ヨトウムシ","アザミウマ"],grain:["ウンカ","カメムシ","ニカメイチュウ"],flower:["アブラムシ","アザミウマ","ハダニ"],none:["害虫A","害虫B"]}},
+  {p:"dis",c:"*",n:"虫数",t:"count"},
+  {p:"dis",c:"*",n:"被害程度",t:"num",d:0,a:"0〜3",u:"0（無）〜3（甚）"},
+  /* 開花・生育ステージ */
+  {p:"phen",c:"fruit",n:"発芽日",t:"date",on:1},
+  {p:"phen",c:"fruit",n:"開花始め",t:"date",on:1},
+  {p:"phen",c:"fruit",n:"満開日",t:"date",on:1},
+  {p:"phen",c:"fruit",n:"落花日",t:"date"},
+  {p:"phen",c:"veg leaf flower",n:"播種日",t:"date"},
+  {p:"phen",c:"veg leaf flower",n:"定植日",t:"date",on:1},
+  {p:"phen",c:"veg flower",n:"開花日",t:"date",on:1},
+  {p:"phen",c:"flower",n:"発蕾日",t:"date",on:1},
+  {p:"phen",c:"grain",n:"播種日",t:"date",on:1},
+  {p:"phen",c:"grain",n:"移植日",t:"date"},
+  {p:"phen",c:"grain",n:"出穂期",t:"date",on:1},
+  {p:"phen",c:"grain",n:"成熟期",t:"date",on:1},
+  {p:"phen",c:"fruit veg leaf flower",n:"収穫日",t:"date",on:1},
+  {p:"phen",c:"none",n:"日付1",t:"date",on:1},
+  /* 土壌・サンプルの採取記録（作物によらない） */
+  {p:"soil",c:"*",n:"地点",t:"text",id:1,sp:"A、B、C",on:1},
+  {p:"soil",c:"*",n:"深さ",t:"text",id:1,sp:"表層、下層",on:1},
+  {p:"soil",c:"*",n:"採取日",t:"date",on:1},
+  {p:"soil",c:"*",n:"土性",t:"choice",o:["砂土","砂壌土","壌土","埴壌土","埴土"]},
+  {p:"soil",c:"*",n:"土壌水分",t:"num",d:1,on:1,u:"%"},
+  {p:"soil",c:"*",n:"地温",t:"num",d:1,u:"℃"},
+  {p:"soil",c:"*",n:"pH",t:"num",d:2,on:1},
+  {p:"soil",c:"*",n:"EC",t:"num",d:2,on:1,u:"mS/cm"},
+  {p:"soil",c:"*",n:"硝酸態窒素",t:"num",d:1,u:"mg/100g"},
+  {p:"soil",c:"*",n:"土壌硬度",t:"num",d:0,u:"mm（山中式）"},
+  {p:"soil",c:"*",n:"採取者",t:"text"},
+  /* そのほか */
+  {p:"other",c:"*",n:"番号",t:"num",id:1,sp:"1-10",on:1},
+  {p:"other",c:"*",n:"値1",t:"num",d:1,on:1},
+  /* 共通 */
+  {p:"*",c:"*",n:"備考",t:"text",on:1}];
+const GD_TYPE={num:"数値",text:"文字",choice:"選択肢",multi:"複数選択",date:"日付",count:"カウンター"};
+const GD_STEPS=[["purpose","何を調べますか"],["crop","作物・分野"],["items","調べる項目"],["ids","個体の構成"],["time","調べ方"],["input","入力のしかた"],["check","見本で確かめる"]];
+let GD=null;
+const gdHit=(f,v)=>f==="*"||f.split(" ").includes(v);
+/* 調べること×作物・分野に合う候補。事前入力の列は名前が重ならないように（作物ごとの行が優先） */
+function gdCands(p,c){
+  const out=[], seen=new Set();
+  GD_ITEMS.forEach((e,i)=>{
+    if(p==="soil"&&e.id&&e.p!=="soil") return;             /* 土壌は地点・深さで並べる */
+    if(p==="other"&&e.id&&e.p!=="other"&&e.n!=="処理区名") return;
+    if(!gdHit(e.p,p)||!gdHit(e.c,c)) return;
+    const role=e.id?"id":"meas", key=role+":"+e.n; if(seen.has(key)) return; seen.add(key);
+    const o=Array.isArray(e.o)?e.o:e.o?(e.o[c]||e.o.none||[]):[];
+    out.push({k:"g"+i,n:e.n,t:e.t,d:e.d||0,s:e.s||0,o:o.slice(),a:e.a||"",role,sp:e.sp||"",on:!!e.on,cmp:e.cmp||null,u:e.u||""});
+  });
+  /* 土壌・そのほかでは処理区を初めは選ばない。備考は最後に */
+  if(p==="soil"||p==="other") out.forEach(x=>{ if(x.n==="処理区名") x.on=false; });
+  if(p==="phen"){ const vi=out.findIndex(x=>x.n==="品種"&&x.role==="id"); if(vi>=0){ const v=out.splice(vi,1)[0]; v.on=true; v.sp="にっこり、豊水"; out.unshift(v); } }
+  const bi=out.findIndex(x=>x.n==="備考"); if(bi>=0) out.push(out.splice(bi,1)[0]);
+  return out;
+}
+function gdNew(){
+  return {step:0,p:"",c:"",crop:"",cands:[],ck:"",ts:false,pOn:true,start:today(),every:14,count:8,dir:"row",rb:"full",name:"",nameTouched:false};
+}
+function gdPrep(){
+  const ck=GD.p+"|"+GD.c; if(GD.ck===ck) return;
+  GD.ck=ck; GD.cands=gdCands(GD.p,GD.c);
+  GD.ts=GD.p==="grow"||GD.p==="dis"; GD.every=GD.p==="dis"?7:14; GD.count=GD.p==="dis"?6:8;
+  GD.dir="row";
+}
+const gdPurpose=()=>GD_PURPOSES.find(x=>x[0]===GD.p);
+const gdCropGroup=()=>GD_CROPS.find(x=>x[0]===GD.c);
+function gdDefName(){ const pu=gdPurpose(); const cr=GD.crop||(GD.c&&GD.c!=="none"?gdCropGroup()?.[1]:""); return `${cr?cr+" ":""}${GD.p==="fq"&&GD.c==="fruit"?"果実品質調査":pu?pu[3]:"調査"}（${today()}）`; }
+const gdSel=role=>GD.cands.filter(x=>x.on&&x.role===role);
+/* 個体リスト：選んだ事前入力の列の作り方（例 1-3、無処理、処理）の組み合わせ */
+function gdRows(){
+  const ids=gdSel("id"); if(!ids.length) return [];
+  let rows=[[]];
+  for(const it of ids){ const vals=expandSpec(it.sp); rows=rows.flatMap(r=>vals.map(v=>r.concat(v))); if(rows.length>5000) return null; }
+  return rows.every(r=>r.every(v=>v===""))?[]:rows;
+}
+/* ひな形と同じ形式の設定を作る */
+function gdBuild(){
+  const its=[...gdSel("id"),...gdSel("meas")];
+  const items=its.map(x=>({id:uid(),name:x.n,type:x.t,dec:x.d,step:x.s,role:x.role,options:x.o,allow:x.a,cmp:x.cmp||{}}));
+  const name=(GD.name||"").trim()||gdDefName();
+  const S0={name,items,ts:!!GD.ts,dir:GD.dir,readback:GD.rb!=="off",rbMode:GD.rb==="off"?"full":GD.rb};
+  if(GD.ts&&GD.pOn) S0.plan={on:true,mode:"every",start:isDate(GD.start)?GD.start:today(),every:GD.every,count:GD.count,until:"",list:[],time:"",alarms:["eve","morn"]};
+  const t={app:TPL_APP,v:1,ver:APP_VER,name,S:S0};
+  const rows=gdRows()||[], ids=items.filter(it=>it.role==="id");
+  if(rows.length) t.list=rows.map(r=>{ const o={}; ids.forEach((it,i)=>{ const v=r[i]; if(v==="") return; const nv=it.type==="num"?parseNumber(v):NaN; o[it.id]=it.type==="num"&&Number.isFinite(nv)?nv:v; }); return o; });
+  return t;
+}
+function gdItemRow(x){
+  const ty=GD_TYPE[x.t]||x.t, extra=[x.t==="num"?(x.d?`小数${x.d}桁`:"整数"):"",x.a?`入力できる値 ${x.a}`:"",x.u].filter(Boolean).join("・");
+  return `<div class="gditem${x.on?" on":""}"><label class="gdck"><input type="checkbox" data-gk="${x.k}"${x.on?" checked":""}><span><b>${esc(x.n)}</b><small>${esc(ty)}${extra?"・"+esc(extra):""}</small></span></label>${x.on&&(x.t==="choice"||x.t==="multi")?`<input type="text" class="gdopt" data-go="${x.k}" value="${esc(x.o.join("、"))}" aria-label="${esc(x.n)}の候補（、で区切る）" placeholder="候補を、で区切って">`:""}${x.on&&x.role==="id"?`<input type="text" class="gdsp" data-gs="${x.k}" value="${esc(x.sp)}" aria-label="${esc(x.n)}の値" placeholder="${x.t==="num"?"例 1-5":"例 無処理、遮光"}">`:""}</div>`;
+}
+function gdAddRow(role){
+  return `<div class="gdadd"><input type="text" id="gdAddN" placeholder="${role==="id"?"例 ブロック":"例 果柄長"}" aria-label="足す項目の名前"><select id="gdAddT" aria-label="種類">${(role==="id"?["text","num"]:["num","count","text","choice","multi","date"]).map(t=>`<option value="${t}">${GD_TYPE[t]}</option>`).join("")}</select><button type="button" class="add" data-gact="add" data-role="${role}">＋ 足す</button></div>`;
+}
+function gdRender(){
+  const st=GD_STEPS[GD.step][0], b=$("#gdBody");
+  $("#gdStep").textContent=`${GD.step+1} / ${GD_STEPS.length}　${GD_STEPS[GD.step][1]}`;
+  $("#gdBar").style.width=`${(GD.step+1)/GD_STEPS.length*100}%`;
+  let h="";
+  if(st==="purpose"){
+    h=`<p class="gdq">何を調べますか</p><div class="seg gdseg">${GD_PURPOSES.map(([k,l,s])=>`<label><input type="radio" name="gdP" value="${k}"${GD.p===k?" checked":""}><span>${esc(l)}<small>${esc(s)}</small></span></label>`).join("")}</div>`;
+    const list=[...svGet().list].sort((a,b)=>String(b.updated).localeCompare(String(a.updated))).slice(0,6);
+    h+=`<details class="gdown"${GD.ownOpen?" open":""}><summary>手元の調査・ひな形から作る</summary><div class="gdownb"><p class="help">これまでの調査の設定と個体リストを使って、測定データが空の調査を作ります。受け取ったひな形のファイルからも作れます。</p>${list.map(e=>{ const nm=(e.id===svId?S.name:e.name)||"調査"; return `<button type="button" class="add gdsv" data-gact="copy" data-id="${esc(e.id)}"><b>${esc(nm)}</b><small class="ver" style="display:block">${esc(svInfo(e))}${e.updated?`・更新 ${esc(e.updated)}`:""}</small></button>`; }).join("")}<label class="add filebtn" for="gdFile">ひな形のファイルから作る（.json）<input type="file" id="gdFile" accept=".json" hidden></label></div></details>`;
+  } else if(st==="crop"){
+    h=`<p class="gdq">作物・分野は？</p><div class="seg gdseg">${GD_CROPS.map(([k,l,cs])=>`<label><input type="radio" name="gdC" value="${k}"${GD.c===k?" checked":""}><span>${esc(l)}<small>${esc(cs.slice(0,4).join("・"))}${cs.length>4?"など":""}</small></span></label>`).join("")}</div>`;
+    const g=gdCropGroup();
+    if(g&&g[2].length) h+=`<div class="field"><b>作物名（調査名に使います。なくても進めます）</b><div class="hchips">${g[2].map(cn=>`<button type="button" class="hchip" data-gact="crop" data-v="${esc(cn)}" aria-pressed="${GD.crop===cn}">${esc(cn)}</button>`).join("")}</div><input type="text" id="gdCrop" value="${esc(GD.crop)}" placeholder="ほかの作物は入力（例 にっこり）"></div>`;
+  } else if(st==="items"){
+    const ms=GD.cands.filter(x=>x.role==="meas");
+    h=`<p class="gdq">調べる項目を選んでください</p><p class="help">声で入力する列になります。順番・名前・桁数は、作った後に「設定」の「調査項目」で変えられます。選択肢・複数選択の候補は、ここで直せます（「、」で区切る）。</p><div class="gdlist">${ms.map(gdItemRow).join("")}</div>${gdAddRow("meas")}<span class="ver">${ms.filter(x=>x.on).length}項目を選んでいます</span>`;
+  } else if(st==="ids"){
+    const is=GD.cands.filter(x=>x.role==="id"), rows=gdRows();
+    h=`<p class="gdq">個体はどう並びますか</p><p class="help">樹番号・処理区など、先に分かっている列（事前入力の列）を選び、値を入れます。数は <code>1-5</code>、名前は <code>無処理、遮光</code> のように書くと、組み合わせで個体リストを作ります。左の列から順に組み合わせます。</p><div class="gdlist">${is.map(gdItemRow).join("")}</div>${gdAddRow("id")}<span class="ver gdcount">${rows===null?"5,000個体を超えています。値を減らしてください":rows.length?`${rows.length}個体を作ります`:"個体リストを作りません（あとで設定の「個体リスト」で作れます）"}</span>`;
+  } else if(st==="time"){
+    h=`<p class="gdq">調べ方は？</p><div class="seg gdseg"><label><input type="radio" name="gdT" value="0"${GD.ts?"":" checked"}><span>1回の調査<small>調査日を分けずに記録</small></span></label><label><input type="radio" name="gdT" value="1"${GD.ts?" checked":""}><span>経時調査<small>同じ個体を調査日ごとに記録し、前回の値と比べる</small></span></label></div>`;
+    if(GD.ts) h+=`<label class="toggle" for="gdPOn"><span>調査日の予定を使う<small class="ver" style="display:block">開いたときに今日が調査日か、予定を過ぎたかを知らせます。カレンダーにも登録できます</small></span><input type="checkbox" id="gdPOn"${GD.pOn?" checked":""}></label>${GD.pOn?`<div class="pgrid"><label class="field"><b>初回</b><input type="date" id="gdStart" value="${esc(GD.start)}"></label><label class="field"><b>間隔（日ごと）</b><input type="number" id="gdEvery" min="1" max="365" step="1" inputmode="numeric" value="${GD.every}"></label><label class="field"><b>回数</b><input type="number" id="gdCount" min="1" max="200" step="1" inputmode="numeric" value="${GD.count}"></label></div><span class="ver">${esc(gdPlanText())}</span>`:""}`;
+  } else if(st==="input"){
+    h=`<p class="gdq">入力のしかたは？</p><div class="field"><b>進む順番</b><div class="seg gdseg"><label><input type="radio" name="gdD" value="row"${GD.dir==="row"?" checked":""}><span>行単位<small>1個体の全項目 → 次の個体</small></span></label><label><input type="radio" name="gdD" value="col"${GD.dir==="col"?" checked":""}><span>列単位<small>1項目を全個体 → 次の項目</small></span></label></div></div><div class="field"><b>声で入れた値の読み上げ</b><div class="seg gdseg">${[["full","全部","値と次の個体を読む"],["short","短く","値と、変わった番号だけ"],["beep","区切りだけ","ふだんは「ピッ」"],["off","読み上げない","画面で確かめる"]].map(([v,l,s])=>`<label><input type="radio" name="gdR" value="${v}"${GD.rb===v?" checked":""}><span>${l}<small>${s}</small></span></label>`).join("")}</div></div><p class="help">どちらも、作った後に「設定」で変えられます。</p>`;
+  } else {
+    const t=gdBuild(), its=t.S.items, ids=its.filter(it=>it.role==="id"), ms=its.filter(it=>it.role!=="id"), rows=t.list||[];
+    const head=its.map(it=>`<th class="${it.role==="id"?"idh":""}">${esc(it.name)}<span class="grp">${esc(GD_TYPE[it.type])}</span></th>`).join("");
+    const body=(rows.length?rows.slice(0,4):[{}]).map(r=>`<tr>${its.map(it=>`<td class="${it.role==="id"?"idc":""}">${it.role==="id"&&hasVal(r[it.id])?esc(String(r[it.id])):""}</td>`).join("")}</tr>`).join("");
+    if(!GD.nameTouched) GD.name=gdDefName();
+    h=`<p class="gdq">この内容で作ります</p><div class="field"><label for="gdName"><b>調査名</b></label><input type="text" id="gdName" value="${esc(GD.name)}"></div>
+      <ul class="gdsum"><li>音声で入力する項目 ${ms.length}：${esc(ms.map(it=>it.name).join("、"))||"なし"}</li><li>事前入力の列 ${ids.length}${ids.length?"："+esc(ids.map(it=>it.name).join("、")):""}</li><li>個体リスト ${rows.length?rows.length+"個体":"なし（あとで作れます）"}</li><li>${t.S.ts?"経時調査"+(t.S.plan?`（${esc(gdPlanText())}）`:"（予定なし）"):"1回の調査"}・${t.S.dir==="row"?"行単位":"列単位"}・読み上げ ${{full:"全部",short:"短く",beep:"区切りだけ",off:"なし"}[GD.rb]}</li></ul>
+      <p class="help">見本（初めの${Math.min(4,rows.length)||1}行）</p><div class="gdprev"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>${rows.length>4?`<span class="ver">…ほか ${rows.length-4}個体</span>`:""}
+      ${ms.length?"":`<p class="note">音声で入力する項目がありません。「戻る」で項目を選んでください。</p>`}
+      <p class="help">「この内容で作る」で新しい調査を作って開きます（今の調査はそのまま残ります）。同じ設定をほかの人に配るときは「ひな形を保存」か、作った後に調査一覧の「共有」を使います。</p>`;
+  }
+  b.innerHTML=h;
+  $("#gdBack").disabled=GD.step===0;
+  const last=GD.step===GD_STEPS.length-1;
+  $("#gdNext").hidden=last; $("#gdMake").hidden=!last; $("#gdTpl").hidden=!last;
+  gdNextUpd();
+}
+function gdPlanText(){
+  if(!GD.ts||!GD.pOn) return "予定なし";
+  const end=isDate(GD.start)?addDays(GD.start,GD.every*(GD.count-1)):"";
+  return `${GD.start} から ${GD.every}日ごと ${GD.count}回${end?`（最後 ${end}）`:""}`;
+}
+function gdNextUpd(){
+  const st=GD_STEPS[GD.step][0];
+  let ok=true;
+  if(st==="purpose") ok=!!GD.p; else if(st==="crop") ok=!!GD.c;
+  else if(st==="items") ok=gdSel("meas").length>0; else if(st==="ids") ok=gdRows()!==null;
+  else if(st==="check") ok=gdSel("meas").length>0;
+  $("#gdNext").disabled=!ok; $("#gdMake").disabled=!ok;
+}
+function gdOpen(){
+  if(listening||standby) stopRec(); clearPend(); save();
+  if($("#svDlg").open) $("#svDlg").close();
+  GD=gdNew(); gdRender(); $("#gdDlg").showModal(); $("#gdDlg").scrollTop=0;
+}
+function gdGo(k){
+  GD.step=Math.max(0,Math.min(GD_STEPS.length-1,GD.step+k));
+  if(GD.step>=2) gdPrep();
+  gdRender(); $("#gdDlg").scrollTop=0; $("#gdStep").focus({preventScroll:true});
+}
+$("#gdBack").onclick=()=>gdGo(-1);
+$("#gdNext").onclick=()=>gdGo(1);
+$("#gdClose").onclick=()=>$("#gdDlg").close();
+$("#gdTpl").onclick=()=>{ const t=gdBuild(); download(new Blob([JSON.stringify(t)],{type:"application/json"}),`${String(t.name).replace(/[\\/:*?"<>|]/g,"_")}_ひな形.json`); note("ひな形を保存しました。「調査一覧」の「ファイルから作る」で読み込めます"); };
+$("#gdMake").onclick=async()=>{
+  const t=gdBuild(); let r; try{ r=tplSanitize(t); }catch(e){ note(e.message,true); return; }
+  const id=await svCreateRaw(r.nS,r.nD);
+  if(!id){ note("この端末に保存できませんでした（容量を超えた可能性があります）。使わない調査を削除してから作り直してください。",true); return; }
+  $("#gdDlg").close();
+  await svOpen(id,`ガイドで「${r.nS.name}」を作りました（項目 ${r.nS.items.length}・個体 ${r.nD.length}）。マイクを押して始められます`);
+};
+/* 手元の調査から：設定と個体リスト（事前入力の列）を写し、測定データ・調査日・除外は空にする */
+async function svCopyFrom(id){
+  let j=null; if(id===svId){ save(); j={S,D}; } else { try{ j=await stGet(id); }catch(e){} }
+  if(!j||!j.S){ note("この調査を読み込めませんでした",true); return; }
+  const nS=JSON.parse(JSON.stringify(j.S)); nS.sessions={}; nS.curDate=today();
+  const ids=(nS.items||[]).filter(it=>it.role==="id");
+  const nD=(j.D||[]).map(row=>{ const o={}; ids.forEach(it=>{ if(hasVal(row?.[it.id])) o[it.id]=row[it.id]; }); return o; });
+  while(nD.length&&!Object.keys(nD[nD.length-1]).length) nD.pop();
+  nS.name=`${String(j.S.name||"調査").replace(/（\d{4}-\d{2}-\d{2}）$/,"")}（${today()}）`;
+  const nid=await svCreateRaw(nS,nD);
+  if(!nid){ note("この端末に保存できませんでした（容量を超えた可能性があります）。",true); return; }
+  $("#gdDlg").close();
+  await svOpen(nid,`「${j.S.name||"調査"}」の設定と個体リストで「${nS.name}」を作りました（測定データは空です）`);
+}
+$("#gdBody").addEventListener("change",e=>{
+  const t=e.target;
+  if(t.name==="gdP"){ GD.p=t.value; if(t.value==="soil"&&!GD.c) GD.c="none"; gdNextUpd(); return; }
+  if(t.name==="gdC"){ GD.c=t.value; if(!gdCropGroup()?.[2].includes(GD.crop)) GD.crop=""; gdRender(); return; }
+  if(t.name==="gdT"){ GD.ts=t.value==="1"; gdRender(); return; }
+  if(t.name==="gdD"){ GD.dir=t.value; return; }
+  if(t.name==="gdR"){ GD.rb=t.value; return; }
+  if(t.id==="gdPOn"){ GD.pOn=t.checked; gdRender(); return; }
+  if(t.id==="gdFile"){ const f=t.files[0]; t.value=""; if(f){ $("#gdDlg").close(); importFile(f,true); } return; }
+  if(t.dataset.gk){ const x=GD.cands.find(c=>c.k===t.dataset.gk); if(x){ x.on=t.checked; const keep=GD.step; gdRender(); GD.step=keep; const el=$(`#gdBody input[data-gk="${x.k}"]`); if(el) el.focus(); } return; }
+});
+$("#gdBody").addEventListener("input",e=>{
+  const t=e.target;
+  if(t.id==="gdCrop"){ GD.crop=t.value.trim(); $("#gdBody").querySelectorAll('[data-gact="crop"]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===GD.crop)); return; }
+  if(t.id==="gdName"){ GD.name=t.value; GD.nameTouched=true; return; }
+  if(t.id==="gdStart"||t.id==="gdEvery"||t.id==="gdCount"){
+    if(t.id==="gdStart") GD.start=t.value; else { const v=Math.floor(+t.value); if(v>=1) GD[t.id==="gdEvery"?"every":"count"]=Math.min(t.id==="gdEvery"?365:200,v); }
+    const s=t.closest(".fbody,#gdBody").querySelector(".pgrid+.ver"); if(s) s.textContent=gdPlanText(); return; }
+  if(t.dataset.go){ const x=GD.cands.find(c=>c.k===t.dataset.go); if(x) x.o=[...new Set(t.value.normalize("NFKC").split(/[、,，]+/).map(v=>v.trim()).filter(Boolean))].slice(0,200); return; }
+  if(t.dataset.gs){ const x=GD.cands.find(c=>c.k===t.dataset.gs); if(x){ x.sp=t.value; const rows=gdRows(), c=$("#gdBody .gdcount"); if(c) c.textContent=rows===null?"5,000個体を超えています。値を減らしてください":rows.length?`${rows.length}個体を作ります`:"個体リストを作りません（あとで設定の「個体リスト」で作れます）"; gdNextUpd(); } return; }
+});
+$("#gdBody").addEventListener("click",e=>{
+  const b=e.target.closest("[data-gact]"); if(!b) return;
+  const a=b.dataset.gact;
+  if(a==="crop"){ GD.crop=GD.crop===b.dataset.v?"":b.dataset.v; const i=$("#gdCrop"); if(i) i.value=GD.crop; $("#gdBody").querySelectorAll('[data-gact="crop"]').forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===GD.crop)); }
+  else if(a==="copy") svCopyFrom(b.dataset.id);
+  else if(a==="add"){
+    const nm=$("#gdAddN").value.trim().slice(0,60), ty=$("#gdAddT").value, role=b.dataset.role;
+    if(!nm){ $("#gdAddN").focus(); return; }
+    if(GD.cands.some(x=>x.role===role&&x.n===nm)){ const x=GD.cands.find(x=>x.role===role&&x.n===nm); x.on=true; }
+    else { const x={k:"u"+uid(),n:nm,t:ty,d:ty==="num"&&role!=="id"?1:0,s:0,o:ty==="choice"||ty==="multi"?["A","B"]:[],a:"",role,sp:"",on:true,cmp:null,u:""};
+      const bi=GD.cands.findIndex(c=>c.n==="備考"&&c.role==="meas"); if(role==="meas"&&bi>=0) GD.cands.splice(bi,0,x); else GD.cands.push(x); }
+    gdRender(); const el=$("#gdAddN"); if(el) el.focus();
+  }
+});
+$("#gdBody").addEventListener("toggle",e=>{ if(e.target.classList?.contains("gdown")) GD.ownOpen=e.target.open; },true);
+/* ========= 起動時に開く画面（4.7〜） =========
+   last＝前回の調査（これまでどおり）／list＝調査一覧／guide＝ガイド。この端末のブラウザに覚える（調査ごとではない）。
+   利用コードの確認の後に1回だけ開く。ひな形のリンクで開いたときは、その受け取りを優先する */
+const START_KEY="koe-yacho-v2-start";
+const startGet=()=>{ try{ const v=localStorage.getItem(START_KEY); return ["last","list","guide"].includes(v)?v:"last"; }catch(e){ return "last"; } };
+let startDone=false;
+function startScreen(){
+  if(startDone) return; startDone=true;
+  if(tplPending||document.querySelector("dialog[open]")||!$("#gate").hidden) return;
+  const v=startGet();
+  if(v==="list") $("#btnSurveys").click();
+  else if(v==="guide") gdOpen();
+  else { /* 初めて使う人（調査が1つで、まだ何も入っていない）には、ガイドがあることだけを知らせる（開かない） */
+    let set=null; try{ set=localStorage.getItem(START_KEY); }catch(e){}
+    if(set===null&&!ST.migNew&&svGet().list.length===1&&!D.some(r=>r&&Object.keys(r).length)){
+      note("調べること・作物を選んで項目を作る「ガイド」があります。",false);
+      $("#note").insertAdjacentHTML("beforeend",' <button type="button" class="ghost" id="gdHint" style="padding:4px 10px">ガイドで作る</button>');
+      $("#gdHint").onclick=()=>gdOpen();
+    }
+  }
+}
+$("#svStart").addEventListener("change",e=>{ try{ localStorage.setItem(START_KEY,e.target.value); }catch(_){} svMsg(`次にアプリを開いたときは「${e.target.selectedOptions[0].textContent}」を開きます。`); });
+$("#svGuide").onclick=()=>gdOpen();
 /* ========= 集計・経時グラフ（4.0〜） =========
    別の画面で、事前入力の列（処理区など）ごとに数値の項目の平均と n を出す。SD・SE は選んだときだけ。
    経時調査では、項目を1つ選んで、まとまりごとの平均の推移を折れ線で描く（誤差棒は なし／SE／SD）。画像（PNG）で保存できる。
@@ -4055,9 +4449,13 @@ $("#ioMerge").onclick=mgOpen;
 const HELP_GROUPS=[["start","はじめに"],["input","入力する"],["table","表と順番"],["ts","経時調査"],["save","保存と出力"],["trouble","困ったとき"]];
 const HELP=[
 {g:"start",id:"flow",t:"使い始めの流れ",k:"始め方 最初 手順 基本 使い方 準備 はじめかた てじゅん",go:"items",b:
-"<ol><li>画面上の「調査一覧」で調査を作ります（今の調査の設定を使う／果実品質調査のひな形／空白から）。</li><li>「設定」の「調査項目」で、表の列を決めます。樹番号・処理区など先に分かっている列は「事前入力」、調査で測る列は「音声で入力」にします。</li><li>事前入力の列があれば、「個体リスト」で個体を並べます。</li><li>マイクを押して値を話します。入るたびに次のセルへ進みます。</li><li>終わったら「Excelで保存」か、設定の「バックアップを保存」で保存します。「集計・グラフ」で、処理区ごとの平均や推移をその場で確かめられます。</li></ol>"},
+"<ol><li>画面上の「調査一覧」で調査を作ります。初めてなら「ガイドで作る」で、調べること・作物を選ぶと項目と個体リストの候補が出ます（ほかに、今の調査の設定を使う／果実品質調査のひな形／空白から）。</li><li>「設定」の「調査項目」で、表の列を決めます。樹番号・処理区など先に分かっている列は「事前入力」、調査で測る列は「音声で入力」にします。</li><li>事前入力の列があれば、「個体リスト」で個体を並べます。</li><li>マイクを押して値を話します。入るたびに次のセルへ進みます。</li><li>終わったら「Excelで保存」か、設定の「バックアップを保存」で保存します。「集計・グラフ」で、処理区ごとの平均や推移をその場で確かめられます。</li></ol>"},
 {g:"start",id:"surveys",t:"調査一覧（複数の調査）",k:"新しい調査 作る 切り替え 空白から ひな形 削除 ファイルから作る 別の調査 複数 ちょうさいちらん くうはく ひながた さくじょ",b:
-"<p>調査ごとに、設定・個体リスト・全調査日のデータを分けてこの端末に保存します。「調査一覧」で調査を押すと切り替わり、入力中の調査は自動で保存されます。</p><ul><li><b>今の調査の設定を使う</b>：項目・個体リスト・読み上げなどを引き継ぎ、測定データは空で始めます。</li><li><b>果実品質調査のひな形</b>：標準の項目（樹番号・横径・果実重など）から始めます。</li><li><b>空白から</b>：標準の項目を使わず、項目を自分で作ります。作るとすぐ設定が開き、最初の項目名を打ち直せます。</li><li><b>ファイルから作る</b>：ひな形・バックアップ（.json）、このアプリのExcel・CSVから新しい調査を作ります。今の調査はそのまま残ります。</li></ul><p>一覧の「共有」でその調査の設定をひな形として配れ、「保存」でその調査のバックアップを、「削除」で調査ごと消せます（削除は元に戻せません）。別々の調査なら、タブ・ウインドウごとに並行して使えます。</p>"},
+"<p>調査ごとに、設定・個体リスト・全調査日のデータを分けてこの端末に保存します。「調査一覧」で調査を押すと切り替わり、入力中の調査は自動で保存されます。</p><ul><li><b>ガイドで作る</b>：調べること・作物を選んで、項目と個体リストを作ります（「ガイドで調査を作る」を参照）。</li><li><b>今の調査の設定を使う</b>：項目・個体リスト・読み上げなどを引き継ぎ、測定データは空で始めます。</li><li><b>果実品質調査のひな形</b>：標準の項目（樹番号・横径・果実重など）から始めます。</li><li><b>空白から</b>：標準の項目を使わず、項目を自分で作ります。作るとすぐ設定が開き、最初の項目名を打ち直せます。</li><li><b>ファイルから作る</b>：ひな形・バックアップ（.json）、このアプリのExcel・CSVから新しい調査を作ります。今の調査はそのまま残ります。</li></ul><p>一覧の「共有」でその調査の設定をひな形として配れ、「保存」でその調査のバックアップを、「削除」で調査ごと消せます（削除は元に戻せません）。別々の調査なら、タブ・ウインドウごとに並行して使えます。</p>"},
+{g:"start",id:"guide",t:"ガイドで調査を作る（作物・調べることから）",act:"guide",k:"ガイド 案内 はじめて 初めて 作物 野菜 果樹 水稲 麦 大豆 花き 土壌 生育調査 収量 病害虫 開花 品質 項目の候補 ウィザード がいど さくもつ やさい かじゅ すいとう どじょう しゅうりょう びょうがいちゅう",b:
+"<p>「調査一覧」の「ガイドで作る」で、質問に答えていくと新しい調査ができます。今の調査はそのまま残ります。</p><ol><li><b>何を調べるか</b>：果実・収穫物の品質、生育調査、収量調査、病害虫・障害の発生、開花・生育ステージ、土壌・サンプルの採取記録、そのほか。</li><li><b>作物・分野</b>：果樹・果菜類・葉茎菜・根菜類・水稲・麦・大豆・花き、または作物を決めない。作物名は調査名に使います。</li><li><b>調べる項目</b>：調べることと作物に合う項目の候補から選びます。日付・複数選択・カウンターの列も候補に入っています。選択肢の候補はここで直せ、候補にない項目も足せます。</li><li><b>個体の構成</b>：処理区・反復・樹番号・株番号などの事前入力の列を選び、<code>1-5</code> や <code>無処理、遮光</code> のように値を入れると、組み合わせで個体リストを作ります（5,000個体まで）。</li><li><b>調べ方</b>：1回の調査か経時調査か。経時調査では、初回の日・間隔・回数で調査日の予定も作れます。</li><li><b>入力のしかた</b>：進む順番（行単位・列単位）と読み上げ。</li><li><b>見本で確かめる</b>：調査名を決め、表の見本を見てから「この内容で作る」を押します。「ひな形を保存」で、同じ設定をファイルにしてほかの人に配れます。</li></ol><p>最初の画面の「手元の調査・ひな形から作る」では、これまでの調査の設定と個体リストを使って、測定データが空の調査を作れます。受け取ったひな形のファイルからも作れます。</p><p>作った後の項目の順番・名前・桁数・前回比などは、「設定」の「調査項目」で変えられます。</p>"},
+{g:"start",id:"startup",t:"アプリを開いたときの画面",k:"起動 開いたとき 最初の画面 前回の調査 調査一覧 ガイド きどう さいしょ",act:"list",b:
+"<p>「調査一覧」のいちばん下の「アプリを開いたときの画面」で選びます。</p><ul><li><b>前回の調査</b>（標準）：前に開いていた調査をそのまま開きます。</li><li><b>調査一覧</b>：調査を選んでから始めます。いくつもの調査を並行しているときに。</li><li><b>ガイド</b>：毎回、新しい調査を作るところから始めます。</li></ul><p>この端末のブラウザで覚えます（調査ごとではありません）。ひな形のリンクやQRコードで開いたときは、ひな形の受け取りを先に行います。</p>"},
 {g:"start",id:"template",t:"ひな形を配る・受け取る（ファイル・リンク・QR）",k:"ひな形 テンプレート 共有 配る 受け取る QR QRコード リンク 送る 同じ設定 ほかの人 研究会 ひながた きょうゆう くばる",b:
 "<p>「調査一覧」で調査の「共有」を押すと、その調査の設定（項目・言い換え・入力の順番・読み上げなど）をひな形として配れます。「個体リストも含める」を外すと、項目と設定だけを配ります。<b>測定データ・調査日・除外の記録は含みません。</b></p><ul><li><b>QRコード</b>：受け取る人がカメラで読み取ると、このアプリが開きます。</li><li><b>リンクをコピー</b>：メールやチャットに貼って送ります。</li><li><b>ファイルで保存</b>：受け取る人は「調査一覧」の「ファイルから作る」で読み込みます。</li></ul><p>受け取ると、中身（項目・個体・言い換えの数）を確かめてから新しい調査として作ります。受け取る人の今の調査は変わりません。ひな形の中身はリンクの「#」より後ろに入っていて、サーバーには送られません。</p><p>個体リストが大きいとQRコードに入りきらないことがあります。そのときは個体リストを外すか、ファイルで配ります。iPhoneでホーム画面から使っている場合、QRコードやリンクはSafariで開くため、ホーム画面のアプリとは別の場所に作られます。その場合はファイルで受け取ってください。QRコードを作るときだけ、部品をインターネットから読み込みます。</p>"},
 {g:"start",id:"offline",t:"オフラインで使う・新しい版への切り替え",k:"オフライン 電波 圏外 通信 ネット インターネット 更新 新しい版 アップデート 切り替え おふらいん でんぱ けんがい こうしん",b:
@@ -4142,7 +4540,7 @@ const HELP=[
 "<p>ブラウザのメニューから「ホーム画面に追加」すると、アプリのように開けます。Androidで追加したアプリはタブを複数開けないので、複数の調査は「調査一覧」で切り替えます。同じ調査を2か所で開くと、あとから変えた方の内容に揃えます。</p><p>ホーム画面のアプリとブラウザのタブのように Pro を2か所で開いていると、開いたときに「データの読み込みを待っています」と出たり、保存を待つお知らせが出たりすることがあります。裏に回った画面が読み書きの途中で止められたためです。もう一方の画面を表示して開き直すか、閉じると続きます。入力したデータは消えていません。</p>"}
 ];
 const HELP_GO={ts:"調査の種類",items:"調査項目",alias:"言い換え",list:"個体リスト",dir:"入力の進む順番",listen:"聞き取り方",standby:"待機のしかた",plan:"調査日の予定・カレンダー",outlier:"外れ値のお知らせ",other:"読み上げ・音・その他",freeze:"表の表示",io:"データの保存・読み込み・全消去"};
-const HELP_EX=["取り消し","ノギス","言い換え","外れ値","予定","統合","ひな形","集計","オフライン"];
+const HELP_EX=["ガイド","取り消し","ノギス","言い換え","外れ値","予定","統合","ひな形","集計","オフライン"];
 /* 探す言葉を正規化（全角半角・ひらがなカタカナ・大文字小文字の違いを無視） */
 const helpNorm=s=>normJ(s);
 const helpText=h=>{ const d=document.createElement("div"); d.innerHTML=h.b; return d.textContent; };
@@ -4172,7 +4570,7 @@ function drawHelp(){
   let hits=HELP.filter(h=>terms.every(t=>h._hay.includes(t)));
   if(terms.length) hits=hits.map((h,i)=>({h,i,s:terms.filter(t=>h._t.includes(t)).length})).sort((a,b)=>b.s-a.s||a.i-b.i).map(x=>x.h);
   const open=terms.length&&hits.length<=6;
-  const card=h=>`<details class="fold htopic" data-h="${h.id}"${open?" open":""}><summary><span class="ftitle">${esc(h.t)}</span></summary><div class="fbody hbody">${h.b}${h.go?`<button type="button" class="ghost hgo" data-go="${h.go}">設定の「${esc(HELP_GO[h.go]||h.go)}」を開く</button>`:""}</div></details>`;
+  const card=h=>`<details class="fold htopic" data-h="${h.id}"${open?" open":""}><summary><span class="ftitle">${esc(h.t)}</span></summary><div class="fbody hbody">${h.b}${h.go?`<button type="button" class="ghost hgo" data-go="${h.go}">設定の「${esc(HELP_GO[h.go]||h.go)}」を開く</button>`:""}${h.act?`<button type="button" class="ghost hgo" data-act="${h.act}">${h.act==="guide"?"ガイドを開く":"調査一覧を開く"}</button>`:""}</div></details>`;
   let html="";
   if(!terms.length) HELP_GROUPS.forEach(([g,l])=>{ const hs=HELP.filter(h=>h.g===g); if(hs.length) html+=`<h3 class="hgrp">${esc(l)}</h3>`+hs.map(card).join(""); });
   else html=hits.map(card).join("")||`<p class="help">「${esc(q.trim())}」に当てはまる説明は見つかりませんでした。別の言葉（例：${HELP_EX.slice(0,4).join("、")}）で探してください。</p>`;
@@ -4195,6 +4593,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.7",d:"2026-11-05",a:[["ガイドで調査を作る（調べること・作物を選ぶと、項目と個体リストの候補が出る。野菜・水稲・麦・大豆・花き・土壌の項目も）","guide"],["手元の調査・ひな形のファイルから、ガイドの最初の画面で作る","guide"],["アプリを開いたときの画面を選ぶ（前回の調査・調査一覧・ガイド）","startup"]]},
 {v:"Pro 4.6.1",d:"2026-11-05",a:[["音声コマンドの言い方を登録する欄（設定の「言い換え」の中。聞き違いや言いやすい言葉で操作できる）","alias"],["その他の不具合の修正",""]]},
 {v:"Pro 4.6",d:"2026-11-05",a:[["複数選択の列（1つのセルに候補をいくつでも。声で続けて言う・ボタンで入れる外す）","multi"],["日付の列（「今日」「11月5日」などで日付を記録）","date"],["カウンターの列（「プラス」「プラス3」で数える）","count"]]},
 {v:"Pro 4.5",d:"2026-11-05",a:[["声で確かめる（「どこ」で今の個体・項目・値、「さっき」で直前の値、「前回」で経時調査の前回の値、「残り」で今日の残りの数）","where"],["言い換えで音声コマンドの言い方を足す","alias"]]},
@@ -4255,6 +4654,7 @@ $("#helpClose").onclick=()=>$("#helpDlg").close();
 /* 説明から設定の見出しへ（設定が開いていればその見出しへ移るだけ。開いていなければ開く） */
 $("#helpList").addEventListener("click",e=>{
   const b=e.target.closest(".hgo"); if(!b) return;
+  if(b.dataset.act){ $("#helpDlg").close(); if($("#dlg").open) $("#dlg").close(); if(b.dataset.act==="guide") gdOpen(); else $("#btnSurveys").click(); return; }
   const key=b.dataset.go; $("#helpDlg").close();
   if($("#dlg").open) foldGo(key); else openSettings(key);
 });
@@ -4368,7 +4768,7 @@ function gateShow(msg,isErr,mode){
 function gateMailUpd(){ $("#gateMailBox").hidden=gateMode==="agree"||!codeHasMail($("#gateCode").value); }
 $("#gateCode").addEventListener("input",gateMailUpd);
 let seenDone=false;
-function gateHide(){ $("#gate").hidden=true; $("#gate").classList.remove("loading"); $("#gateWait").hidden=true; if(tplPending) setTimeout(tplAfterGate,0); if(!seenDone&&stReady){ seenDone=true; setTimeout(seenCheck,800); } }
+function gateHide(){ $("#gate").hidden=true; $("#gate").classList.remove("loading"); $("#gateWait").hidden=true; if(tplPending) setTimeout(tplAfterGate,0); if(!seenDone&&stReady){ seenDone=true; setTimeout(seenCheck,800); } if(stReady&&!startDone){ if(tplPending) startDone=true; else setTimeout(startScreen,300); } }
 function licShowInfo(){
   const el=$("#licInfo"); if(!el) return;
   el.textContent=licNow?("利用コード："+licText(licNow)+(licNow.mailMask?"・"+licNow.mailMask:"")):"利用コード：未入力";
