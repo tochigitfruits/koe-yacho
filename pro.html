@@ -255,6 +255,9 @@ details.fold.flash>summary{animation:flash 1.2s ease-out}
 .arow button{width:36px;height:38px;border:1.5px solid var(--line);border-radius:8px;background:var(--bg)}
 .arow .awarn{grid-column:1 / -1;font-size:.78rem;color:var(--warn)}
 .arow .awarn:empty{display:none}
+.arow.crow select{grid-column:auto;padding:8px 4px}
+@media (max-width:520px){ .arow.crow{grid-template-columns:auto minmax(0,1fr) 36px} .arow.crow input{grid-column:1 / -1} }
+.ahead{font-weight:700;margin:10px 0 0}
 /* ひな形の共有（3.9.2） */
 .qrbox{display:grid;justify-items:center;gap:6px}
 #tplCanvas{width:min(340px,100%);height:auto;image-rendering:pixelated;background:#fff;border-radius:8px}
@@ -739,9 +742,14 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
     <details class="fold" data-fold="alias"><summary><span class="ftitle">言い換え（聞き違い・略語）</span><span class="fsum" data-sum="alias"></span></summary>
     <fieldset class="fbody">
       <legend>言い換え（聞き違い・略語）</legend>
-      <p class="help">話した言葉が、登録した言葉と<b>そのまま同じ</b>ときに、右の値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>。左は「、」で区切って複数書けます。ひらがな・カタカナの違いは気にしません。「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。右に音声コマンドの言葉（例 <code>どこ</code>）を書くと、左の言葉でもその操作ができます（例：<code>ここは</code> → <code>どこ</code>）。</p>
+      <p class="ahead">値の言い換え</p>
+      <p class="help">話した言葉が、登録した言葉と<b>そのまま同じ</b>ときに、右の値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>。左は「、」で区切って複数書けます。ひらがな・カタカナの違いは気にしません。「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。</p>
       <div class="aliases" id="sAliases"></div>
       <button type="button" class="add" id="sAliasAdd">＋ 言い換えを追加</button>
+      <p class="ahead">音声コマンドの言い方</p>
+      <p class="help">音声コマンドとして受け付ける言葉を足します。聞き違い（例：iPhone で「たいき」が <code>大樹</code> になる）や、言いやすい言葉を登録します。例：<code>休み、ちょっと待って</code> → <b>待機</b>、<code>ここは</code> → <b>どこ</b>。どの列にいるときでも効きます。</p>
+      <div class="aliases" id="sCmdWords"></div>
+      <button type="button" class="add" id="sCmdAdd">＋ 音声コマンドの言い方を追加</button>
     </fieldset>
     </details>
     <details class="fold" data-fold="list" id="sListBox"><summary><span class="ftitle">個体リスト（事前入力の列）</span><span class="fsum" data-sum="list"></span></summary>
@@ -916,7 +924,7 @@ function parseCommand(tok){
   if(/^(枯死|こし)$/.test(t)) return "ex:枯死";
   if(/^(欠株|けっかぶ)$/.test(t)) return "ex:欠株";
   if(/^(復帰|ふっき|フッキ|除外取り?消し)$/.test(t)) return "restore";
-  if(/^(待機|たいき|タイキ|待機して|一時停止|いちじていし|休憩|きゅうけい|キュウケイ|ポーズ|pause|standby)$/i.test(t)) return "standby";
+  if(/^(待機|たいき|タイキ|大樹|大気|待期|待機して|一時停止|いちじていし|休憩|きゅうけい|キュウケイ|ポーズ|pause|standby)$/i.test(t)) return "standby";
   if(isStopWord(t)) return "stop";
   if(isResumeWord(t)) return "resume";
   /* 4.5〜：画面を見ずに確かめる（入力・移動はしない。待機中でも使える） */
@@ -2028,7 +2036,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.6（2026-11-05）";
+const APP_VER="Pro 4.6.1（2026-11-05）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -2756,12 +2764,61 @@ function drawItems(){
   drawAliases();
   if(typeof foldSums==="function") foldSums();
 }
+/* 音声コマンドの言い方（4.6.1〜）：言い換えのうち、対象が「すべての列」で、右が音声コマンドの言葉の行を別の欄に出す。
+   保存の形は言い換え（S.aliases）と同じ（to＝コマンドの代表の言葉、item 空）なので、4.5 以降の版でもそのまま効く */
+const CMD_WORDS=[["待機","待機（一時停止）"],["再開","再開"],["停止","停止（聞き取りを終える）"],["次","次"],["戻る","戻る"],["取り消し","取り消し"],["スキップ","スキップ"],["除外","除外"],["落果","落果"],["枯死","枯死"],["欠株","欠株"],["復帰","復帰"],["どこ","どこ"],["さっき","さっき"],["前回","前回"],["残り","残り"]];
+const cmdOf=w=>parseCommand(String(w||""));
+const isCmdRow=a=>!!a&&(a._cmd||(!a.item&&!!cmdOf(a.to)));
+function drawCmdWords(){
+  const box=$("#sCmdWords"); if(!box||!draft) return;
+  const rows=draft.aliases.map((a,i)=>[a,i]).filter(([a])=>isCmdRow(a));
+  box.innerHTML=rows.map(([a,i])=>{ const c=cmdOf(a.to); return `<div class="arow crow" data-ai="${i}">
+    <input type="text" data-ck="from" value="${esc(a.from)}" placeholder="話した言葉（例 大樹、大気）" aria-label="音声コマンドとして受け付ける言葉">
+    <span class="arr" aria-hidden="true">→</span>
+    <select data-ck="cmd" aria-label="音声コマンド">${CMD_WORDS.map(([w,l])=>`<option value="${w}" ${cmdOf(w)===c?"selected":""}>${l}</option>`).join("")}</select>
+    <button type="button" data-ck="del" aria-label="この言い方を削除">✕</button>
+    <span class="awarn"></span>
+  </div>`; }).join("")||`<p class="help">まだありません。</p>`;
+  cmdWarn();
+}
+function cmdWarn(){
+  if(!draft) return;
+  const seen=new Map();
+  $("#sCmdWords").querySelectorAll(".arow").forEach(row=>{
+    const a=draft.aliases[+row.dataset.ai]; const w=[];
+    const froms=String(a.from).split(/[、,，]/).map(f=>f.trim()).filter(Boolean);
+    const built=froms.filter(f=>parseCommand(f)||isStopWord(f)||isResumeWord(f)||parseYesNo(f));
+    if(built.length) w.push(`「${built.join("・")}」はもとから音声コマンドの言葉なので、登録しなくても使えます（そちらの操作になります）`);
+    froms.forEach(f=>{ const k=normJ(f); if(seen.has(k)) w.push(`「${f}」は上の行にもあります（上の行が使われます）`); else seen.set(k,1); });
+    if(!froms.length) w.push("左に言葉を入れてください（空の行は保存しません）");
+    row.querySelector(".awarn").textContent=w.join("。");
+  });
+}
+$("#sCmdWords").addEventListener("input",e=>{
+  const row=e.target.closest(".arow"); if(!row||e.target.dataset.ck!=="from") return;
+  draft.aliases[+row.dataset.ai].from=e.target.value; cmdWarn();
+});
+$("#sCmdWords").addEventListener("change",e=>{
+  const row=e.target.closest(".arow"); if(!row||e.target.dataset.ck!=="cmd") return;
+  draft.aliases[+row.dataset.ai].to=e.target.value; cmdWarn(); foldSums();
+});
+$("#sCmdWords").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-ck=del]"); if(!b) return;
+  draft.aliases.splice(+b.closest(".arow").dataset.ai,1); drawAliases(); foldSums();
+});
+$("#sCmdAdd").onclick=()=>{
+  if(!Array.isArray(draft.aliases)) draft.aliases=[];
+  draft.aliases.push({from:"",to:"待機",item:"",_cmd:true}); drawAliases(); foldSums();
+  const rows=$("#sCmdWords").querySelectorAll(".arow"); const el=rows[rows.length-1];
+  if(el){ el.scrollIntoView({block:"nearest"}); el.querySelector("input").focus(); }
+};
 /* 言い換えの行（draft.aliases）。対象は「すべての列」か、音声で入力の列 */
 function drawAliases(){
   const box=$("#sAliases"); if(!box||!draft) return;
   if(!Array.isArray(draft.aliases)) draft.aliases=[];
   const cols=draft.items.filter(it=>it.role!=="id");
-  box.innerHTML=draft.aliases.map((a,i)=>`<div class="arow" data-ai="${i}">
+  drawCmdWords();
+  box.innerHTML=draft.aliases.map((a,i)=>isCmdRow(a)?"":`<div class="arow" data-ai="${i}">
     <input type="text" data-ak="from" value="${esc(a.from)}" placeholder="話した言葉（例 むし、虫）" aria-label="話した言葉${i+1}">
     <span class="arr" aria-hidden="true">→</span>
     <input type="text" data-ak="to" value="${esc(a.to)}" placeholder="入れる値（例 虫害）" aria-label="入れる値${i+1}">
@@ -3016,7 +3073,8 @@ function foldSums(){
   put("other",`読み上げ ${q("#sRead").checked?"オン":"オフ"}・${{full:"全部",short:"短く",beep:"区切りだけ"}[q("#sRbMode").value]||""}・×${(+q("#sRate").value||1.1).toFixed(1)}・音 ${q("#sSound").checked?"オン":"オフ"}`);
   const fc=Math.max(0,Math.floor(+q("#sFzCols").value||0)), fr=Math.max(0,Math.floor(+q("#sFzRows").value||0));
   put("freeze",fc||fr?[fc?`左${fc}列`:"",fr?`上${fr}行`:""].filter(Boolean).join("・"):"固定なし");
-  { const al=(draft.aliases||[]).filter(a=>String(a.from).trim()&&String(a.to).trim()); put("alias",al.length?`${al.length}件（${al.slice(0,2).map(a=>`${a.from.split(/[、,，]/)[0].trim()}→${a.to.trim()}`).join("、")}${al.length>2?"…":""}）`:"なし"); }
+  { const all=(draft.aliases||[]).filter(a=>String(a.from).trim()&&String(a.to).trim()), al=all.filter(a=>!isCmdRow(a)), cm=all.length-al.length;
+    put("alias",(al.length?`${al.length}件（${al.slice(0,2).map(a=>`${a.from.split(/[、,，]/)[0].trim()}→${a.to.trim()}`).join("、")}${al.length>2?"…":""}）`:"なし")+(cm?`・音声コマンド ${cm}件`:"")); }
   put("outlier",q("#sOutlier").value==="off"?"切":`感度 ${OL_NAME[q("#sOutlier").value]||"中"}`);
   { const pl=planFromForm(), P=planDates(pl); put("plan",!pl.on?"使わない":P.length?`全${P.length}回・${planMD(P[0])}〜${planMD(P[P.length-1])}${pl.time?"・"+pl.time:""}`:"日付が未入力"); }
   put("io","この調査だけが対象");
@@ -4024,8 +4082,8 @@ const HELP=[
 "<p>日付を記録する列です。値は <b>YYYY-MM-DD</b>（例 2026-11-05）で記録します。</p><ul><li><b>言い方</b>：「今日」「昨日」「おととい」「明日」、「11月5日」「5日」（今月の5日）、「2026年11月5日」。手入力は「11/5」「2026-11-05」「1105」も使えます。年を言わないときは今年です。</li><li>手入力欄の下の「今日」「昨日」のボタンでも入れられます。</li><li>読み上げは「11月5日」のように言います。集計・外れ値の対象にはなりません。</li></ul>"},
 {g:"input",id:"count",t:"カウンターの列（数を数える）",k:"カウンター 数える 計数 個数 花数 果数 虫の数 プラス 足す 追加 かうんたー かぞえる",go:"items",b:
 "<p>見ながら1つずつ数えるための列です（例 花そう数・着果数・虫の数）。値は整数で、集計・外れ値・前回比の対象になります。</p><ul><li><b>声</b>：「プラス」「追加」「カウント」で1つ足し、「プラス3」で3つ足します。「マイナス」で1つ引きます。足し引きしている間は次へ進みません。数え終わったら「次」と言います。</li><li>数を言う（例「12」）と、その数にして次へ進みます。空欄のまま「プラス」と言うと 0 から数えます。</li><li><b>ボタン</b>：手入力欄の下の「＋1」「−1」。手入力欄に「+1」「-1」「+5」と入れても同じです。</li><li>「取り消し」は、直前の足し引き（1回分）だけを戻します。</li><li>「入力できる値」（例 0〜50）を決めておくと、外れた数にはなりません。</li></ul>"},
-{g:"input",id:"alias",t:"言い換え（聞き違い・略語の登録）",k:"言い換え 置き換え 略語 聞き違い 誤変換 登録 虫害 いいかえ ききちがい りゃくご とうろく",go:"alias",b:
-"<p>よく聞き違える言葉や、短く言いたい言葉を登録しておくと、決めた値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>、<code>びょう</code> → <code>病害</code>。左は「、」で区切って複数書けます。</p><ul><li>話した言葉が登録した言葉と<b>そのまま同じ</b>ときだけ置き換えます（言葉の一部は置き換えません）。</li><li>ひらがな・カタカナ、全角・半角の違いは気にしません。</li><li>対象は「すべての列」か、特定の列だけを選べます。文字・選択肢・数値のどの列にも使えます。選択肢の列では、置き換えた値が候補にあるときだけ入ります。</li><li>手入力・まとめて入力・貼り付けにも効きます。</li><li>「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。</li><li>右に音声コマンドの言葉（<code>どこ</code>・<code>次</code> など）を書くと、左の言葉でもその操作ができます（例：<code>ここは</code> → <code>どこ</code>）。</li></ul><p>置き換えたときは、聞き取った言葉の横に（言い換え むし→虫害）と出ます。言い換えは調査ごとの設定で、「今の調査の設定を使う」で作った調査とバックアップにも引き継がれます。</p>"},
+{g:"input",id:"alias",t:"言い換え（聞き違い・略語の登録）",k:"言い換え 置き換え 略語 聞き違い 誤変換 登録 虫害 音声コマンド コマンド 言い方 待機 大樹 いいかえ ききちがい りゃくご とうろく",go:"alias",b:
+"<p>よく聞き違える言葉や、短く言いたい言葉を登録しておくと、決めた値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>、<code>びょう</code> → <code>病害</code>。左は「、」で区切って複数書けます。</p><ul><li>話した言葉が登録した言葉と<b>そのまま同じ</b>ときだけ置き換えます（言葉の一部は置き換えません）。</li><li>ひらがな・カタカナ、全角・半角の違いは気にしません。</li><li>対象は「すべての列」か、特定の列だけを選べます。文字・選択肢・数値のどの列にも使えます。選択肢の列では、置き換えた値が候補にあるときだけ入ります。</li><li>手入力・まとめて入力・貼り付けにも効きます。</li><li>「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。</li></ul><p><b>音声コマンドの言い方</b>（同じ見出しの下の欄）：音声コマンドとして受け付ける言葉を足せます。左に言葉、右で操作（待機・再開・停止・次・戻る・取り消し・どこ など）を選びます。例：<code>大樹、大気</code> → 待機。iPhone の音声認識が「たいき」を「大樹」と返すような聞き違いに使います。どの列にいるときでも効き、待機中の「再開」「停止」にも効きます。発話全体が登録した言葉と同じときだけ操作になります。</p><p>iPhone で「たいき」が「大樹」「大気」「待期」になるときは、登録しなくても待機になります（4.6.1〜）。</p><p>置き換えたときは、聞き取った言葉の横に（言い換え むし→虫害）と出ます。言い換えは調査ごとの設定で、「今の調査の設定を使う」で作った調査とバックアップにも引き継がれます。</p>"},
 {g:"input",id:"allow",t:"入力できる値（範囲外の防止）",k:"範囲 範囲外 入力できる値 指数 0〜3 制限 はんい はんいがい しすう",go:"items",b:
 "<p>数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます。病害の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます。</p>"},
 {g:"input",id:"outlier",t:"外れ値のお知らせ",k:"外れ値 外れ 異常値 おかしい値 言い間違い 測り間違い 桁 感度 中央値 伸び方 はずれち いじょうち かんど",go:"outlier",b:
@@ -4137,6 +4195,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.6.1",d:"2026-11-05",a:[["音声コマンドの言い方を登録する欄（設定の「言い換え」の中。聞き違いや言いやすい言葉で操作できる）","alias"],["その他の不具合の修正",""]]},
 {v:"Pro 4.6",d:"2026-11-05",a:[["複数選択の列（1つのセルに候補をいくつでも。声で続けて言う・ボタンで入れる外す）","multi"],["日付の列（「今日」「11月5日」などで日付を記録）","date"],["カウンターの列（「プラス」「プラス3」で数える）","count"]]},
 {v:"Pro 4.5",d:"2026-11-05",a:[["声で確かめる（「どこ」で今の個体・項目・値、「さっき」で直前の値、「前回」で経時調査の前回の値、「残り」で今日の残りの数）","where"],["言い換えで音声コマンドの言い方を足す","alias"]]},
 {v:"Pro 4.3.3",d:"2026-10-30",a:[["列単位・グループ単位で次の列（まとまり）に移るとき、空いているセルから続ける","order"]]},
