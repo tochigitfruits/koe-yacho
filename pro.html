@@ -455,6 +455,31 @@ body.kbd .bkbar{display:none}
 .asbox{border:1.5px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:8px}
 .asbox .asst{font-weight:700}
 .asbox .asst.warn{color:var(--warn)}
+/* 4.8.2：入力の表に前の調査日の値・全調査日の一覧 */
+#tbl th.pvh{color:var(--muted);font-weight:400;font-size:.72rem;background:color-mix(in srgb,var(--line) 22%,var(--surface))}
+#tbl th.pvh small{font-size:.68rem}
+#tbl td.pv{color:var(--muted);font-size:.8rem;min-width:3.4em;padding-inline:6px;cursor:default;background:color-mix(in srgb,var(--line) 18%,var(--surface))}
+.pva{font-size:.68rem;margin-left:3px;color:var(--muted);font-weight:400;vertical-align:1px}
+.pva.lv-info{color:var(--accent)}.pva.lv-warn{color:var(--warn);font-weight:700}.pva.lv-block{color:var(--rec);font-weight:700}
+td.cur .pva{color:inherit}
+.pcbox{border:1.5px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:8px}
+.lswrap{max-height:62vh}
+.lstbl th,.lstbl td{padding:6px 8px}
+.lstbl thead tr:nth-child(2) th{position:sticky;z-index:2}
+.lstbl th.lsid,.lstbl td.lsid{position:sticky;left:0;background:var(--surface);z-index:1;text-align:left;font-family:var(--f-ui);font-size:.85rem}
+.lstbl thead th.lsid{z-index:4}
+.lstbl .lsidend{box-shadow:2px 0 0 var(--line)}
+.lstbl td.lsno,.lstbl th.lsno{color:var(--muted);text-align:center}
+.lstbl th.lsg0,.lstbl td.lsg0{border-left:2px solid var(--ink)}
+.lstbl th.lscur{background:color-mix(in srgb,var(--mark) 55%,var(--surface));color:var(--mark-ink)}
+.lstbl td.lsv{text-align:right;cursor:pointer;min-width:4em}
+.lstbl td.lsv:hover{outline:2px solid var(--accent);outline-offset:-2px}
+.lstbl td.lsex{color:var(--muted);background:color-mix(in srgb,var(--line) 45%,var(--surface))}
+.lstbl td.lsex small{font-size:.72rem}
+.lstbl tr.lsexr td.lsid{color:var(--muted)}
+.lstbl td.al-warn{background:color-mix(in srgb,var(--warn) 20%,var(--surface))}
+.lstbl td.al-block{background:color-mix(in srgb,var(--rec) 20%,var(--surface))}
+.chks .lsall{min-height:40px;padding:4px 12px;border-radius:999px}
 </style>
 </head>
 <body>
@@ -569,6 +594,7 @@ body.kbd .bkbar{display:none}
   <div class="out">
     <button type="button" id="btnEnd">今日の調査を終える<small class="ver" style="display:block;color:inherit;opacity:.8;font-weight:400">空欄・外れ値の確認とバックアップ</small></button>
     <button type="button" id="btnSum" class="sec">集計・グラフ</button>
+    <button type="button" id="btnList" class="sec">全調査日の一覧</button>
     <button type="button" id="btnXlsx">Excelで保存</button>
     <button type="button" id="btnCsv" class="sec">この日のCSV</button>
     <button type="button" id="btnCsvWide" class="sec">全調査日CSV（野帳型）</button>
@@ -710,6 +736,23 @@ body.kbd .bkbar{display:none}
     </section>
     <span class="ver" id="sumOut" aria-live="polite"></span>
     <div class="actions"><button type="button" id="sumClose">閉じる</button></div>
+  </div>
+</dialog>
+
+<dialog id="lsDlg" aria-labelledby="lsTitle">
+  <div class="sheet">
+    <div class="sheethead"><h2 id="lsTitle" tabindex="-1" autofocus>全調査日の一覧</h2><span class="ver" id="lsSub"></span></div>
+    <div class="sumctl">
+      <label class="field"><b>並べ方</b><select id="lsMode"><option value="item">項目ごと（項目の中に調査日）</option><option value="date">調査日ごと（Excelの野帳型と同じ）</option></select></label>
+      <label class="field"><b>調査日</b><select id="lsLast"><option value="0">全部</option><option value="3">直近3回</option><option value="5">直近5回</option><option value="10">直近10回</option></select></label>
+      <div class="field"><b>項目</b><div class="chks" id="lsItems"></div></div>
+    </div>
+    <p class="help" id="lsNote"></p>
+    <div class="sumwrap lswrap" id="lsWrap"><table id="lsTbl" class="sumtbl lstbl"></table></div>
+    <p class="help">セルを押すと、一覧を閉じてその調査日のそのセルに移ります（そのまま声・手入力で直せます）。この画面では値を変えません。色は前回比、点線の枠は外れ値の候補、灰色は除外した個体（除外した日から）、黄色の見出しは今開いている調査日です。</p>
+    <div class="addrow"><button type="button" class="add" id="lsCopy">表をコピー</button><button type="button" class="add" id="lsCsv">表をCSVで保存</button></div>
+    <span class="ver" id="lsOut" aria-live="polite"></span>
+    <div class="actions"><button type="button" id="lsClose">閉じる</button></div>
   </div>
 </dialog>
 
@@ -925,6 +968,14 @@ body.kbd .bkbar{display:none}
       <label class="toggle" for="sFzRows"><span>上から固定する行数<small class="ver" style="display:block">項目名の行はいつも固定されます。ここではその下のデータの行を数えます</small></span><input type="number" id="sFzRows" min="0" max="20" step="1" inputmode="numeric"></label>
       <div class="toggle"><button type="button" class="ghost" id="sFzId">事前入力の列まで固定</button><span class="ver" id="sFzPrev"></span></div>
       <p class="help">表を横や下に動かしても、固定した列・行は残ります。画面が狭いときは、固定する部分を表の幅・高さの7割までにとどめます。</p>
+      <div class="pcbox" id="pcBox">
+        <b>前の調査日の値を並べる（経時調査）</b>
+        <label class="toggle" for="sPcN"><span>並べる回数<small class="ver" style="display:block">各項目の今日の列の左に、前の調査日の値を薄い色で並べ、今日の値の横に前回からの増減（▲▼＝）を出します。見るだけの列で、入力・範囲選択・コピー・Excel には入らず、上の「固定する列数」にも数えません</small></span><select id="sPcN"><option value="0">なし</option><option value="1">1回</option><option value="2">2回</option><option value="3">3回</option></select></label>
+        <div id="pcSub">
+          <div class="seg"><label><input type="radio" name="pcAll" value="all"><span>すべての測定の項目</span></label><label><input type="radio" name="pcAll" value="sel"><span>選んだ項目</span></label></div>
+          <div class="chks" id="sPcItems"></div>
+        </div>
+      </div>
     </fieldset>
     </details>
     <details class="fold" data-fold="cmd"><summary><span class="ftitle">音声コマンド・まとめて入力・表の操作の説明</span></summary>
@@ -1266,6 +1317,9 @@ function normS(){
   S.freezeCols=Math.max(0,Math.min(30,Math.floor(+S.freezeCols||0)));
   S.freezeRows=Math.max(0,Math.min(20,Math.floor(+S.freezeRows||0)));
   S.done=/^\d{4}-\d{2}-\d{2}$/.test(S.done||"")?S.done:"";
+  /* 4.8.2：前の調査日の値を並べる（S.prevCols）・全調査日の一覧の絞り込み（S.listCfg） */
+  { const p=S.prevCols&&typeof S.prevCols==="object"?S.prevCols:{}; S.prevCols={n:[0,1,2,3].includes(+p.n)?+p.n:0,items:Array.isArray(p.items)?p.items.map(String).slice(0,200):null}; }
+  if(S.listCfg!==undefined&&(typeof S.listCfg!=="object"||S.listCfg===null)) delete S.listCfg;
 }
 normS();
 let saveWarned=0;
@@ -2150,7 +2204,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.8.1（2026-11-05）";
+const APP_VER="Pro 4.8.2（2026-11-05）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -2463,13 +2517,18 @@ function render(){
   const L=listLen();
   const rows=L?Math.max(L,D.length,cur.r+1):Math.max(D.length,cur.r+1)+1;
   const gStart=new Set(S.dir==="group"?groupsOf().slice(1).map(g=>g[0]):[]);
-  let h="<thead><tr>"+(S.serial?'<th class="no">No.</th>':"")+S.items.map((x,ci)=>`<th class="${x.role==="id"?"idh":""}${gStart.has(ci)?" gstart":""}">${esc(x.name)}<small>${esc(typeLabel(x).replace("事前入力・","事前・"))}</small></th>`).join("")+"</tr></thead><tbody>";
+  /* 4.8.2：前の調査日の値（見るだけの列）。data-lc は「No.＋項目」で数えた列の番号（固定の列数に使う） */
+  const pc=S.ts?pcCfg(S.prevCols):{n:0,items:null}, pcDs=pc.n?allDates().filter(d=>d<S.curDate).slice(-pc.n):[];
+  const pcOn=x=>pcDs.length>0&&x.role!=="id"&&(!pc.items||pc.items.includes(x.id)), lc0=S.serial?1:0;
+  let h="<thead><tr>"+(S.serial?'<th class="no" data-lc="0">No.</th>':"")+S.items.map((x,ci)=>(pcOn(x)?pcDs.map((d,k)=>`<th class="pvh${k===0&&gStart.has(ci)?" gstart":""}" data-lc="${lc0+ci}">${esc(x.name)}<small>${planMD(d)}</small></th>`).join(""):"")
+    +`<th class="${x.role==="id"?"idh":""}${gStart.has(ci)&&!pcOn(x)?" gstart":""}" data-lc="${lc0+ci}">${esc(x.name)}<small>${esc(typeLabel(x).replace("事前入力・","事前・"))}</small></th>`).join("")+"</tr></thead><tbody>";
   const OLM=olCompute(S.curDate);
   for(let r=0;r<rows;r++){
     h+=`<tr class="${r===cur.r?"currow":""}${isEx(r)?" exrow":""}">`+(S.serial?`<td class="no">${isEx(r)?"✕":r+1}</td>`:"");
     S.items.forEach((x,c)=>{
-      const v=D[r]?.[x.id]; const k=r+":"+c;
-      const cls=["v"]; if(gStart.has(c)) cls.push("gstart"); if(x.role==="id") cls.push("idc"); if(!isNum(x)) cls.push("txt"); if(isEx(r)) cls.push("exc");
+      const v=D[r]?.[x.id]; const k=r+":"+c, pon=pcOn(x);
+      if(pon) pcDs.forEach((d,k2)=>{ h+=`<td class="pv${k2===0&&gStart.has(c)?" gstart":""}">${exState(r,d)?"":esc(fmt(valAt(r,x,d),x))}</td>`; });
+      const cls=["v"]; if(gStart.has(c)&&!pon) cls.push("gstart"); if(x.role==="id") cls.push("idc"); if(!isNum(x)) cls.push("txt"); if(isEx(r)) cls.push("exc");
       let tip="";
       if(S.ts&&hasVal(v)&&!isEx(r)){ const a=checkCmp(r,x,v); if(a){ cls.push("al-"+a.level); tip=vsPrev(fmt(a.prev,x),a.date,a.kind,true); } }
       { const o=!isEx(r)&&OLM.get(k); if(o){ cls.push("ol"); tip=(tip?tip+"／":"")+olText(o,true); } }
@@ -2477,7 +2536,11 @@ function render(){
       if(inSel(r,c)) cls.push("sel");
       if(r===cur.r&&c===cur.c) cls.push("cur"); if(flashCells.has(k)) cls.push("flash"); if(badCells.has(k)) cls.push("badflash");
       const txt=isEx(r)&&x.role!=="id"?(c===firstMeas()?`${D[r]._why}（${D[r]._ex}〜）`:""):fmt(v,x);
-      h+=`<td class="${cls.join(" ")}" data-r="${r}" data-c="${c}"${tip}>${esc(txt)}</td>`;
+      /* 前回からの増減（前の値を並べている項目だけ。色は前回比の判定とそろえる） */
+      let arr="";
+      if(pon&&isNum(x)&&typeof v==="number"&&!isEx(r)){ const pv=prevOf(r,x); if(pv){ const tol=Math.abs(+x.cmp?.tol||0)+1e-9, df=v-pv.v, kd=Math.abs(df)<=tol?"same":df<0?"dec":"inc", a=checkCmp(r,x,v);
+        arr=`<span class="pva lv-${a?a.level:"none"}" aria-label="前回${{inc:"より増",dec:"より減",same:"と同じ"}[kd]}">${{inc:"▲",dec:"▼",same:"＝"}[kd]}</span>`; } }
+      h+=`<td class="${cls.join(" ")}" data-r="${r}" data-c="${c}"${tip}>${esc(txt)}${arr}</td>`;
     });
     h+="</tr>";
   }
@@ -2488,6 +2551,7 @@ function render(){
   $("#dateBar").hidden=!S.ts; if(!S.ts) $("#newDateBox").hidden=true;
   $("#btnCsv").textContent=S.ts?"この日のCSV":"CSVで保存";
   $("#btnCsvWide").hidden=!(S.ts&&(S.outFmt==="wide"||S.outFmt==="both"));
+  $("#btnList").hidden=!S.ts;
   $("#btnCsvLong").hidden=!(S.ts&&(S.outFmt==="long"||S.outFmt==="both"));
   renderDates(); renderStandby(); renderSel();
   $("#btnEx").firstChild.nodeValue=isEx(cur.r)?"復帰":"除外";
@@ -2517,7 +2581,9 @@ let fzCapped=false;
 function applyFreeze(){
   const tb=$("#tbl"), box=$("#tablebox"), head=tb.tHead?.rows[0];
   if(!head){ return; }
-  const fc=Math.min(+S.freezeCols||0,head.cells.length), fr=+S.freezeRows||0;
+  /* 4.8.2：固定する列数は「No.＋項目」で数える。前の値の列（見るだけ）は、その項目と一緒に固定する */
+  const lcMax=+S.freezeCols||0; let fc=0; for(const c of head.cells){ const lc=c.dataset.lc===undefined?fc:+c.dataset.lc; if(lc<lcMax) fc++; else break; }
+  const fr=+S.freezeRows||0;
   const W=box.clientWidth, H=box.clientHeight, T=tb.getBoundingClientRect();
   /* 固定を当てる前に、各列の左端・各行の上端を表の左上からの位置で測る（幅の足し算より誤差が出ない） */
   const lefts=[]; let left=0; fzCapped=false;
@@ -2991,6 +3057,7 @@ let draft=null;
 const STEPS=[0,0.1,0.2,0.25,0.5,1,5,10];
 const lvSel=(k,v)=>`<select data-k="cmp.${k}" aria-label="前回比 ${KIND_S[k]}">${LEVELS.map(([x,l])=>`<option value="${x}" ${x===v?"selected":""}>${l}</option>`).join("")}</select>`;
 function drawItems(){
+  try{ pcDraw(); }catch(e){}
   $("#sItems").innerHTML=draft.items.map((it,i)=>{ const c=normCmp(it.cmp); return `
     <div class="item${it.role==="id"?" isid":""}" data-i="${i}">
       <div class="irow ihead">
@@ -3207,7 +3274,7 @@ $("#sItems").addEventListener("keydown",e=>{
 });
 $("#sAdd").onclick=()=>{ insertItem(draft.items.length,draft.items[draft.items.length-1]); };
 $("#sPreset").onclick=()=>{ draft.items=PRESET_FRUIT(); drawItems(); };
-document.querySelectorAll("input[name=ts]").forEach(r=>r.addEventListener("change",()=>{ draft.ts=document.querySelector("input[name=ts]:checked").value==="1"; $("#sTsBox").hidden=!draft.ts; $("#planFold").hidden=!draft.ts; drawItems(); }));
+document.querySelectorAll("input[name=ts]").forEach(r=>r.addEventListener("change",()=>{ draft.ts=document.querySelector("input[name=ts]:checked").value==="1"; $("#sTsBox").hidden=!draft.ts; $("#planFold").hidden=!draft.ts; $("#pcBox").hidden=!draft.ts; drawItems(); }));
 /* 個体リスト：組み合わせで作る（例 樹 1-5 × 処理区 無処理、遮光 × 果実 1-10） */
 function expandSpec(s){
   s=(s||"").normalize("NFKC").trim(); if(!s) return [""];
@@ -3244,6 +3311,7 @@ function openSettings(go,then){
   $("#sIosNp").checked=iosNoPause();
   planToForm(planNorm(draft.plan)); $("#planFold").hidden=!draft.ts;
   $("#sFzCols").value=draft.freezeCols; $("#sFzRows").value=draft.freezeRows; drawFzPrev();
+  $("#pcBox").hidden=!draft.ts; pcDraw();
   $("#sRate").value=draft.rate||1.1; $("#sRateVal").textContent="×"+(+$("#sRate").value).toFixed(1);
   listOrig=listText(); $("#sList").value=listOrig; $("#sListInfo").textContent=listOrig?`現在 ${listOrig.split("\n").length}個体`:"";
   drawItems(); applyFold(); $("#dlg").showModal(); foldSums();
@@ -3326,7 +3394,7 @@ function foldSums(){
   put("standby",radio("sbm")==="stop"?"完全に止める":"声で再開できる");
   put("other",`読み上げ ${q("#sRead").checked?"オン":"オフ"}・${{full:"全部",short:"短く",beep:"区切りだけ"}[q("#sRbMode").value]||""}・×${(+q("#sRate").value||1.1).toFixed(1)}・音 ${q("#sSound").checked?"オン":"オフ"}`);
   const fc=Math.max(0,Math.floor(+q("#sFzCols").value||0)), fr=Math.max(0,Math.floor(+q("#sFzRows").value||0));
-  put("freeze",fc||fr?[fc?`左${fc}列`:"",fr?`上${fr}行`:""].filter(Boolean).join("・"):"固定なし");
+  { const pn=draft.ts?pcCfg(draft.prevCols).n:0; put("freeze",(fc||fr?[fc?`左${fc}列`:"",fr?`上${fr}行`:""].filter(Boolean).join("・"):"固定なし")+(pn?`・前の値 ${pn}回`:"")); }
   { const all=(draft.aliases||[]).filter(a=>String(a.from).trim()&&String(a.to).trim()), al=all.filter(a=>!isCmdRow(a)), cm=all.length-al.length;
     put("alias",(al.length?`${al.length}件（${al.slice(0,2).map(a=>`${a.from.split(/[、,，]/)[0].trim()}→${a.to.trim()}`).join("、")}${al.length>2?"…":""}）`:"なし")+(cm?`・音声コマンド ${cm}件`:"")); }
   put("outlier",q("#sOutlier").value==="off"?"切":`感度 ${OL_NAME[q("#sOutlier").value]||"中"}`);
@@ -3370,6 +3438,7 @@ $("#sSave").onclick=()=>{
   try{ if($("#sIosNp").checked) localStorage.setItem(IOS_NP_KEY,"1"); else localStorage.removeItem(IOS_NP_KEY); }catch(e){}
   draft.plan=planFromForm();
   draft.freezeCols=+String($("#sFzCols").value).normalize("NFKC")||0; draft.freezeRows=+String($("#sFzRows").value).normalize("NFKC")||0;
+  pcRead(); if(draft.prevCols.items) draft.prevCols.items=draft.prevCols.items.filter(id=>draft.items.some(it=>it.id===id&&it.role!=="id"));
   draft.items.forEach((it,i)=>{ if(!String(it.name||"").trim()) it.name="項目"+(i+1); });
   draft.aliases=(draft.aliases||[]).map(a=>({from:String(a.from||"").split(/[、,，]/).map(f=>f.trim()).filter(Boolean).join("、"),to:String(a.to||"").trim(),item:draft.items.some(it=>it.id===a.item&&it.role!=="id")?a.item:""})).filter(a=>a.from&&a.to);
   const curId=S.items[cur.c]?.id;
@@ -3686,7 +3755,7 @@ function importTable(rows){
    配り方：ファイル（.json）／リンク（pro.html#tpl=…）／QRコード（リンクを載せる）。リンクの # 以降はサーバーへ送られない。
    受け取ると、確かめたうえで新しい調査を作る（今の調査は変えない） */
 const TPL_APP="koe-yacho-v2-template";
-const TPL_KEYS=["name","items","aliases","ts","outFmt","dir","groups","mode","standbyMode","readback","rbMode","rate","fastCommit","serial","autoCommit","alertSound","undoGap","freezeCols","freezeRows","outlier","plan"];
+const TPL_KEYS=["name","items","aliases","ts","outFmt","dir","groups","mode","standbyMode","readback","rbMode","rate","fastCommit","serial","autoCommit","alertSound","undoGap","freezeCols","freezeRows","outlier","plan","prevCols"];
 const TPL_HOME="https://tochigitfruits.github.io/koe-yacho/pro.html";
 const QR_SRC="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
 const QR_SRI="sha384-8FWZA6BGMXhsfO+BLtrJK0We6gg5o1JyO8xQm6peWDEUs17ACA5ziE/NIAkl9z2k";
@@ -4727,9 +4796,13 @@ const HELP=[
 "<p>表を横や下に動かしても、左の列・上の行が残るようにできます。設定の「表の表示」で、左から固定する列数（No.の列も1列と数える）と上から固定する行数を指定します。「事前入力の列まで固定」で、個体の識別の列までを一度に指定できます。</p>"},
 
 {g:"ts",id:"timeseries",t:"経時調査と調査日",k:"経時 調査日 日付 新しい調査日 肥大 継続 繰り返し けいじ ちょうさび ぜんかい ひだい",go:"ts",b:
-"<p>設定の「調査の種類」を「経時調査」にすると、調査日ごとに記録します。表の上の「＋ 新しい調査日」で次の調査を始め、調査日の欄で過去の日に切り替えて見直せます。個体リストと除外の記録は、全調査日で共通です。</p>"},
+"<p>設定の「調査の種類」を「経時調査」にすると、調査日ごとに記録します。表の上の「＋ 新しい調査日」で次の調査を始め、調査日の欄で過去の日に切り替えて見直せます。個体リストと除外の記録は、全調査日で共通です。全調査日の値は「全調査日の一覧」で見比べられ、入力の表に前の調査日の値を並べることもできます。</p>"},
+{g:"ts",id:"lslist",t:"全調査日の一覧（野帳型の表示）",k:"一覧 全調査日 推移 野帳型 前回 過去 横に並べる 調査日ごと 項目ごと 見比べる いちらん すいい やちょうがた かこ よこにならべる",b:
+"<p>経時調査では、表の下の「全調査日の一覧」で、全調査日の値を1行＝1個体の表で見られます（「集計・グラフ」と同じく別の画面で、ここでは値を変えません）。</p><ul><li><b>並べ方</b>：「項目ごと」は 横径 10/01・10/15・11/01 → 縦径 … の順、「調査日ごと」は 10/01 の全項目 → 10/15 の全項目 …（Excel・CSV の野帳型と同じ順）。</li><li><b>項目</b>・<b>調査日</b>（全部・直近3／5／10回）で絞り込めます。1項目だけにすると、その項目の推移が1行で読めます。選んだ内容は調査ごとに覚えます。</li><li>前回より減った・増えたセルは、前回比の設定と同じ判定で色が付きます。点線の枠は外れ値の候補、灰色は除外した個体（除外した日から。理由を小さく出します）、黄色の見出しは今開いている調査日です。</li><li>セルを押すと、一覧を閉じてその調査日のそのセルに移ります。そのまま声や手入力で直せます。</li><li>「表をコピー」（Excelに貼れます）「表をCSVで保存」は、表示しているとおり（絞り込んだ後）の表です。全項目・全調査日は、これまでどおり「全調査日CSV（野帳型）」やExcelで保存します。</li><li>個体・項目・調査日が多く、セルが2万を超えるときは、初めは1項目だけを表示します。</li></ul><p>日付を列にした1回の調査（「横径_10/01」…の項目）は、前回比・伸び方の外れ値・経時グラフ・縦持ちCSV・予定が働かないので勧めません。経時調査にして、この一覧で見てください。</p>"},
+{g:"ts",id:"prevcols",t:"前の調査日の値を並べる（入力の表）",k:"前の調査日 前回 過去 横に並べる 前の値 直近 薄い 増減 矢印 推移 まえのちょうさび ぜんかい かこ よこにならべる やじるし",go:"freeze",b:
+"<p>設定の「表の表示（ウインドウ枠の固定）」にある「前の調査日の値を並べる」で回数（1〜3回）を選ぶと、入力の表で各項目の今日の列の左に、前の調査日の値を薄い色で並べます（見出しは「横径 10/15」のように日付付き）。今日の値の横には、前回からの増減を ▲（増）▼（減）＝（同じ）で出します。前回比を設定した項目は、表示・注意・禁止と同じ色になります。</p><ul><li>すべての測定の項目か、選んだ項目だけかを選べます。設定は調査ごとに覚え、ひな形にも入ります。</li><li>前の値の列は見るだけです。押しても今のセルにならず、入力の順番・範囲選択・コピー・貼り付け・Excel・CSV には入りません。「固定する列数」も、これまでどおり No. と項目で数えます（前の値の列は、その項目と一緒に固定されます）。</li><li>前の値がない個体は空けます。1回の調査では出ません。</li></ul>"},
 {g:"ts",id:"compare",t:"前回比アラート",k:"前回比 アラート 減った 増えた 同じ 注意 禁止 表示 許容 誤差 はい いいえ ぜんかいひ あらーと ちゅうい きんし きょよう ごさ",go:"items",b:
-"<p>経時調査では、各項目（数値・音声で入力）の「前回比」で、前回より減った・増えた・同じときの扱いを決めます。</p><ul><li><b>表示</b>：知らせるだけ</li><li><b>注意</b>：「はい」で確定、「いいえ」か正しい値で入力し直し</li><li><b>禁止</b>：入れずに、入力し直しを求める</li></ul><p>「許容±」は測定誤差の幅で、この幅以内の差は「同じ」とみなします。例：肥大調査なら、横径・縦径・果実重の「減った」を「注意」か「禁止」にします。</p>"},
+"<p>経時調査では、各項目（数値・音声で入力）の「前回比」で、前回より減った・増えた・同じときの扱いを決めます。</p><ul><li><b>表示</b>：知らせるだけ</li><li><b>注意</b>：「はい」で確定、「いいえ」か正しい値で入力し直し</li><li><b>禁止</b>：入れずに、入力し直しを求める</li></ul><p>「許容±」は測定誤差の幅で、この幅以内の差は「同じ」とみなします。例：肥大調査なら、横径・縦径・果実重の「減った」を「注意」か「禁止」にします。</p><p>前回までの値は、「全調査日の一覧」でまとめて見たり、「前の調査日の値を並べる」で入力の表の横に出したりできます。</p>"},
 {g:"ts",id:"plan",t:"調査日の予定とカレンダー",k:"予定 調査日 お知らせ 通知 カレンダー ics 繰り返し 間隔 何日ごと 忘れ 過ぎ 今日 リマインダー よてい つうち かれんだー くりかえし かんかく",go:"plan",b:
 "<p>経時調査では、設定の「調査日の予定・カレンダー」で予定を決められます。</p><ul><li><b>間隔で決める</b>：初回の日と、何日ごとか（例 14日ごと）、回数か終わりの日。</li><li><b>日付を並べる</b>：予定日を1行に1つずつ書く。</li></ul><p>アプリを開くと、今日が調査日のときと、予定日を過ぎてまだ調査していないときに、画面の上に知らせます（「今日の調査を始める」で今日の調査日を作れます）。調査日の欄の横には次の予定が出ます。「調査一覧」には調査ごとの状態が出て、今日・過ぎている調査があるとボタンに ● と件数が付きます。</p><p>このアプリは閉じている間に通知を出せません。決まった時刻に知らせてほしいときは、「カレンダーに登録（.ics ファイルを保存）」で端末のカレンダーに予定を入れます。通知は 前日の18時・当日の朝7時・開始の1時間前 から選べます（複数可）。予定を変えたときは、もう一度登録します。</p><p>予定日の前後（前後の予定日との間の半分まで）に調査した日があれば、その回は済んだとみなします。予定はひな形にも入るので、同じ予定をほかの人に配れます。</p>"},
 {g:"ts",id:"exclude",t:"除外（落果・枯死・欠株）と復帰",k:"除外 落果 枯死 欠株 復帰 飛ばす じょがい らっか こし けっかぶ ふっき",b:
@@ -4817,6 +4890,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.8.2",d:"2026-11-05",a:[["全調査日の一覧（1行＝1個体。項目ごと／調査日ごと、絞り込み、前回比の色・外れ値・除外の表示、押すとそのセルへ）","lslist"],["入力の表に前の調査日の値を並べる（1〜3回、前回からの増減の矢印）","prevcols"]]},
 {v:"Pro 4.8.1",d:"2026-11-05",a:[["iPhone の聞き取りと読み上げの安定化（止まったときの「再開」ボタン、続けて入った値の読み上げをまとめる、試験的な設定「iPhoneでも聞き取りを止めずに読み上げる」）","iosmic"],["その他の不具合の修正",""]]},
 {v:"Pro 4.8",d:"2026-11-05",a:[["今日の調査を終える（空欄・外れ値の確認、次回も続ける／完了、中身を確かめたバックアップ）","end"],["画面の下に最終バックアップの日時（しばらく取っていないときは色を変えて知らせる）","autosave"],["PCでは選んだフォルダーへ自動で保存（Googleドライブなどの同期フォルダーを選べばクラウドにも入る）","autosave"],["調査一覧に完了の印とバックアップの日時","surveys"]]},
 {v:"Pro 4.7",d:"2026-11-05",a:[["ガイドで調査を作る（調べること・作物を選ぶと、項目と個体リストの候補が出る。野菜・水稲・麦・大豆・花き・土壌の項目も）","guide"],["手元の調査・ひな形のファイルから、ガイドの最初の画面で作る","guide"],["アプリを開いたときの画面を選ぶ（前回の調査・調査一覧・ガイド）","startup"]]},
@@ -5221,6 +5295,170 @@ function doneNote(){
   $("#note").insertAdjacentHTML("beforeend",' <button type="button" class="ghost" id="undoneBtn" style="padding:4px 10px">完了の印を外す</button>');
   $("#undoneBtn").onclick=()=>{ S.done=""; save(); render(); note("完了の印を外しました。この調査を続けられます。"); };
 }
+/* ========= 全調査日の一覧（4.8.2〜） =========
+   経時調査の全調査日の値を、1行＝1個体で一覧する別画面（読むだけ。値はここでは変えない）。データの持ち方は変えない（S.sessions のまま）。
+   並べ方：item＝項目ごと（横径 10/01・10/15 … → 縦径 …）／date＝調査日ごと（Excel・CSV の野帳型 aoaWide と同じ順）。
+   絞り込み：項目（チェック）・調査日（全部／直近 n 回）。調査ごとに S.listCfg={mode,last,items}（バックアップに入る。ひな形には入れない）。
+   色は前回比（it.cmp。前回は prevAt）、点線は外れ値の候補（olItem）、灰色は除外（その日以降）。セルを押すとその調査日のそのセルへ移る。
+   セルが多いとき（LS_MAX を超える）は、初めは1項目だけを出す。描画は行を少しずつ足して、画面を固めない */
+const LS_MAX=20000, LS_LASTS=[0,3,5,10];
+let lsTok=0, lsTemp=null;   /* lsTemp：開いた直後だけ1項目に絞るとき（覚えない） */
+function lsCfg(){
+  const c=S.listCfg&&typeof S.listCfg==="object"?S.listCfg:{};
+  return {mode:c.mode==="date"?"date":"item", last:LS_LASTS.includes(+c.last)?+c.last:0, items:Array.isArray(c.items)?c.items.map(String):null};
+}
+function lsSetCfg(o){ S.listCfg={...lsCfg(),...o}; save(); }
+const lsAllItems=()=>meas().map(c=>S.items[c]);
+function lsItems(){
+  const all=lsAllItems(), ids=lsTemp||lsCfg().items;
+  return ids?all.filter(it=>ids.includes(it.id)):all;
+}
+function lsModel(){
+  const cfg=lsCfg(), dsAll=allDates(), ds=cfg.last?dsAll.slice(-cfg.last):dsAll, its=lsItems();
+  const cols=cfg.mode==="date"?ds.flatMap(d=>its.map(it=>({it,d}))):its.flatMap(it=>ds.map(d=>({it,d})));
+  return {mode:cfg.mode,ds,its,cols,ids:idItems(),R:Math.max(0,lastRowAll()+1),nAll:dsAll.length};
+}
+/* 前回比（その調査日の値と、それより前の直近の値） */
+function lsCmp(r,it,d,val){
+  if(!isNum(it)||typeof val!=="number") return null;
+  const c=it.cmp; if(!c||(c.dec==="none"&&c.inc==="none"&&c.same==="none")) return null;
+  const p=prevAt(r,it,d); if(!p) return null;
+  const diff=val-p.v, tol=Math.abs(+c.tol||0)+1e-9, kind=Math.abs(diff)<=tol?"same":diff<0?"dec":"inc";
+  const level=c[kind]||"none"; return level==="none"?null:{level,kind,prev:p.v,date:p.d};
+}
+function lsOpen(){
+  if(!S.ts) return;
+  if(listening||standby) stopRec(); clearPend(); save();
+  lsTemp=null;
+  const m=lsModel(), cells=m.R*lsAllItems().length*m.nAll;
+  if(!lsCfg().items&&cells>LS_MAX&&lsAllItems().length>1) lsTemp=[lsAllItems()[0].id];
+  $("#lsMode").value=lsCfg().mode; $("#lsLast").value=String(lsCfg().last);
+  $("#lsOut").textContent="";
+  $("#lsDlg").showModal(); lsDraw();
+}
+function lsChips(){
+  const sel=new Set(lsItems().map(it=>it.id));
+  $("#lsItems").innerHTML=lsAllItems().map(it=>`<label class="chk"><input type="checkbox" value="${esc(it.id)}"${sel.has(it.id)?" checked":""}><span>${esc(it.name)}</span></label>`).join("")
+    +`<button type="button" class="ghost lsall" id="lsAllBtn">すべて</button>`;
+}
+function lsDraw(){
+  const tok=++lsTok, m=lsModel(), wrap=$("#lsWrap"), tb=$("#lsTbl");
+  lsChips();
+  $("#lsSub").textContent=`${S.name||"調査"}・調査日 ${m.nAll}回`+(m.ds.length<m.nAll?`（表示 ${m.ds.length}回）`:"");
+  const notes=[];
+  if(m.nAll<2) notes.push("調査日が2つ以上になると比べられます。");
+  if(lsTemp) notes.push(`セルが多いため（約${(m.R*lsAllItems().length*m.nAll).toLocaleString()}）、初めは1項目だけを表示しています。見たい項目を選んでください。`);
+  const cells=m.R*m.cols.length;
+  if(!lsTemp&&cells>LS_MAX) notes.push(`表示するセルが多いため（約${cells.toLocaleString()}）、少しずつ表示します。重いときは項目を絞ってください。`);
+  if(!m.its.length) notes.push("項目を選んでください。");
+  $("#lsNote").textContent=notes.join(" ");
+  if(!m.its.length||!m.R){ tb.innerHTML=""; if(!m.R&&m.its.length) $("#lsNote").textContent="まだ値がありません。"; return; }
+  const md=d=>planMD(d), curD=S.curDate;
+  const idh=`<th class="lsid lsno" rowspan="2">No.</th>`+m.ids.map(it=>`<th class="lsid" rowspan="2">${esc(it.name)}</th>`).join("");
+  let h1="", h2="";
+  if(m.mode==="item"){
+    h1=m.its.map(it=>`<th class="lsg" colspan="${m.ds.length}">${esc(it.name)}</th>`).join("");
+    h2=m.its.map(()=>m.ds.map((d,k)=>`<th class="lsd${d===curD?" lscur":""}${k===0?" lsg0":""}">${md(d)}</th>`).join("")).join("");
+  } else {
+    h1=m.ds.map(d=>`<th class="lsg${d===curD?" lscur":""}" colspan="${m.its.length}">${md(d)}</th>`).join("");
+    h2=m.ds.map(d=>m.its.map((it,k)=>`<th class="lsd${d===curD?" lscur":""}${k===0?" lsg0":""}">${esc(it.name)}</th>`).join("")).join("");
+  }
+  tb.innerHTML=`<thead><tr>${idh}${h1}</tr><tr>${h2}</tr></thead><tbody></tbody>`;
+  /* 外れ値の候補（表示する調査日・項目だけ） */
+  const OL=new Map();
+  if(OL_LV[S.outlier]){ const gOf=olGroupMap(); m.ds.forEach(d=>m.its.forEach(it=>olItem(S.items.indexOf(it),d,OL,gOf))); }
+  const OLk=new Set([...OL.values()].map(o=>o.r+":"+o.it.id+":"+o.date));
+  const gFirst=new Set(m.mode==="item"?m.its.map((it,i)=>i*m.ds.length):m.ds.map((d,i)=>i*m.its.length));
+  const rowHtml=r=>{
+    const ex=D[r]?._ex||"";
+    let h=`<tr${ex?' class="lsexr"':""}><td class="lsid lsno">${r+1}</td>`+m.ids.map(it=>`<td class="lsid">${esc(fmt(D[r]?.[it.id],it))}</td>`).join("");
+    m.cols.forEach(({it,d},k)=>{
+      const v=valAt(r,it,d), exd=ex&&ex<=d, cls=["lsv"]; let tip="", txt=esc(fmt(v,it));
+      if(gFirst.has(k)) cls.push("lsg0"); if(d===curD) cls.push("lscurc");
+      if(exd){ cls.push("lsex"); if(!hasVal(v)) txt=`<small>${esc(D[r]._why||"除外")}</small>`; tip=`${D[r]._why||"除外"}（${ex}〜）`; }
+      else if(hasVal(v)){
+        const a=lsCmp(r,it,d,v); if(a){ cls.push("al-"+a.level); tip=vsPrev(fmt(a.prev,it),a.date,a.kind,true); }
+        if(OLk.has(r+":"+it.id+":"+d)){ cls.push("ol"); const o=[...OL.values()].find(o=>o.r===r&&o.it===it&&o.date===d); tip=(tip?tip+"／":"")+(o?olText(o,true):"外れ値かも"); }
+      }
+      h+=`<td class="${cls.join(" ")}" data-r="${r}" data-d="${d}" data-i="${esc(it.id)}"${tip?` title="${esc(tip)}"`:""}>${txt}</td>`;
+    });
+    return h+"</tr>";
+  };
+  const body=tb.tBodies[0], per=Math.max(20,Math.floor(3000/Math.max(1,m.cols.length+m.ids.length+1)));
+  let r=0;
+  const step=()=>{
+    if(tok!==lsTok) return;
+    let h=""; const end=Math.min(m.R,r+per); for(;r<end;r++) h+=rowHtml(r);
+    body.insertAdjacentHTML("beforeend",h);
+    if(r===end&&end===Math.min(m.R,per)) lsSticky();
+    if(r<m.R) setTimeout(step,0); else lsSticky();
+  };
+  step();
+}
+/* 左の No.・事前入力の列と、2段目の見出しを固定する位置を測って当てる */
+function lsSticky(){
+  const tb=$("#lsTbl"), h=tb.tHead; if(!h||!$("#lsDlg").open) return;
+  const r1=h.rows[0], top2=r1.getBoundingClientRect().height; if(!top2) return;
+  [...h.rows[1].cells].forEach(c=>c.style.top=top2+"px");
+  /* 固定するのは、表の幅の半分までに収まる左の列だけ（狭い画面で値が見えなくなるのを防ぐ） */
+  const W=$("#lsWrap").clientWidth, idc=[...r1.cells].filter(c=>c.classList.contains("lsid")); let left=0; const lefts=[];
+  for(const c of idc){ const w=c.getBoundingClientRect().width; if(lefts.length&&left+w>W*0.5) break; lefts.push(left); left+=w; }
+  const apply=row=>{ for(let i=0;i<idc.length;i++){ const c=row.cells[i]; if(!c) continue;
+    if(i<lefts.length){ c.style.position=""; c.style.left=lefts[i]+"px"; c.classList.toggle("lsidend",i===lefts.length-1); }
+    else { c.style.position="static"; c.classList.remove("lsidend"); } } };
+  apply(r1); [...tb.tBodies[0].rows].forEach(apply);
+}
+/* 表示しているとおりの表（コピー・CSV） */
+function lsAoa(){
+  const m=lsModel(), head=["No.",...m.ids.map(it=>it.name),...m.cols.map(({it,d})=>`${it.name}_${d}`),"除外日","理由"], out=[head];
+  for(let r=0;r<m.R;r++){
+    out.push([r+1,...m.ids.map(it=>cellOut(D[r]?.[it.id],it,true)),...m.cols.map(({it,d})=>exState(r,d)?"":cellOut(valAt(r,it,d),it,true)),D[r]?._ex||"",D[r]?._why||""]);
+  }
+  return out;
+}
+$("#btnList").onclick=lsOpen;
+$("#lsClose").onclick=()=>{ lsTok++; $("#lsDlg").close(); };
+$("#lsMode").onchange=e=>{ lsSetCfg({mode:e.target.value}); lsDraw(); };
+$("#lsLast").onchange=e=>{ lsSetCfg({last:+e.target.value}); lsDraw(); };
+$("#lsItems").addEventListener("change",()=>{
+  const ids=[...$("#lsItems").querySelectorAll("input:checked")].map(x=>x.value);
+  lsTemp=null; lsSetCfg({items:ids.length===lsAllItems().length?null:ids}); lsDraw();
+});
+$("#lsItems").addEventListener("click",e=>{ if(e.target.closest("#lsAllBtn")){ lsTemp=null; lsSetCfg({items:null}); lsDraw(); } });
+$("#lsTbl").addEventListener("click",e=>{
+  const td=e.target.closest("td.lsv"); if(!td) return;
+  const r=+td.dataset.r, d=td.dataset.d, c=S.items.findIndex(x=>x.id===td.dataset.i); if(c<0) return;
+  lsTok++; $("#lsDlg").close(); clearPend();
+  if(d!==S.curDate){ if(listening) stopRec(); switchDate(d); }
+  cur={r,c}; sel=null; save(); render();
+  note(`${cellName(cur)}（${d}）に移りました。値を直すときは、そのまま話すか手入力します。`+(isEx(r)?"この個体は除外しています。":""));
+});
+$("#lsCopy").onclick=async()=>{ const t=lsAoa().map(r=>r.join("\t")).join("\n"); const ok=await writeClip(t); $("#lsOut").textContent=ok?"表示している表をコピーしました（Excelに貼れます）":"コピーできませんでした。CSVで保存してください"; };
+$("#lsCsv").onclick=()=>{ download(new Blob([toCsv(lsAoa())],{type:"text/csv"}),`${safeName()}_全調査日一覧_${today()}.csv`); $("#lsOut").textContent="表示している表をCSVで保存しました"; };
+window.addEventListener("resize",()=>{ if($("#lsDlg").open) lsSticky(); });
+
+/* ========= 入力の表に前の調査日の値を並べる（4.8.2〜） =========
+   S.prevCols={n:0〜3, items:null（すべての測定の項目）|[id]}。経時調査のときだけ。ひな形にも入る。
+   前の値の列は見るだけの飾り：S.items には足さない。td は class "pv"（td.v ではない）なので、タップ・範囲選択・キー操作・コピー・貼り付けの対象にならない。
+   列の固定（freezeCols）は「No.＋項目」の数え方のまま。見出しの各セルに data-lc（論理の列番号）を付け、applyFreeze で DOM のセル数に直す */
+function pcCfg(p){ p=p&&typeof p==="object"?p:{}; return {n:[0,1,2,3].includes(+p.n)?+p.n:0, items:Array.isArray(p.items)?p.items.map(String):null}; }
+/* 設定画面 */
+function pcDraw(){
+  if(!draft) return;
+  const p=pcCfg(draft.prevCols), ms=draft.items.filter(it=>it.role!=="id");
+  const sel=new Set(p.items||ms.map(it=>it.id));
+  $("#sPcN").value=String(p.n);
+  document.querySelector(`input[name=pcAll][value=${p.items?"sel":"all"}]`).checked=true;
+  $("#sPcItems").innerHTML=ms.map(it=>`<label class="chk"><input type="checkbox" value="${esc(it.id)}"${sel.has(it.id)?" checked":""}><span>${esc(it.name||"（名前なし）")}</span></label>`).join("");
+  $("#sPcItems").hidden=!p.items; $("#pcSub").hidden=!p.n;
+}
+function pcRead(){
+  const n=+$("#sPcN").value||0, all=document.querySelector("input[name=pcAll]:checked")?.value!=="sel";
+  draft.prevCols={n,items:all?null:[...$("#sPcItems").querySelectorAll("input:checked")].map(x=>x.value)};
+}
+$("#sPcN").onchange=()=>{ pcRead(); pcDraw(); foldSums(); };
+document.querySelectorAll("input[name=pcAll]").forEach(x=>x.addEventListener("change",()=>{ pcRead(); pcDraw(); }));
+$("#sPcItems").addEventListener("change",pcRead);
 /* ========= 利用コード（共通） ========= */
 const LIC_PUB="BOudjzCP+kKh6CRo+2Yw+Mykv1uIt2ldgk/MJ5qxg5h6CSIhuvlVN7AZpuX34RgGsuDDqberT1hGfTlg0hsD2x4=";
 /* 種類：1 3か月／2 1年／3 期間指定（期限はコードに記録した日付）／9 開発者（無期限）。期限の判定はどの種類も、コードに記録した日付で行う
