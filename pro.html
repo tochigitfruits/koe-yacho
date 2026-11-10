@@ -16,7 +16,7 @@
 <title>声で野帳 Pro</title>
 <link rel="manifest" href="manifest-pro.json">
 <link rel="icon" type="image/png" sizes="32x32" href="pro-favicon-32.png">
-<link rel="apple-touch-icon" href="pro-apple-touch-icon.png?v=2">
+<link rel="apple-touch-icon" href="pro-apple-touch-icon.png?v=3">
 <meta name="apple-mobile-web-app-title" content="声で野帳 Pro">
 <meta name="theme-color" content="#15231d">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2204,7 +2204,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.8.2（2026-11-05）";
+const APP_VER="Pro 4.8.3（2026-11-10）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
