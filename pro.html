@@ -480,6 +480,20 @@ td.cur .pva{color:inherit}
 .lstbl td.al-warn{background:color-mix(in srgb,var(--warn) 20%,var(--surface))}
 .lstbl td.al-block{background:color-mix(in srgb,var(--rec) 20%,var(--surface))}
 .chks .lsall{min-height:40px;padding:4px 12px;border-radius:999px}
+
+/* セルに直接入力（今のセルをもう一度押す） */
+#tablebox{position:relative}
+.cellbar{position:absolute;z-index:2;display:grid;gap:4px;padding:3px;background:var(--surface);border:2px solid var(--accent);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.28);box-sizing:border-box}
+.cellbar .cbrow{display:flex;gap:4px;align-items:stretch}
+.cellbar input{flex:1 1 auto;min-width:5.5em;width:5.5em;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--bg);color:var(--ink);font-family:var(--f-num);font-size:max(16px,1.05rem);text-align:right}
+.cellbar input.txt{text-align:left;font-family:var(--f-ui);min-width:9em;width:9em}
+.cellbar button{flex:none;border:0;border-radius:8px;padding:0 12px;min-height:40px;font-weight:700;background:var(--ink);color:var(--surface);touch-action:manipulation;white-space:nowrap}
+.cellbar button.sec{background:transparent;color:var(--ink);border:1.5px solid var(--line);padding:0 10px}
+.cellbar .cbmsg{font-size:.8rem;color:var(--warn);font-family:var(--f-ui);white-space:normal;max-width:19em;text-align:left;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cellbar .cbmsg button{min-height:34px}
+.listbtns{display:flex;gap:6px;flex-wrap:wrap}
+.listbtns .add{flex:1 1 12em}
+#sListWarn{color:var(--warn);font-size:.82rem}
 </style>
 </head>
 <body>
@@ -589,7 +603,8 @@ td.cur .pva{color:inherit}
     <button type="button" class="ghost" id="newDateGo">この日の調査を始める</button>
     <button type="button" class="ghost" id="newDateCancel">やめる</button>
   </div>
-  <div class="tablebox" id="tablebox"><table id="tbl"></table></div>
+  <div class="tablebox" id="tablebox"><table id="tbl"></table><div class="cellbar" id="cellBar" hidden><div class="cbrow"><input id="cellIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" aria-label="今のセルに直接入力"><button type="button" id="cellOk">入力</button><button type="button" id="cellX" class="sec" aria-label="直接入力を終える" title="直接入力を終える">✕</button></div><div class="cbmsg" id="cellMsg" hidden><span id="cellMsgT"></span><button type="button" id="cellYes">はい</button><button type="button" id="cellNo" class="sec">やり直し</button></div></div></div>
+  <div class="ver" id="ceHint">今のセル（黄色）をもう一度押すと、その場でキーボード入力できます（PCはダブルクリック）</div>
 
   <div class="out">
     <button type="button" id="btnEnd">今日の調査を終える<small class="ver" style="display:block;color:inherit;opacity:.8;font-weight:400">空欄・外れ値の確認とバックアップ</small></button>
@@ -896,11 +911,12 @@ td.cur .pva{color:inherit}
     <details class="fold" data-fold="list" id="sListBox"><summary><span class="ftitle">個体リスト（事前入力の列）</span><span class="fsum" data-sum="list"></span></summary>
     <fieldset class="fbody">
       <legend>個体リスト（事前入力の列）</legend>
-      <p class="help">組み合わせで作るか、Excelから事前入力の列を並べてコピーし、貼り付けます（1行が1個体、列の順は <b id="sListHead"></b>）。</p>
+      <p class="help">下の欄に値を書いて作ります（列の順は <b id="sListHead"></b>）。<b>付け足す</b>は、今のリストを変えずに最後へ足します。個体ごとに数が違うときは、1個体（1まとまり）ずつ欄を書き換えて付け足します。使わない欄は空のままでかまいません。<b>作り直す</b>は、全部の組み合わせで今のリストを置き換えます。Excelから列を並べてコピーし、下の枠に貼り付けることもできます（1行が1個体）。</p>
       <div class="gens" id="sGen"></div>
-      <button type="button" class="add" id="sMake">組み合わせで個体リストを作る</button>
+      <div class="listbtns"><button type="button" class="add" id="sAppend">＋ 今のリストの最後に付け足す</button><button type="button" class="add" id="sMake">組み合わせで作り直す（置き換え）</button><button type="button" class="add" id="sAppendUndo" hidden>付け足しを1つ戻す</button></div>
       <textarea id="sList" rows="6" aria-label="個体リスト" spellcheck="false"></textarea>
       <span class="ver" id="sListInfo"></span>
+      <span id="sListWarn" hidden></span>
     </fieldset>
     </details>
     <details class="fold" data-fold="dir"><summary><span class="ftitle">入力の進む順番</span><span class="fsum" data-sum="dir"></span></summary>
@@ -2204,7 +2220,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.8.3（2026-11-10）";
+const APP_VER="Pro 4.8.4（2026-11-12）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -4786,12 +4802,14 @@ const HELP=[
 {g:"input",id:"manual",t:"手入力・ノギス・はかり",k:"手入力 ノギス はかり 計量器 Bluetooth キーボード U-WAVE 復唱 Enter Win+H キーボード音声入力 てにゅうりょく のぎす はかり ふくしょう",go:"other",b:
 "<p>手入力欄に値を入れて「入力」かEnterで入ります。ノギスやはかりなど、キーボードとして値を送る機器もそのまま使えます（Enterで操作ボタンが押されない・キーの繰り返しを止める対策をしています）。</p><p>マイクの横の「復唱」を押すと、オフにするまで手入力の値も読み上げます。PCで Win+H などのキーボードの音声入力を使うときは、設定の「キーボード音声入力モード」をオンにすると、話した後1.2秒で自動で確定します。</p>"},
 
+{g:"table",id:"celledit",t:"セルに直接入力する（キーボード）",k:"直接入力 セル キーボード 手入力 スクロール ダブルクリック F2 iPhone スマホ ちょくせつにゅうりょく せる きーぼーど てにゅうりょく",b:
+"<p>今のセル（黄色）をもう一度押すと、そのセルの上に入力欄が出て、キーボードでその場に入れられます（PCはダブルクリックか F2）。手入力欄までスクロールする必要はありません。</p><ul><li>「入力」かキーボードの Enter・次へ で入り、入力の進む順番どおりに次のセルへ移って、そのまま続けて入れられます。</li><li>入っている値は選んだ状態で出ます。そのまま打てば置き換え、変えずに「入力」なら次へ進むだけです。空にして「入力」するとその値を消します（直後なら「元に戻す」で戻せます）。</li><li>入力中にほかのセルを押すと、打ちかけの値を入れてから、押したセルへ入力欄が移ります。</li><li>前回比の確認が出たときは、入力欄の下の「はい」「やり直し」で答えます。</li><li>「✕」かキーボードを閉じると終わります。復唱・言い換え・入力できる値の確認は、手入力欄と同じに働きます。</li><li>事前入力の列は、設定の「個体リスト」で直します。</li></ul>"},
 {g:"table",id:"tableops",t:"表の操作（クリア・削除して詰める・行を削除）",k:"クリア 消す 削除 詰める 行を削除 範囲選択 コピー 貼り付け 貼付 元に戻す Ctrl Delete くりあ さくじょ つめる はんいせんたく こぴー はりつけ もとにもどす",b:
 "<ul><li><b>クリア</b>：選んだセル（範囲）の値を消す</li><li><b>削除して詰める</b>：今のセルを消し、後ろの値を1つずつ前へ詰める（2回入ってしまったとき）</li><li><b>行を削除</b>：今の行を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も消える</li><li><b>範囲選択</b>：オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）</li><li><b>コピー</b>・<b>貼付</b>：Excelとの間でも使える（PCは Ctrl+C・Ctrl+V・Delete も可）</li></ul><p>操作のあとは「元に戻す」で戻せます。</p>"},
 {g:"table",id:"order",t:"入力の進む順番（行・列・グループ）",k:"順番 行単位 列単位 グループ 横 縦 進む方向 じゅんばん ぎょう れつ ぐるーぷ",go:"dir",b:
 "<ul><li><b>行単位</b>：1個体の全項目 → 次の個体</li><li><b>列単位</b>：1項目を全個体 → 次の項目</li><li><b>グループ単位</b>：決めた列数のまとまりごとに 横 → 次の個体。例 <code>2,1</code> なら、左の2列を全個体分、次の1列を全個体分</li></ul><p>列単位・グループ単位で次の列（まとまり）に移るときは、そのまとまりで最初に空いているセルから始めます。前半の個体を調べた後に個体を足して続きを調べるときも、調べ終わった先頭に戻りません。すべて埋まっているときは先頭の個体から始めます。</p>"},
 {g:"table",id:"list",t:"個体リスト（事前入力の列）",k:"個体リスト 事前入力 樹番号 処理区 果実番号 組み合わせ Excel 貼り付け こたいりすと じぜんにゅうりょく じゅばんごう しょりく",go:"list",b:
-"<p>事前入力の列（樹番号・処理区など）は、個体リストで先に入れておきます。「組み合わせで個体リストを作る」で、例えば 樹 <code>1-5</code> × 処理区 <code>無処理、遮光</code> × 果実 <code>1-10</code> の全組み合わせを作れます。Excelで事前入力の列を並べてコピーし、貼り付けることもできます。リストを減らすと、外れた行を表から消すか確かめます。</p>"},
+"<p>事前入力の列（樹番号・処理区など）は、個体リストで先に入れておきます。「組み合わせで個体リストを作る」で、例えば 樹 <code>1-5</code> × 処理区 <code>無処理、遮光</code> × 果実 <code>1-10</code> の全組み合わせを作れます。Excelで事前入力の列を並べてコピーし、貼り付けることもできます。リストを減らすと、外れた行を表から消すか確かめます。</p><p><b>個体ごとに数が違うとき</b>は「＋ 今のリストの最後に付け足す」を使います。例えば 個体名 <code>A</code>・株 <code>1-3</code>・反復 <code>1-2</code> で付け足し、次に 個体名 <code>B</code>・株 <code>1-5</code>・反復は空のまま、で付け足します。空の欄はその列を空けたまま作ります。付け足しは今のリストを変えないので、調査の途中で個体を足すときにも使えます。「付け足しを1つ戻す」で直前の付け足しを取り消せます。</p><p>測定値は行の位置（No.）で持っています。値を入れた後にリストの途中へ行を足したり消したりすると、個体と測定値がずれるので、足すときは最後に付け足してください（途中を変えたときは設定の画面で知らせます）。</p>"},
 {g:"table",id:"freeze",t:"ウインドウ枠の固定",k:"固定 ウインドウ枠 列 行 スクロール 見出し こてい ういんどうわく",go:"freeze",b:
 "<p>表を横や下に動かしても、左の列・上の行が残るようにできます。設定の「表の表示」で、左から固定する列数（No.の列も1列と数える）と上から固定する行数を指定します。「事前入力の列まで固定」で、個体の識別の列までを一度に指定できます。</p>"},
 
@@ -4890,6 +4908,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.8.4",d:"2026-11-12",a:[["表のセルに直接入力（今のセルをもう一度押すと、その場でキーボード入力。PCはダブルクリック・F2）","celledit"],["個体リストを少しずつ付け足して作る（個体ごとに株・反復の数が違ってもよい。空の欄も可）","list"]]},
 {v:"Pro 4.8.2",d:"2026-11-05",a:[["全調査日の一覧（1行＝1個体。項目ごと／調査日ごと、絞り込み、前回比の色・外れ値・除外の表示、押すとそのセルへ）","lslist"],["入力の表に前の調査日の値を並べる（1〜3回、前回からの増減の矢印）","prevcols"]]},
 {v:"Pro 4.8.1",d:"2026-11-05",a:[["iPhone の聞き取りと読み上げの安定化（止まったときの「再開」ボタン、続けて入った値の読み上げをまとめる、試験的な設定「iPhoneでも聞き取りを止めずに読み上げる」）","iosmic"],["その他の不具合の修正",""]]},
 {v:"Pro 4.8",d:"2026-11-05",a:[["今日の調査を終える（空欄・外れ値の確認、次回も続ける／完了、中身を確かめたバックアップ）","end"],["画面の下に最終バックアップの日時（しばらく取っていないときは色を変えて知らせる）","autosave"],["PCでは選んだフォルダーへ自動で保存（Googleドライブなどの同期フォルダーを選べばクラウドにも入る）","autosave"],["調査一覧に完了の印とバックアップの日時","surveys"]]},
@@ -5684,6 +5703,164 @@ async function boot(){
   try{ await asInit(); }catch(e){}
   await licStart();
 }
+/* ========= 個体リスト：付け足して作る ========= */
+let listUndo=[];
+function genRows(){
+  const ids=draft.items.filter(it=>it.role==="id"); let rows=[[]];
+  ids.forEach(it=>{ const vals=expandSpec($(`#sGen input[data-gid="${it.id}"]`)?.value); rows=rows.flatMap(r=>vals.map(v=>r.concat(v))); });
+  return rows;
+}
+const listLines=t=>{ t=String(t||"").replace(/\r/g,"").replace(/\n+$/,""); return t?t.split("\n"):[]; };
+const listKey=l=>l.split(/\t|,/).map(s=>s.trim()).join("\t").replace(/\t+$/,"");
+function listHasMeas(){
+  const ids=measIds(), has=o=>!!o&&ids.some(id=>hasVal(o[id]));
+  return D.some(has)||Object.values(S.sessions||{}).some(a=>Array.isArray(a)&&a.some(has));
+}
+/* 値を入れた後に、リストの途中を変えたときの知らせ（測定値は行の位置で持っているため） */
+function listEditWarn(){
+  const w=$("#sListWarn"); if(!w) return;
+  const a=listLines(listOrig), b=listLines($("#sList").value);
+  const mid=a.length>0&&a.some((l,i)=>i<b.length&&listKey(l)!==listKey(b[i]));
+  if(mid&&listHasMeas()){ w.hidden=false; w.textContent="リストの途中の行を変えています。測定値は行の位置（No.）のまま残り、個体と一緒には動きません。個体を足すときは「最後に付け足す」を使ってください。"; }
+  else w.hidden=true;
+}
+$("#sAppend").onclick=()=>{
+  const rows=genRows().filter(r=>r.some(v=>v!==""));
+  if(!rows.length){ $("#sListInfo").textContent="付け足す値を、上の欄に1つ以上入れてください（使わない欄は空のままでかまいません）。"; return; }
+  const ta=$("#sList"), now=listLines(ta.value);
+  listUndo.push(ta.value); if(listUndo.length>50) listUndo.shift();
+  ta.value=now.concat(rows.map(r=>r.join("\t"))).join("\n");
+  $("#sListInfo").textContent=`${rows.length}個体を付け足しました（合計 ${now.length+rows.length}個体）。欄を書き換えて、続けて付け足せます。保存すると表に反映されます。`;
+  $("#sAppendUndo").hidden=false; ta.scrollTop=ta.scrollHeight; listEditWarn();
+};
+$("#sAppendUndo").onclick=()=>{
+  if(!listUndo.length) return;
+  $("#sList").value=listUndo.pop(); $("#sAppendUndo").hidden=!listUndo.length;
+  $("#sListInfo").textContent=`付け足しを1つ戻しました（${listLines($("#sList").value).length}個体）。`; listEditWarn();
+};
+$("#sMake").addEventListener("click",()=>{ listUndo=[]; $("#sAppendUndo").hidden=true; listEditWarn(); });
+$("#sList").addEventListener("input",listEditWarn);
+{ const o0=openSettings; openSettings=function(){ const r=o0.apply(this,arguments); try{ listUndo=[]; $("#sAppendUndo").hidden=true; $("#sListWarn").hidden=true; }catch(e){} return r; }; }
+
+/* ========= セルに直接入力 =========
+   今のセル（黄色）をもう一度押すと、表の中に入力欄を出す（PCはダブルクリック・F2）。
+   入れる処理は手入力欄と同じ handleText。表を描き直しても入力欄は作り直さない（キーボードを閉じさせないため） */
+let ce=null, ceTapPrev=null, ceKeep=0, ceBusy=false, ceAuto=null, ceNote="";
+const ceIn=$("#cellIn"), ceBar=$("#cellBar");
+function ceCellText(){ const it=S.items[cur.c]; return it?fmt(D[cur.r]?.[it.id],it):""; }
+function ceSelectAll(){ try{ ceIn.setSelectionRange(0,ceIn.value.length); }catch(e){} }
+function ceMsgSync(){
+  const m=$("#cellMsg"); if(!ce){ m.hidden=true; return; }
+  const al=!$("#alertBar").hidden, txt=al?$("#alertMsg").textContent:ceNote;
+  if(!txt){ m.hidden=true; return; }
+  $("#cellMsgT").textContent=txt; const ask=al&&!!pend&&!$("#alBtns").hidden;
+  $("#cellYes").hidden=!ask; $("#cellNo").hidden=!ask; m.hidden=false;
+}
+function cePlace(){
+  if(!ce) return;
+  const td=$("#tbl td.cur"), it=S.items[cur.c];
+  if(!td||!it||it.role==="id"||sel||rangeMode||document.querySelector("dialog[open]")||!$("#gate").hidden){ ceEnd(); return; }
+  const moved=ce.r!==cur.r||ce.c!==cur.c||ce.d!==S.curDate||ce.sv!==svId, cell=ceCellText();
+  if(moved||cell!==ce.cell){
+    ce.r=cur.r; ce.c=cur.c; ce.d=S.curDate; ce.sv=svId; ce.cell=cell; ce.orig=cell; ceIn.value=cell; if(moved) ceNote="";
+    ceIn.setAttribute("inputmode",isNum(it)?"decimal":"text"); ceIn.classList.toggle("txt",!isNum(it));
+    ceIn.setAttribute("aria-label",`${cellName(cur)} に直接入力`);
+    if(document.activeElement===ceIn) ceSelectAll();
+  }
+  ceMsgSync();
+  const box=$("#tablebox"), b=box.getBoundingClientRect(), t=td.getBoundingClientRect();
+  ceBar.hidden=false; ceBar.style.minWidth=Math.ceil(t.width)+"px";
+  ceIn.style.minHeight=Math.max(40,Math.ceil(t.height)-8)+"px";
+  const w=ceBar.offsetWidth, x=t.left-b.left+box.scrollLeft-box.clientLeft, y=t.top-b.top+box.scrollTop-box.clientTop;
+  ceBar.style.left=Math.max(0,Math.min(x,Math.max(box.scrollWidth,box.clientWidth)-w))+"px"; ceBar.style.top=Math.max(0,y)+"px";
+  if(moved) try{ ceBar.scrollIntoView({block:"nearest",inline:"nearest"}); }catch(e){}
+}
+function ceStart(){
+  const it=S.items[cur.c]; if(!it) return false;
+  if(it.role==="id"){ note("事前入力の列は、設定の「個体リスト」で直します"); return false; }
+  if(sel||rangeMode) return false;
+  ce={r:-1,c:-1,d:"",sv:"",cell:"",orig:""}; ceNote=""; cePlace(); if(!ce) return false;
+  ceIn.focus(); ceSelectAll(); return true;
+}
+function ceEnd(){
+  if(!ce) return; ce=null; ceKeep=0; clearTimeout(ceAuto); ceBar.hidden=true; ceNote="";
+  if(document.activeElement===ceIn) ceIn.blur();
+}
+/* 入れる。変えていなければ次のセルへ進むだけ、空にしていればその値を消す。move=false：進まない（ほかのセルを押したとき・閉じるとき） */
+function ceCommit(move){
+  if(!ce||ceBusy) return; ceBusy=true; clearTimeout(ceAuto);
+  try{
+    const v=ceIn.value.trim(), was=String(ce.orig||"").trim(); ceNote="";
+    if(v===was){ if(move){ clearPend(); sel=null; cur=nextPos(cur); save(); render(); } }
+    else if(!v){ clearCells(); if(move&&ce){ cur=nextPos(cur); save(); render(); } }
+    else{
+      const at={r:cur.r,c:cur.c};
+      handleText(v,false,!!S.rbManual);
+      if(ce&&cur.r===at.r&&cur.c===at.c&&!pend){ const h=$("#heard"); if(h.classList.contains("ng")){ ceNote=h.textContent; ceMsgSync(); } }
+    }
+  } finally{ ceBusy=false; }
+}
+{ const r0=render; render=function(){ const out=r0.apply(this,arguments); try{ cePlace(); }catch(e){} return out; }; }
+ceIn.addEventListener("keydown",e=>{
+  if(e.isComposing||e.keyCode===229) return;
+  if(e.key==="Enter"){ e.preventDefault(); if(!e.repeat) ceCommit(true); return; }
+  if(e.key==="Escape"){ e.preventDefault(); ceEnd(); return; }
+  if(e.repeat&&/^[0-9.\-+]$/.test(e.key)) e.preventDefault();
+});
+ceIn.addEventListener("input",()=>{ ceNote=""; clearTimeout(ceAuto); if(S.autoCommit&&ceIn.value.trim()) ceAuto=setTimeout(()=>ceCommit(true),1200); });
+/* キーボードを閉じた・ほかの所を押した：打ちかけの値を入れて終わる（入力欄のボタンや表のセルを押したときは続ける） */
+function ceBlurCheck(){
+  if(!ce||document.activeElement===ceIn) return;
+  const w=ceKeep-Date.now(); if(w>0){ setTimeout(ceBlurCheck,w+60); return; }
+  if(ceIn.value.trim()!==String(ce.orig||"").trim()&&ceIn.value.trim()) ceCommit(false);
+  ceEnd();
+}
+ceIn.addEventListener("blur",()=>setTimeout(ceBlurCheck,250));
+ceBar.addEventListener("pointerdown",e=>{ if(e.target.closest("button")) ceKeep=Date.now()+1200; });
+ceBar.addEventListener("mousedown",e=>{ if(e.target.closest("button")) e.preventDefault(); });
+$("#cellOk").onclick=()=>{ ceCommit(true); if(ce) ceIn.focus(); };
+$("#cellX").onclick=()=>ceEnd();
+$("#cellYes").onclick=()=>{ $("#alYes").click(); if(ce) ceIn.focus(); };
+$("#cellNo").onclick=()=>{ const c=ce; $("#alNo").click(); if(c&&ce){ ceIn.focus(); ceSelectAll(); } };
+try{ new MutationObserver(()=>{ if(ce) ceMsgSync(); }).observe($("#alertBar"),{attributes:true,childList:true,subtree:true,characterData:true}); }catch(e){}
+/* 表を押す前の今のセルを覚える（同じセルをもう一度押したかを見るため）。入力中にほかのセルを押したら、先に打ちかけの値を入れる */
+function ceBefore(e){
+  const td=e.target.closest&&e.target.closest("#tbl td.v"); if(!td) return;
+  if(ce){ ceKeep=Date.now()+1500;
+    const p={r:+td.dataset.r,c:+td.dataset.c};
+    if((p.r!==cur.r||p.c!==cur.c)&&ceIn.value.trim()&&ceIn.value.trim()!==String(ce.orig||"").trim()) ceCommit(false);
+  }
+}
+document.addEventListener("pointerdown",e=>{
+  const td=e.target.closest&&e.target.closest("#tbl td.v");
+  ceTapPrev=td?{r:cur.r,c:cur.c,pt:e.pointerType}:null;
+  if(ce&&td) ceKeep=Date.now()+1500;
+  if(e.pointerType==="mouse"&&e.button===0) ceBefore(e);
+},true);
+document.addEventListener("click",e=>{ if(!mouseTap) ceBefore(e); },true);
+$("#tbl").addEventListener("click",e=>{
+  const td=e.target.closest("td.v"); if(!td) return;
+  const p={r:+td.dataset.r,c:+td.dataset.c};
+  if(ce){ ceIn.focus(); ceSelectAll(); return; }
+  if(e.shiftKey||sel||rangeMode) return;
+  if(!ceTapPrev||ceTapPrev.pt==="mouse") return;
+  if(ceTapPrev.r===p.r&&ceTapPrev.c===p.c&&cur.r===p.r&&cur.c===p.c) ceStart();
+});
+/* PC（マウス）：表は押した時点で描き直すので click・dblclick は届かない。押した時点で、続けて同じセルを押したか（ダブルクリック）を見る */
+let ceLastDown=null;
+$("#tbl").addEventListener("pointerdown",e=>{
+  if(e.pointerType!=="mouse"||e.button!==0) return;
+  const td=e.target.closest("td.v"); if(!td) return;
+  const p={r:+td.dataset.r,c:+td.dataset.c}, now=Date.now();
+  const dbl=!!ceLastDown&&ceLastDown.r===p.r&&ceLastDown.c===p.c&&now-ceLastDown.t<450;
+  ceLastDown={r:p.r,c:p.c,t:now};
+  if(e.shiftKey||rangeMode) return;
+  if(ce){ setTimeout(()=>{ if(ce){ ceIn.focus(); ceSelectAll(); } },0); return; }
+  if(dbl){ ceLastDown=null; setTimeout(()=>{ dragging=false; ceStart(); },0); }
+});
+document.addEventListener("keydown",e=>{ if(e.key==="F2"&&!ce&&tableKeysOn(e)){ e.preventDefault(); ceStart(); } });
+window.addEventListener("resize",()=>{ if(ce) try{ cePlace(); }catch(e){} });
+
 boot();
 </script>
 </body>
