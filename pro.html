@@ -525,6 +525,40 @@ td.cur .pva{color:inherit}
 #tbl .cdshift{transition:transform .17s ease}
 .cdph{position:absolute;z-index:1;border:2px dashed var(--accent);border-radius:6px;background:color-mix(in srgb,var(--accent) 7%,transparent);pointer-events:none;box-sizing:border-box}
 @media (prefers-reduced-motion:reduce){#tbl .cdshift{transition:none}}
+
+/* 4.9.3 調査日の予定のカレンダー */
+.pcal{border:1.5px solid var(--line);border-radius:12px;padding:6px 3px;display:grid;gap:6px;background:var(--surface)}
+.pcalhead{display:flex;align-items:center;gap:6px}
+.pcalhead b{flex:1;text-align:center;font-size:1rem}
+.pcalhead button{min-width:44px;min-height:40px;padding:4px 10px;font-weight:700}
+.pcalgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+.pcalgrid .wd{font-size:.72rem;color:var(--muted);text-align:center;padding:2px 0}
+.pcalgrid .wd.sun,.pcalgrid button.sun{color:#c0392b}
+.pcalgrid .wd.sat,.pcalgrid button.sat{color:#2a6fb0}
+.pcalgrid button{position:relative;min-height:42px;border:1.5px solid var(--line);border-radius:8px;background:var(--bg);font-family:var(--f-num);font-size:1rem;padding:0;touch-action:manipulation}
+.pcalgrid button.today{outline:2.5px solid var(--ink);outline-offset:1px;z-index:1}
+.pcalgrid button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.pcalgrid button.done::after{content:"";position:absolute;left:50%;bottom:4px;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--warn)}
+.pcalgrid button.on.done::after{background:var(--accent-ink)}
+.pcalgrid button[aria-disabled=true]{cursor:default}
+.pcalgrid .blank{min-height:42px}
+.pcallegend{display:flex;flex-wrap:wrap;gap:10px;font-size:.75rem;color:var(--muted);align-items:center}
+.pcalhead b small{display:block;font-size:.72rem;font-weight:400;color:var(--muted)}
+.pcallegend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:3px}
+@media (prefers-color-scheme:dark){.pcalgrid .wd.sun,.pcalgrid button.sun{color:#ff8a7a}.pcalgrid .wd.sat,.pcalgrid button.sat{color:#7fb4ff}}
+:root[data-theme="dark"] .pcalgrid .wd.sun,:root[data-theme="dark"] .pcalgrid button.sun{color:#ff8a7a}
+:root[data-theme="dark"] .pcalgrid .wd.sat,:root[data-theme="dark"] .pcalgrid button.sat{color:#7fb4ff}
+.pcalgrid button.on.sun,.pcalgrid button.on.sat{color:var(--accent-ink)}
+
+/* 4.9.4 カレンダーの祝日 */
+.pcalgrid button.hol{color:#c0392b}
+@media (prefers-color-scheme:dark){.pcalgrid button.hol{color:#ff8a7a}}
+:root[data-theme="dark"] .pcalgrid button.hol{color:#ff8a7a}
+.pcalgrid button.on.hol{color:var(--accent-ink)}
+.pcalhol{font-size:.78rem;color:var(--muted);line-height:1.5}
+.pcalhol b{color:#c0392b;font-weight:700}
+@media (prefers-color-scheme:dark){.pcalhol b{color:#ff8a7a}}
+:root[data-theme="dark"] .pcalhol b{color:#ff8a7a}
 </style>
 </head>
 <body>
@@ -922,6 +956,7 @@ td.cur .pva{color:inherit}
           <label class="field"><b>回数</b><input type="number" id="pCount" min="0" max="200" step="1" inputmode="numeric" placeholder="例 8"></label>
           <label class="field"><b>または終わりの日</b><input type="date" id="pUntil"></label>
         </div>
+        <div class="pcal" id="pCal" aria-label="調査日のカレンダー"><div class="pcalhead"><button type="button" class="ghost" id="pCalPrev" aria-label="前の月">‹</button><b id="pCalTitle" aria-live="polite"></b><button type="button" class="ghost" id="pCalNext" aria-label="次の月">›</button><button type="button" class="ghost" id="pCalNow">今月</button></div><div class="pcalgrid" id="pCalGrid"></div><div class="pcalhol" id="pCalHol"></div><div class="pcallegend"><span><i style="background:var(--accent)"></i>予定日</span><span><b style="color:#c0392b">赤</b>＝日曜・祝日</span><span><i style="outline:2px solid var(--ink);outline-offset:-2px"></i>今日</span><span><i style="background:var(--warn);border-radius:50%"></i>調査した日</span></div><small class="ver" id="pCalHelp"></small></div>
         <label class="field" id="pListBox"><b>予定日</b><textarea id="pList" rows="4" spellcheck="false" placeholder="2026-05-10&#10;2026-05-24&#10;2026-06-07"></textarea></label>
         <div class="pgrid">
           <label class="field"><b>時刻</b><input type="time" id="pTime"><small class="ver">空なら終日の予定</small></label>
@@ -2270,7 +2305,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.9.2（2026-11-14）";
+const APP_VER="Pro 4.9.4（2026-11-15）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -5047,8 +5082,8 @@ const HELP=[
 "<p>設定の「表の表示（ウインドウ枠の固定）」にある「前の調査日の値を並べる」で回数（1〜3回）を選ぶと、入力の表で各項目の今日の列の左に、前の調査日の値を薄い色で並べます（見出しは「横径 10/15」のように日付付き）。今日の値の横には、前回からの増減を ▲（増）▼（減）＝（同じ）で出します。前回比を設定した項目は、表示・注意・禁止と同じ色になります。</p><ul><li>すべての測定の項目か、選んだ項目だけかを選べます。設定は調査ごとに覚え、ひな形にも入ります。</li><li>前の値の列は見るだけです。押しても今のセルにならず、入力の順番・範囲選択・コピー・貼り付け・Excel・CSV には入りません。「固定する列数」も、これまでどおり No. と項目で数えます（前の値の列は、その項目と一緒に固定されます）。</li><li>前の値がない個体は空けます。1回の調査では出ません。</li></ul>"},
 {g:"ts",id:"compare",t:"前回比アラート",k:"前回比 アラート 減った 増えた 同じ 注意 禁止 表示 許容 誤差 はい いいえ ぜんかいひ あらーと ちゅうい きんし きょよう ごさ",go:"items",b:
 "<p>経時調査では、各項目（数値・音声で入力）の「前回比」で、前回より減った・増えた・同じときの扱いを決めます。</p><ul><li><b>表示</b>：知らせるだけ</li><li><b>注意</b>：「はい」で確定、「いいえ」か正しい値で入力し直し</li><li><b>禁止</b>：入れずに、入力し直しを求める</li></ul><p>「許容±」は測定誤差の幅で、この幅以内の差は「同じ」とみなします。例：肥大調査なら、横径・縦径・果実重の「減った」を「注意」か「禁止」にします。</p><p>前回までの値は、「全調査日の一覧」でまとめて見たり、「前の調査日の値を並べる」で入力の表の横に出したりできます。</p>"},
-{g:"ts",id:"plan",t:"調査日の予定とカレンダー",k:"予定 調査日 お知らせ 通知 カレンダー ics 繰り返し 間隔 何日ごと 忘れ 過ぎ 今日 リマインダー よてい つうち かれんだー くりかえし かんかく",go:"plan",b:
-"<p>経時調査では、設定の「調査日の予定・カレンダー」で予定を決められます。</p><ul><li><b>間隔で決める</b>：初回の日と、何日ごとか（例 14日ごと）、回数か終わりの日。</li><li><b>日付を並べる</b>：予定日を1行に1つずつ書く。</li></ul><p>アプリを開くと、今日が調査日のときと、予定日を過ぎてまだ調査していないときに、画面の上に知らせます（「今日の調査を始める」で今日の調査日を作れます）。調査日の欄の横には次の予定が出ます。「調査一覧」には調査ごとの状態が出て、今日・過ぎている調査があるとボタンに ● と件数が付きます。</p><p>このアプリは閉じている間に通知を出せません。決まった時刻に知らせてほしいときは、「カレンダーに登録（.ics ファイルを保存）」で端末のカレンダーに予定を入れます。通知は 前日の18時・当日の朝7時・開始の1時間前 から選べます（複数可）。予定を変えたときは、もう一度登録します。</p><p>予定日の前後（前後の予定日との間の半分まで）に調査した日があれば、その回は済んだとみなします。予定はひな形にも入るので、同じ予定をほかの人に配れます。</p>"},
+{g:"ts",id:"plan",t:"調査日の予定とカレンダー",k:"月 カレンダー 日を選ぶ 押して選ぶ 祝日 休日 振替休日 しゅくじつ きゅうじつ つき ひをえらぶ 予定 調査日 お知らせ 通知 カレンダー ics 繰り返し 間隔 何日ごと 忘れ 過ぎ 今日 リマインダー よてい つうち かれんだー くりかえし かんかく",go:"plan",b:
+"<p>経時調査では、設定の「調査日の予定・カレンダー」で予定を決められます。</p><ul><li><b>間隔で決める</b>：初回の日と、何日ごとか（例 14日ごと）、回数か終わりの日。</li><li><b>日付を並べる</b>：カレンダーで日を押して選ぶ（もう一度押すと外す。‹ › で月を移る）。下の欄に1行に1つずつ書いたり、貼り付けたりもできます。</li><li>カレンダーの日曜・祝日は赤で、その月の祝日の名前はカレンダーの下に出ます。祝日（振替休日・国民の休日を含む）はアプリの中で祝日法の決まりから計算しています（2000〜2099年。通信はしません）。春分の日・秋分の日は計算で出すため、国の発表と違う年があり得ます。法律が変わったときは、アプリを直すまで反映されません。</li><li>「間隔で決める」でも、カレンダーで予定日を確かめられます。そこで日を押すと、間隔の予定を元にして「日付を並べる」に切り替わり、日を足したり外したりできます。</li></ul><p>アプリを開くと、今日が調査日のときと、予定日を過ぎてまだ調査していないときに、画面の上に知らせます（「今日の調査を始める」で今日の調査日を作れます）。調査日の欄の横には次の予定が出ます。「調査一覧」には調査ごとの状態が出て、今日・過ぎている調査があるとボタンに ● と件数が付きます。</p><p>このアプリは閉じている間に通知を出せません。決まった時刻に知らせてほしいときは、「カレンダーに登録（.ics ファイルを保存）」で端末のカレンダーに予定を入れます。通知は 前日の18時・当日の朝7時・開始の1時間前 から選べます（複数可）。予定を変えたときは、もう一度登録します。</p><p>予定日の前後（前後の予定日との間の半分まで）に調査した日があれば、その回は済んだとみなします。予定はひな形にも入るので、同じ予定をほかの人に配れます。</p>"},
 {g:"ts",id:"exclude",t:"除外（落果・枯死・欠株）と復帰",k:"除外 落果 枯死 欠株 復帰 飛ばす じょがい らっか こし けっかぶ ふっき",b:
 "<p>「除外」（または「落果」「枯死」「欠株」）と言うか、「除外」ボタンを押すと、その個体をこの調査日以降は自動で飛ばします。間違えたときは、その個体のセルで「復帰」と言うか「復帰」ボタンを押します。除外は、出力の「状態」「除外日」「理由」に記録されます。</p>"},
 
@@ -5134,9 +5169,11 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.9.4",d:"2026-11-15",a:[["調査日の予定のカレンダーに祝日（振替休日・国民の休日を含む）を表示","plan"]]},
+{v:"Pro 4.9.3",d:"2026-11-14",a:[["調査日の予定を、月のカレンダーで日を押して選べるように（日付を並べるとき。間隔で決めた予定も見られる）","plan"]]},
 {v:"Pro 4.9.2",d:"2026-11-14",a:[["表の見出しをつかんで、列を左右に動かせるように（列ごと浮いて動く。PCはドラッグ、キーボードは Alt+←→）","coledit"]]},
-{v:"Pro 4.9.1",d:"2026-11-14",a:[["表のセルに直接入力（今のセルをもう一度押すと、その場でキーボード入力。PCはダブルクリック・F2）","celledit"],["個体リストを少しずつ付け足して作る（個体ごとに株・反復の数が違ってもよい。空の欄も可）","list"]]},
 {v:"Pro 4.9",d:"2026-11-10",a:[["表の見出しから列を編集（名前・種類の変更、左・右への列の追加、移動、削除）","coledit"],["設定の調査項目の並べ替えを、つかんで滑らかに動かせるように","settings"]]},
+{v:"Pro 4.8.4",d:"2026-11-12",a:[["表のセルに直接入力（今のセルをもう一度押すと、その場でキーボード入力。PCはダブルクリック・F2）","celledit"],["個体リストを少しずつ付け足して作る（個体ごとに株・反復の数が違ってもよい。空の欄も可）","list"]]},
 {v:"Pro 4.8.2",d:"2026-11-05",a:[["全調査日の一覧（1行＝1個体。項目ごと／調査日ごと、絞り込み、前回比の色・外れ値・除外の表示、押すとそのセルへ）","lslist"],["入力の表に前の調査日の値を並べる（1〜3回、前回からの増減の矢印）","prevcols"]]},
 {v:"Pro 4.8.1",d:"2026-11-05",a:[["iPhone の聞き取りと読み上げの安定化（止まったときの「再開」ボタン、続けて入った値の読み上げをまとめる、試験的な設定「iPhoneでも聞き取りを止めずに読み上げる」）","iosmic"],["その他の不具合の修正",""]]},
 {v:"Pro 4.8",d:"2026-11-05",a:[["今日の調査を終える（空欄・外れ値の確認、次回も続ける／完了、中身を確かめたバックアップ）","end"],["画面の下に最終バックアップの日時（しばらく取っていないときは色を変えて知らせる）","autosave"],["PCでは選んだフォルダーへ自動で保存（Googleドライブなどの同期フォルダーを選べばクラウドにも入る）","autosave"],["調査一覧に完了の印とバックアップの日時","surveys"]]},
@@ -6215,6 +6252,106 @@ $("#tbl").addEventListener("click",e=>{
   if(cdHinted||e.pointerType==="mouse") return; const th=e.target.closest("th[data-c]"); if(!th) return;
   setTimeout(()=>{ if(hSel>=0&&!$("#colDlg").open&&!cdHinted){ cdHinted=true; note("選んだ見出し（✎）をつかんで左右に動かすと、列を移動できます。もう一度押すと列の編集が開きます"); } },0);
 });
+
+/* ========= 調査日の予定を月のカレンダーで選ぶ（4.9.3） =========
+   「日付を並べる」のとき、日を押すと #pList に足す／外す（並べ替えて1行に1つ）。
+   「間隔で決める」のときは予定日を見せるだけ。日を押すと、その予定を元に「日付を並べる」に切り替えてから足す／外す */
+let pcalYM=null;
+const pcalPad=n=>String(n).padStart(2,"0");
+const pcalKey=(y,m,d)=>`${y}-${pcalPad(m)}-${pcalPad(d)}`;
+function pcalTokens(){ return $("#pList").value.normalize("NFKC").split(/[\s,、，]+/).filter(Boolean); }
+function pcalSetList(dates){
+  /* 読めない書き方の行は消さずに最後へ残す（打ち間違いを黙って消さない） */
+  const bad=pcalTokens().filter(t=>!isDate(t.replace(/\//g,"-").replace(/^(\d{4})-(\d{1,2})-(\d{1,2})$/,(m,y,mo,d)=>`${y}-${mo.padStart(2,"0")}-${d.padStart(2,"0")}`)));
+  $("#pList").value=[...new Set(dates)].sort().concat(bad).join("\n");
+}
+function pcalInit(){
+  const p=planFromForm(), P=planDates({...p,on:true}), t=today();
+  const base=(p.mode==="list"?p.list.find(d=>d>=t)||p.list[p.list.length-1]:P.find(d=>d>=t)||P[0])||t;
+  pcalYM=[+base.slice(0,4),+base.slice(5,7)];
+}
+function pcalDraw(){
+  if(!$("#pCalGrid")) return;
+  if(!pcalYM) pcalInit();
+  const p=planFromForm(), list=p.mode==="list", P=new Set(planDates({...p,on:true}));
+  const done=new Set((()=>{ try{ return dataDates(draft&&draft.items?{...S,items:draft.items}:S,D); }catch(e){ return []; } })());
+  const [y,m]=pcalYM, first=new Date(y,m-1,1), days=new Date(y,m,0).getDate(), lead=first.getDay(), t=today();
+  const inMonth=[...P].filter(d=>d.slice(0,7)===`${y}-${pcalPad(m)}`).length;
+  $("#pCalTitle").innerHTML=`${y}年${m}月<small>${inMonth?`予定 ${inMonth}日`:"予定なし"}</small>`;
+  let h=["日","月","火","水","木","金","土"].map((w,i)=>`<span class="wd${i===0?" sun":i===6?" sat":""}">${w}</span>`).join("");
+  for(let i=0;i<lead;i++) h+='<span class="blank"></span>';
+  for(let d=1;d<=days;d++){
+    const k=pcalKey(y,m,d), wd=(lead+d-1)%7, on=P.has(k), cls=[wd===0?"sun":wd===6?"sat":"",on?"on":"",k===t?"today":"",done.has(k)?"done":""].filter(Boolean).join(" ");
+    const lab=`${m}月${d}日${on?"、予定日":""}${done.has(k)?"、調査した日":""}${k===t?"、今日":""}`;
+    h+=`<button type="button" class="${cls}" data-d="${k}" aria-pressed="${on}" aria-label="${lab}">${d}</button>`;
+  }
+  $("#pCalGrid").innerHTML=h;
+  $("#pCalHelp").textContent=list?"日を押すと予定日に足し、もう一度押すと外します。":"間隔で決めた予定日です。日を押すと、この予定を元に「日付を並べる」に切り替えて、日を足したり外したりできます。";
+}
+$("#pCalGrid").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-d]"); if(!b) return;
+  const k=b.dataset.d; let p=planFromForm();
+  if(p.mode!=="list"){
+    const P=planDates({...p,on:true});
+    document.querySelector("input[name=pMode][value=list]").checked=true;
+    pcalSetList(P); p=planFromForm();
+    note("間隔の予定を元に「日付を並べる」に切り替えました（戻すときは「間隔で決める」を選びます）");
+  }
+  const s=new Set(p.list); if(s.has(k)) s.delete(k); else { if(s.size>=200){ note("予定日は200日までです"); return; } s.add(k); }
+  pcalSetList([...s]); planFormUi();
+});
+$("#pCalPrev").onclick=()=>{ let [y,m]=pcalYM; m--; if(m<1){ m=12; y--; } pcalYM=[y,m]; pcalDraw(); };
+$("#pCalNext").onclick=()=>{ let [y,m]=pcalYM; m++; if(m>12){ m=1; y++; } pcalYM=[y,m]; pcalDraw(); };
+$("#pCalNow").onclick=()=>{ const t=today(); pcalYM=[+t.slice(0,4),+t.slice(5,7)]; pcalDraw(); };
+{ const f0=planFormUi; planFormUi=function(){ const r=f0.apply(this,arguments); try{ pcalDraw(); }catch(e){} return r; }; }
+/* 欄の入力・切り替えの処理は元の planFormUi を直接持っているので、カレンダーの描き直しを別に付ける */
+["pOn","pStart","pEvery","pCount","pUntil","pList"].forEach(id=>$("#"+id).addEventListener("input",()=>{ try{ pcalDraw(); }catch(e){} }));
+document.querySelectorAll("input[name=pMode],#pOn").forEach(x=>x.addEventListener("change",()=>{ try{ pcalDraw(); }catch(e){} }));
+{ const f0=planToForm; planToForm=function(){ pcalYM=null; const r=f0.apply(this,arguments); return r; }; }
+
+/* ========= 日本の祝日（4.9.4） =========
+   祝日法の決まりで計算する（2000〜2099年）。外からは取らない。
+   春分・秋分は天文の近似式（1980〜2099年で使われる式）。特例の年（2019年の即位、2020・2021年の五輪）は個別に入れる */
+const JPHOL={};
+function jpHolidays(y){
+  if(JPHOL[y]) return JPHOL[y];
+  const H=new Map(); if(y<2000||y>2099){ JPHOL[y]=H; return H; }
+  const k=(m,d)=>`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  const nthMon=(m,n)=>{ const w=new Date(y,m-1,1).getDay(); return 1+((8-w)%7)+(n-1)*7; };
+  const add=(m,d,name)=>H.set(k(m,d),name);
+  add(1,1,"元日"); add(1,nthMon(1,2),"成人の日"); add(2,11,"建国記念の日");
+  if(y>=2020) add(2,23,"天皇誕生日"); else if(y<=2018) add(12,23,"天皇誕生日");
+  const t=y-1980;
+  add(3,Math.floor(20.8431+0.242194*t-Math.floor(t/4)),"春分の日");
+  if(y>=2007){ add(4,29,"昭和の日"); add(5,4,"みどりの日"); } else add(4,29,"みどりの日");
+  add(5,3,"憲法記念日"); add(5,5,"こどもの日");
+  if(y===2020) add(7,23,"海の日"); else if(y===2021) add(7,22,"海の日"); else if(y>=2003) add(7,nthMon(7,3),"海の日"); else add(7,20,"海の日");
+  if(y===2020) add(8,10,"山の日"); else if(y===2021) add(8,8,"山の日"); else if(y>=2016) add(8,11,"山の日");
+  if(y>=2003) add(9,nthMon(9,3),"敬老の日"); else add(9,15,"敬老の日");
+  add(9,Math.floor(23.2488+0.242194*t-Math.floor(t/4)),"秋分の日");
+  if(y===2020) add(7,24,"スポーツの日"); else if(y===2021) add(7,23,"スポーツの日"); else if(y>=2020) add(10,nthMon(10,2),"スポーツの日"); else add(10,nthMon(10,2),"体育の日");
+  add(11,3,"文化の日"); add(11,23,"勤労感謝の日");
+  if(y===2019){ add(5,1,"天皇の即位の日"); add(10,22,"即位礼正殿の儀"); }
+  /* 国民の休日：前の日と次の日が国民の祝日で、その日は祝日でない日 */
+  const base=new Map(H), ds=d=>{ const a=d.split("-").map(Number); return new Date(a[0],a[1]-1,a[2]); }, key=dt=>`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+  for(let dt=new Date(y,0,2); dt.getFullYear()===y; dt.setDate(dt.getDate()+1)){
+    const kk=key(dt); if(base.has(kk)) continue;
+    const pv=new Date(dt); pv.setDate(pv.getDate()-1); const nx=new Date(dt); nx.setDate(nx.getDate()+1);
+    if(base.has(key(pv))&&base.has(key(nx))&&dt.getDay()!==0) H.set(kk,"国民の休日");
+  }
+  /* 振替休日：国民の祝日が日曜のとき、その後でいちばん近い国民の祝日でない日 */
+  [...base.keys()].forEach(d=>{ const dt=ds(d); if(dt.getDay()!==0) return; const x=new Date(dt); do{ x.setDate(x.getDate()+1); }while(base.has(key(x))); if(x.getFullYear()===y&&!H.has(key(x))) H.set(key(x),"振替休日"); });
+  /* 12/31 が日曜の祝日はないので、年をまたぐ振替は起きない */
+  JPHOL[y]=H; return H;
+}
+function jpHoliday(d){ return jpHolidays(+String(d).slice(0,4)).get(d)||""; }
+{ const f0=pcalDraw; pcalDraw=function(){ const r=f0.apply(this,arguments); try{
+  if(!pcalYM) return r;
+  const [y,m]=pcalYM, H=jpHolidays(y), list=[];
+  document.querySelectorAll("#pCalGrid button[data-d]").forEach(b=>{ const n=H.get(b.dataset.d); if(!n) return;
+    b.classList.add("hol"); b.title=n; b.setAttribute("aria-label",b.getAttribute("aria-label").replace(/^(\d+月\d+日)/,`$1、${n}`)); list.push(`<b>${+b.dataset.d.slice(8)}日</b> ${esc(n)}`); });
+  $("#pCalHol").innerHTML=list.length?"祝日："+list.join("、"):(y<2000||y>2099?"この年の祝日は出せません（2000〜2099年）":"");
+}catch(e){} return r; }; }
 
 boot();
 </script>
