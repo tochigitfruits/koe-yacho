@@ -198,7 +198,29 @@ legend{font-weight:700;font-size:.9rem;margin-bottom:6px}
 .item button{width:36px;height:38px;border:1.5px solid var(--line);border-radius:8px;background:var(--bg)}
 .item button.ins{width:auto;padding:0 8px;font-size:.8rem;white-space:nowrap;font-weight:700}
 .handle{width:34px;height:38px;flex:none;display:grid;place-items:center;border:1.5px dashed var(--line);border-radius:8px;color:var(--muted);cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;font-size:1.15rem;line-height:1}
-.item.dragging{border-color:var(--accent);box-shadow:0 8px 20px rgba(0,0,0,.25);position:relative;z-index:3}
+.item.dragging{border-color:var(--accent);box-shadow:0 14px 30px rgba(0,0,0,.28);z-index:50;transform:scale(1.02);transition:transform .12s ease,box-shadow .12s ease;pointer-events:none;background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+/* 4.9：並べ替えの空き（落とす先）と、動いた項目の色 */
+.item-ph{border:2px dashed var(--accent);border-radius:10px;background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.item.moved{animation:moved .9s ease-out}
+@keyframes moved{from{background:color-mix(in srgb,var(--accent) 28%,var(--surface));border-color:var(--accent)}}
+/* 4.9：表の見出しから列を編集 */
+#tbl th[data-c]{cursor:pointer}
+#tbl th.hsel{background:color-mix(in srgb,var(--accent) 18%,var(--surface));box-shadow:inset 0 -3px 0 var(--accent)}
+#tbl th .hedit{display:inline-grid;place-items:center;margin-left:4px;width:1.6em;height:1.6em;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:.8rem;vertical-align:middle}
+#colDlg{width:min(640px,100%)}
+#ceTitle:focus{outline:none}
+.ceorder{display:flex;flex-wrap:wrap;gap:6px}
+.ceorder button{border:1.5px solid var(--line);border-radius:999px;padding:5px 12px;background:var(--bg);font-size:.85rem;min-height:36px}
+.ceorder button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.ceorder button.isid{border-style:dashed}
+.ceorder button.isnew{box-shadow:inset 0 0 0 2px var(--mark)}
+.cegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cegrid button,.ceact button{border:1.5px solid var(--line);border-radius:10px;padding:10px 8px;background:var(--bg);font-weight:700;min-height:44px}
+.cegrid button:disabled{opacity:.4}
+.ceact{display:flex;gap:8px;flex-wrap:wrap}.ceact button{flex:1 1 10em}
+.ceact .danger{color:var(--rec);border-color:color-mix(in srgb,var(--rec) 55%,var(--line))}
+#ceItem .item{border-color:var(--accent)}
+@media (prefers-reduced-motion:reduce){.item.dragging{transition:none;transform:none}.item.moved{animation:none}}
 .item.dragging .handle{cursor:grabbing;border-style:solid;border-color:var(--accent);color:var(--accent)}
 body.itemdrag{-webkit-user-select:none;user-select:none;cursor:grabbing}
 .item.newitem{border:2px solid var(--accent)}
@@ -494,6 +516,15 @@ td.cur .pva{color:inherit}
 .listbtns{display:flex;gap:6px;flex-wrap:wrap}
 .listbtns .add{flex:1 1 12em}
 #sListWarn{color:var(--warn);font-size:.82rem}
+
+/* 4.9.2 表の見出しをつかんで列を動かす */
+#tbl th.hsel{touch-action:none}
+#tbl .cdrag{background:color-mix(in srgb,var(--accent) 14%,var(--surface))!important;box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent);z-index:8}
+#tbl td.cdrag:not(.fzc){position:relative}
+#tbl th.cdrag{box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent),inset 0 3px 0 var(--accent);cursor:grabbing}
+#tbl .cdshift{transition:transform .17s ease}
+.cdph{position:absolute;z-index:1;border:2px dashed var(--accent);border-radius:6px;background:color-mix(in srgb,var(--accent) 7%,transparent);pointer-events:none;box-sizing:border-box}
+@media (prefers-reduced-motion:reduce){#tbl .cdshift{transition:none}}
 </style>
 </head>
 <body>
@@ -603,7 +634,7 @@ td.cur .pva{color:inherit}
     <button type="button" class="ghost" id="newDateGo">この日の調査を始める</button>
     <button type="button" class="ghost" id="newDateCancel">やめる</button>
   </div>
-  <div class="tablebox" id="tablebox"><table id="tbl"></table><div class="cellbar" id="cellBar" hidden><div class="cbrow"><input id="cellIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" aria-label="今のセルに直接入力"><button type="button" id="cellOk">入力</button><button type="button" id="cellX" class="sec" aria-label="直接入力を終える" title="直接入力を終える">✕</button></div><div class="cbmsg" id="cellMsg" hidden><span id="cellMsgT"></span><button type="button" id="cellYes">はい</button><button type="button" id="cellNo" class="sec">やり直し</button></div></div></div>
+  <div class="tablebox" id="tablebox"><table id="tbl"></table><div class="cdph" id="cdPh" hidden></div><div class="cellbar" id="cellBar" hidden><div class="cbrow"><input id="cellIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" aria-label="今のセルに直接入力"><button type="button" id="cellOk">入力</button><button type="button" id="cellX" class="sec" aria-label="直接入力を終える" title="直接入力を終える">✕</button></div><div class="cbmsg" id="cellMsg" hidden><span id="cellMsgT"></span><button type="button" id="cellYes">はい</button><button type="button" id="cellNo" class="sec">やり直し</button></div></div></div>
   <div class="ver" id="ceHint">今のセル（黄色）をもう一度押すと、その場でキーボード入力できます（PCはダブルクリック）</div>
 
   <div class="out">
@@ -724,6 +755,23 @@ td.cur .pva{color:inherit}
     <p class="help">受け取る人は、QRコードをカメラで読み取るか、リンクを開きます。アプリが開き、確かめたうえで新しい調査として作られます（受け取る人の今の調査はそのまま）。ファイルは「調査一覧」の「ファイルから作る」で読み込みます。</p>
     <p class="help">iPhoneでホーム画面から使っている場合、QRコードやリンクはSafariで開くため、ホーム画面のアプリとは別の場所に調査が作られます。その場合はファイルで受け取ってください。</p>
     <div class="actions"><button type="button" id="tplClose">閉じる</button></div>
+  </div>
+</dialog>
+
+<dialog id="colDlg" aria-labelledby="ceTitle">
+  <div class="sheet">
+    <div class="sheethead"><h2 id="ceTitle" tabindex="-1" autofocus>列の編集</h2><span class="ver" id="ceSub"></span></div>
+    <div class="field"><b>列の並び（押すとその列を編集）</b><div class="ceorder" id="ceOrder"></div></div>
+    <div class="items" id="ceItem"></div>
+    <div class="cegrid">
+      <button type="button" data-ce="addL">＋ 左に列を追加</button>
+      <button type="button" data-ce="addR">＋ 右に列を追加</button>
+      <button type="button" data-ce="moveL">← 左へ移動</button>
+      <button type="button" data-ce="moveR">右へ移動 →</button>
+    </div>
+    <div class="ceact"><button type="button" class="danger" data-ce="del">この列を削除</button><button type="button" data-ce="settings">設定画面で開く</button></div>
+    <p class="help" id="ceNote">変更は「保存」を押すまで反映されません。途中で足した列は、前の調査日では空欄になります。</p>
+    <div class="actions"><button type="button" id="ceCancel">キャンセル</button><button type="button" class="primary" id="ceSave">保存</button></div>
   </div>
 </dialog>
 
@@ -889,7 +937,7 @@ td.cur .pva{color:inherit}
     <details class="fold" data-fold="items"><summary><span class="ftitle">調査項目（左の列から順）</span><span class="fsum" data-sum="items"></span></summary>
     <fieldset class="fbody">
       <legend>調査項目（左の列から順）</legend>
-      <p class="help">左端の <b>⠿</b> をつかんで上下に動かすと、順番を変えられます。<b>＋上</b>・<b>＋下</b> で、その項目のすぐ上・下に新しい項目を入れます。</p>
+      <p class="help">左端の <b>⠿</b> をつかんで上下に動かすと、順番を変えられます。<b>＋上</b>・<b>＋下</b> で、その項目のすぐ上・下に新しい項目を入れます。入力の画面でも、表の見出し（項目名）を押すと、その列だけを編集できます。</p>
       <div class="items" id="sItems"></div>
       <div class="addrow"><button type="button" class="add" id="sAdd">＋ 項目を最後に追加</button><button type="button" class="add" id="sPreset">果実品質調査のひな形</button></div>
       <p class="help">「事前入力」の列（樹番号・処理区など）は、下の個体リストで先に入れておきます。音声では「音声で入力」の列だけを順に入力します。項目の順番を変えたり項目を足したりしても、これまでに入力した値はそのまま残ります。</p>
@@ -1315,6 +1363,8 @@ function peerSend(m){
 let svId="main";
 let S=S_DEFAULT();
 let D=[]; let cur={r:0,c:0}; let logs=[];
+/* 4.9：表の見出しで選んだ列（-1＝なし）と、列の編集の下書き */
+let hSel=-1, ce=null;
 function normS(){
   S.items=S.items.map(normItem);
   S.sessions=S.sessions||{}; S.curDate=S.curDate||today();
@@ -2220,7 +2270,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.8.4（2026-11-12）";
+const APP_VER="Pro 4.9.2（2026-11-14）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -2519,6 +2569,7 @@ let noteTimer=null;
 function note(msg,sticky){ const el=$("#note"); el.textContent=msg; el.hidden=false; clearTimeout(noteTimer); if(!sticky) noteTimer=setTimeout(()=>el.hidden=true,8000); }
 const inSel=(r,c)=>!!sel&&r>=sel.r1&&r<=sel.r2&&c>=sel.c1&&c<=sel.c2;
 function render(){
+  if(hSel>=n()) hSel=-1;
   $("#title").firstChild.nodeValue=S.name||"調査";
   $("#subtitle").textContent=`${S.ts?"経時調査・":""}${S.dir==="row"?"行単位":S.dir==="col"?"列単位":"グループ単位（"+groupsOf().map(g=>g.length).join("・")+"列）"}・${S.mode==="cont"?"連続認識":"1回ずつ"}`;
   $("#nextHint").textContent=S.dir==="col"?"次の項目へ":"次の個体へ";
@@ -2536,14 +2587,14 @@ function render(){
   /* 4.8.2：前の調査日の値（見るだけの列）。data-lc は「No.＋項目」で数えた列の番号（固定の列数に使う） */
   const pc=S.ts?pcCfg(S.prevCols):{n:0,items:null}, pcDs=pc.n?allDates().filter(d=>d<S.curDate).slice(-pc.n):[];
   const pcOn=x=>pcDs.length>0&&x.role!=="id"&&(!pc.items||pc.items.includes(x.id)), lc0=S.serial?1:0;
-  let h="<thead><tr>"+(S.serial?'<th class="no" data-lc="0">No.</th>':"")+S.items.map((x,ci)=>(pcOn(x)?pcDs.map((d,k)=>`<th class="pvh${k===0&&gStart.has(ci)?" gstart":""}" data-lc="${lc0+ci}">${esc(x.name)}<small>${planMD(d)}</small></th>`).join(""):"")
-    +`<th class="${x.role==="id"?"idh":""}${gStart.has(ci)&&!pcOn(x)?" gstart":""}" data-lc="${lc0+ci}">${esc(x.name)}<small>${esc(typeLabel(x).replace("事前入力・","事前・"))}</small></th>`).join("")+"</tr></thead><tbody>";
+  let h="<thead><tr>"+(S.serial?'<th class="no" data-lc="0">No.</th>':"")+S.items.map((x,ci)=>(pcOn(x)?pcDs.map((d,k)=>`<th class="pvh${k===0&&gStart.has(ci)?" gstart":""}${hSel===ci?" hsel":""}" data-lc="${lc0+ci}" data-c="${ci}">${esc(x.name)}<small>${planMD(d)}</small></th>`).join(""):"")
+    +`<th class="${x.role==="id"?"idh":""}${gStart.has(ci)&&!pcOn(x)?" gstart":""}${hSel===ci?" hsel":""}" data-lc="${lc0+ci}" data-c="${ci}" tabindex="0" title="押して選び、もう一度押すとこの列を編集">${esc(x.name)}${hSel===ci?'<span class="hedit" aria-hidden="true">✎</span>':""}<small>${esc(typeLabel(x).replace("事前入力・","事前・"))}</small></th>`).join("")+"</tr></thead><tbody>";
   const OLM=olCompute(S.curDate);
   for(let r=0;r<rows;r++){
     h+=`<tr class="${r===cur.r?"currow":""}${isEx(r)?" exrow":""}">`+(S.serial?`<td class="no">${isEx(r)?"✕":r+1}</td>`:"");
     S.items.forEach((x,c)=>{
       const v=D[r]?.[x.id]; const k=r+":"+c, pon=pcOn(x);
-      if(pon) pcDs.forEach((d,k2)=>{ h+=`<td class="pv${k2===0&&gStart.has(c)?" gstart":""}">${exState(r,d)?"":esc(fmt(valAt(r,x,d),x))}</td>`; });
+      if(pon) pcDs.forEach((d,k2)=>{ h+=`<td class="pv${k2===0&&gStart.has(c)?" gstart":""}" data-p="${c}">${exState(r,d)?"":esc(fmt(valAt(r,x,d),x))}</td>`; });
       const cls=["v"]; if(gStart.has(c)&&!pon) cls.push("gstart"); if(x.role==="id") cls.push("idc"); if(!isNum(x)) cls.push("txt"); if(isEx(r)) cls.push("exc");
       let tip="";
       if(S.ts&&hasVal(v)&&!isEx(r)){ const a=checkCmp(r,x,v); if(a){ cls.push("al-"+a.level); tip=vsPrev(fmt(a.prev,x),a.date,a.kind,true); } }
@@ -2837,7 +2888,7 @@ const mkSel=(a,b)=>({r1:Math.min(a.r,b.r),r2:Math.max(a.r,b.r),c1:Math.min(a.c,b
 const sameSel=(a,b)=>!!a&&!!b&&a.r1===b.r1&&a.r2===b.r2&&a.c1===b.c1&&a.c2===b.c2;
 function cellAt(x,y){ const el=document.elementFromPoint(x,y); const td=el&&el.closest?el.closest("#tbl td.v"):null; return td?{r:+td.dataset.r,c:+td.dataset.c}:null; }
 function tapCell(p,extend){
-  clearPend();
+  clearPend(); hSel=-1;
   if(extend||rangeMode){
     const a=anchor||cur; const s=mkSel(a,p);
     sel=(s.r1===s.r2&&s.c1===s.c2)?null:s;
@@ -2866,6 +2917,122 @@ $("#tbl").addEventListener("click",e=>{
   tapCell({r:+td.dataset.r,c:+td.dataset.c},e.shiftKey);
 });
 $("#btnRange").onclick=()=>{ rangeMode=!rangeMode; anchor=cur; if(!rangeMode) sel=null; render(); };
+/* ========= 表の見出しから列を編集（4.9〜） =========
+   見出しを1回押すと選び（✎ の印）、もう1回押すと編集の画面を開く（PC はダブルクリック、キーボードは Enter でも開く）。
+   画面の中で、名前・種類などの変更、左右への列の追加・移動・削除をまとめて行い、「保存」で反映する。項目の id は変えない */
+$("#tbl").addEventListener("click",e=>{
+  const th=e.target.closest("th[data-c]"); if(!th) return;
+  const c=+th.dataset.c;
+  if(hSel===c){ openColEdit(c); return; }
+  hSel=c; render();
+});
+$("#tbl").addEventListener("dblclick",e=>{ const th=e.target.closest("th[data-c]"); if(th) openColEdit(+th.dataset.c); });
+$("#tbl").addEventListener("keydown",e=>{ const th=e.target.closest("th[data-c]"); if(th&&(e.key==="Enter"||e.key===" ")){ e.preventDefault(); openColEdit(+th.dataset.c); } });
+function colHasData(id){
+  let k=0; const cnt=row=>{ if(row&&hasVal(row[id])) k++; };
+  D.forEach(cnt); Object.values(S.sessions).forEach(a=>Array.isArray(a)&&a.forEach(cnt)); return k;
+}
+function openColEdit(c){
+  if(!S.items[c]||$("#colDlg").open) return;
+  if(listening||standby) stopRec(); clearPend(); sel=null;
+  ce={items:JSON.parse(JSON.stringify(S.items)), i:c, orig:new Set(S.items.map(it=>it.id)), del:[]};
+  hSel=-1; render(); ceDraw();
+  $("#colDlg").showModal(); $("#ceTitle").focus();
+}
+function ceDraw(){
+  const a=ce.items, i=ce.i, it=a[i];
+  $("#ceTitle").textContent=`列の編集：${it.name||"（新しい列）"}`;
+  $("#ceSub").textContent=`${i+1}列目／${a.length}列`;
+  $("#ceOrder").innerHTML=a.map((x,k)=>`<button type="button" data-k="${k}" class="${k===i?"on":""}${x.role==="id"?" isid":""}${ce.orig.has(x.id)?"":" isnew"}" aria-pressed="${k===i}">${esc(x.name||"（新しい列）")}</button>`).join("");
+  $("#ceItem").innerHTML=itemCard(it,i,S.ts,true);
+  document.querySelector('#colDlg [data-ce="moveL"]').disabled=i<=0;
+  document.querySelector('#colDlg [data-ce="moveR"]').disabled=i>=a.length-1;
+  document.querySelector('#colDlg [data-ce="del"]').disabled=a.length<=1;
+}
+$("#ceOrder").addEventListener("click",e=>{ const b=e.target.closest("button[data-k]"); if(!b) return; ce.i=+b.dataset.k; ceDraw(); });
+$("#ceItem").addEventListener("input",e=>{
+  const k=e.target.dataset.k; itemInputApply(ce.items[ce.i],k,e.target);
+  if(k==="name"){ const it=ce.items[ce.i]; $("#ceTitle").textContent=`列の編集：${it.name||"（新しい列）"}`; const b=$("#ceOrder").querySelector(`button[data-k="${ce.i}"]`); if(b) b.textContent=it.name||"（新しい列）"; }
+});
+$("#ceItem").addEventListener("change",e=>{ if(itemChangeApply(ce.items[ce.i],e.target.dataset.k,e.target)){ const f=e.target.dataset.k; ceDraw(); $("#ceItem").querySelector(`[data-k="${f}"]`)?.focus(); } });
+$("#colDlg").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-ce]"); if(!b||b.disabled) return;
+  const a=ce.items, i=ce.i, act=b.dataset.ce;
+  if(act==="addL"||act==="addR"){
+    const at=act==="addL"?i:i+1; a.splice(at,0,newItemLike(a[i])); ce.i=at; ceDraw();
+    const el=$("#ceItem input.iname"); if(el){ el.focus(); }
+    return;
+  }
+  if(act==="moveL"||act==="moveR"){
+    const j=act==="moveL"?i-1:i+1; if(j<0||j>=a.length) return;
+    const snap=flipSnap([...$("#ceOrder").children]), ids=a.map(x=>x.id);
+    [a[i],a[j]]=[a[j],a[i]]; ce.i=j; ceDraw();
+    const m=new Map(), els=[...$("#ceOrder").children]; [...snap.values()].forEach((r,k)=>{ const ni=a.findIndex(x=>x.id===ids[k]); if(els[ni]) m.set(els[ni],r); }); flipPlay(m);
+    return;
+  }
+  if(act==="del"){
+    if(a.length<=1){ note("項目は1つ以上必要です"); return; }
+    const it=a[i], k=ce.orig.has(it.id)?colHasData(it.id):0;
+    if(k&&!confirm(`「${it.name}」の列には、記録済みの値が ${k}件あります（すべての調査日）。\nこの列を削除しますか？\n（保存の直後なら「元に戻す」で戻せます）`)) return;
+    a.splice(i,1); ce.i=Math.min(i,a.length-1); ceDraw();
+    return;
+  }
+  if(act==="settings"){
+    const id=a[i].id, changed=JSON.stringify(a)!==JSON.stringify(S.items);
+    if(changed&&!confirm("この画面での変更は反映されません。設定画面を開きますか？")) return;
+    $("#colDlg").close(); ce=null;
+    openSettings("items",()=>{ const k=draft.items.findIndex(x=>x.id===id); const el=$("#sItems").querySelectorAll(".item")[k]; if(el){ el.scrollIntoView({block:"center"}); el.classList.add("moved"); } });
+  }
+});
+$("#ceCancel").onclick=()=>{ $("#colDlg").close(); };
+$("#colDlg").addEventListener("close",()=>{ ce=null; });
+let colUndoSnap=null;
+$("#ceSave").onclick=()=>{
+  if(!ce) return;
+  const a=ce.items;
+  a.forEach((it,k)=>{ if(!String(it.name||"").trim()) it.name="項目"+(k+1); });
+  const before=JSON.stringify({items:S.items,freezeCols:S.freezeCols,prevCols:S.prevCols,aliases:S.aliases,cur});
+  const oldIds=S.items.map(x=>x.id), wasType=new Map(S.items.map(it=>[it.id,it.type])), curId=S.items[cur.c]?.id;
+  const removed=oldIds.filter(id=>!a.some(x=>x.id===id));
+  /* 固定する列（No.＋項目で数える）：固定していた項目の範囲が、新しい並びのどこまでかに合わせる */
+  const lc0=S.serial?1:0, k0=Math.max(0,(+S.freezeCols||0)-lc0);
+  if(k0>0){
+    /* 固定する列の数は変えない。ただし、固定の範囲の内側に足した列の分は増やし、固定していた列を消した分は減らす（移動では変えない） */
+    const orig=new Set(oldIds), target=k0-removed.filter(id=>oldIds.indexOf(id)<k0).length; let k=0, m=0;
+    for(const x of a){ if(m>=target) break; k++; if(orig.has(x.id)) m++; }
+    S.freezeCols=k+lc0; }
+  const flip=colFlipSnap();
+  S.items=a; normS(); convTypes(wasType);
+  if(S.prevCols&&S.prevCols.items) S.prevCols.items=S.prevCols.items.filter(id=>S.items.some(it=>it.id===id&&it.role!=="id"));
+  S.aliases=(S.aliases||[]).map(x=>({...x,item:S.items.some(it=>it.id===x.item&&it.role!=="id")?x.item:""}));
+  const ni=S.items.findIndex(it=>it.id===curId); cur.c=(ni<0||S.items[ni].role==="id")?firstMeas():ni;
+  sel=null; $("#colDlg").close();
+  save(); render(); colFlipPlay(flip);
+  if(removed.length){ colUndoSnap=before;
+    note(`${removed.length}列を削除しました（記録した値は残してあります）。間違えた場合は「元に戻す」を押してください。`,true);
+    $("#note").insertAdjacentHTML("beforeend",' <button type="button" class="ghost" id="colUndoBtn" style="padding:4px 10px">元に戻す</button>');
+    $("#colUndoBtn").onclick=()=>{ if(!colUndoSnap) return; const o=JSON.parse(colUndoSnap); colUndoSnap=null; S.items=o.items; S.freezeCols=o.freezeCols; S.prevCols=o.prevCols; S.aliases=o.aliases; cur=o.cur; normS(); save(); render(); note("元に戻しました"); };
+  } else note("列の設定を保存しました");
+};
+/* 列を動かしたときの動き：見出しと、上のほうの行のセルを、前の位置から滑らせる */
+function colFlipSnap(){
+  if(reduceMotion()) return null;
+  const m=new Map(), tb=$("#tbl"); const key=(el)=>{ const c=el.dataset.c??el.dataset.p; return c===undefined?null:S.items[+c]?.id; };
+  const take=(row,ri)=>{ const cnt=new Map(); [...row.cells].forEach(el=>{ const id=key(el); if(!id) return; const k=cnt.get(id)||0; cnt.set(id,k+1); m.set(ri+"|"+id+"|"+k,el.getBoundingClientRect()); }); };
+  const head=tb.tHead?.rows[0]; if(head) take(head,"h");
+  [...(tb.tBodies[0]?.rows||[])].slice(0,40).forEach((row,r)=>take(row,r));
+  return m;
+}
+function colFlipPlay(m){
+  if(!m) return;
+  const tb=$("#tbl"), out=new Map(); const key=(el)=>{ const c=el.dataset.c??el.dataset.p; return c===undefined?null:S.items[+c]?.id; };
+  const take=(row,ri)=>{ const cnt=new Map(); [...row.cells].forEach(el=>{ const id=key(el); if(!id) return; const k=cnt.get(id)||0; cnt.set(id,k+1); const r=m.get(ri+"|"+id+"|"+k); if(r) out.set(el,r); }); };
+  const head=tb.tHead?.rows[0]; if(head) take(head,"h");
+  [...(tb.tBodies[0]?.rows||[])].slice(0,40).forEach((row,r)=>take(row,r));
+  /* 縦のずれ（固定の行の変化など）は動かさず、横だけ滑らせる */
+  out.forEach((r0,el)=>{ const r1=el.getBoundingClientRect(); out.set(el,new DOMRect(r0.left,r1.top,r0.width,r0.height)); });
+  flipPlay(out,220);
+}
 /* 元に戻す（今の調査日の表だけを、操作の直前に戻す） */
 function snap(){ undoSnap=JSON.stringify({D,sessions:S.sessions,cur}); }
 function offerUndo(msg){
@@ -3072,16 +3239,15 @@ document.addEventListener("keydown",e=>{
 let draft=null;
 const STEPS=[0,0.1,0.2,0.25,0.5,1,5,10];
 const lvSel=(k,v)=>`<select data-k="cmp.${k}" aria-label="前回比 ${KIND_S[k]}">${LEVELS.map(([x,l])=>`<option value="${x}" ${x===v?"selected":""}>${l}</option>`).join("")}</select>`;
-function drawItems(){
-  try{ pcDraw(); }catch(e){}
-  $("#sItems").innerHTML=draft.items.map((it,i)=>{ const c=normCmp(it.cmp); return `
+/* 項目の編集欄（4.9〜：設定画面と、表の見出しから開く列の編集で共通）。compact：⠿・＋上・＋下・✕ を出さない */
+function itemCard(it,i,ts,compact){ const c=normCmp(it.cmp); return `
     <div class="item${it.role==="id"?" isid":""}" data-i="${i}">
       <div class="irow ihead">
-        <span class="handle" role="button" tabindex="0" aria-label="${esc(it.name||"項目")}の順番を変える（つかんで上下に動かす。キーボードは↑↓）" title="つかんで上下に動かす">⠿</span>
+        ${compact?"":`<span class="handle" role="button" tabindex="0" aria-label="${esc(it.name||"項目")}の順番を変える（つかんで上下に動かす。キーボードは↑↓）" title="つかんで上下に動かす">⠿</span>`}
         <input type="text" value="${esc(it.name)}" data-k="name" aria-label="項目名${i+1}" class="iname" placeholder="新しい項目名">
-        <button type="button" class="ins" data-a="insUp" aria-label="この上に項目を追加" title="この上に項目を追加">＋上</button>
+        ${compact?"":`<button type="button" class="ins" data-a="insUp" aria-label="この上に項目を追加" title="この上に項目を追加">＋上</button>
         <button type="button" class="ins" data-a="insDn" aria-label="この下に項目を追加" title="この下に項目を追加">＋下</button>
-        <button type="button" data-a="del" aria-label="削除">✕</button>
+        <button type="button" data-a="del" aria-label="削除">✕</button>`}
       </div>
       <div class="irow">
         <select data-k="role" aria-label="入力のしかた"><option value="meas" ${it.role!=="id"?"selected":""}>音声で入力</option><option value="id" ${it.role==="id"?"selected":""}>事前入力（個体の識別）</option></select>
@@ -3092,10 +3258,13 @@ function drawItems(){
         ${it.role!=="id"?`<input type="text" data-k="allow" value="${esc(it.allow||"")}" placeholder="入力できる値（例 0,1,2,3／0〜3）空なら制限なし" class="iopts" aria-label="入力できる値">`:""}`:""}
         ${hasOpts(it)?`<input type="text" data-k="options" value="${esc(it.options.join("、"))}" placeholder="${it.type==="multi"?"候補を「、」区切りで（例 虫害、日焼け、裂果）":"候補を「、」区切りで（例 にっこり、幸水、豊水）"}" class="iopts" aria-label="候補">`:""}
       </div>
-      ${draft.ts&&isNum(it)&&it.role!=="id"?`<div class="irow cmp"><span class="cmpl">前回比</span>
+      ${ts&&isNum(it)&&it.role!=="id"?`<div class="irow cmp"><span class="cmpl">前回比</span>
         <label>減った${lvSel("dec",c.dec)}</label><label>増えた${lvSel("inc",c.inc)}</label><label>同じ${lvSel("same",c.same)}</label>
         <label>許容±<input type="text" inputmode="decimal" data-k="cmp.tol" value="${c.tol||""}" placeholder="0"></label></div>`:""}
-    </div>`; }).join("");
+    </div>`; }
+function drawItems(){
+  try{ pcDraw(); }catch(e){}
+  $("#sItems").innerHTML=draft.items.map((it,i)=>itemCard(it,i,draft.ts,false)).join("");
   drawGen(); if(document.querySelector("input[name=dir]:checked")) drawGroupPrev(); if($("#sFzPrev")) drawFzPrev();
   drawAliases();
   if(typeof foldSums==="function") foldSums();
@@ -3208,24 +3377,51 @@ function drawGen(){
   $("#sGen").innerHTML=ids.map(it=>`<label class="gen"><span>${esc(it.name)}</span><input type="text" data-gid="${it.id}" placeholder="${isNum(it)?"例 1-5":"例 無処理、遮光"}"></label>`).join("");
   $("#sListHead").textContent=ids.map(it=>it.name).join(" ／ ")||"";
 }
+/* 項目の欄の入力（設定画面・列の編集で共通） */
+function itemInputApply(it,k,el){
+  if(!it||!k) return;
+  if(k==="name") it.name=el.value;
+  if(k==="dec") it.dec=+el.value;
+  if(k==="step") it.step=+el.value;
+  if(k==="allow") it.allow=el.value;
+  if(k==="options") it.options=el.value.split(/[、,，]/).map(s=>s.trim()).filter(Boolean);
+  if(k.startsWith("cmp.")){ it.cmp=normCmp(it.cmp); const sub=k.slice(4); it.cmp[sub]=sub==="tol"?Math.abs(+String(el.value).normalize("NFKC")||0):el.value; }
+}
+/* 入力のしかた・種類を変えたとき（欄を描き直すなら true） */
+function itemChangeApply(it,k,el){
+  if(!it) return false;
+  if(k==="role"){ it.role=el.value; return true; }
+  if(k==="type"){ it.type=el.value; if(it.type!=="num") it.step=0; if(it.type==="count") it.dec=0; return true; }
+  return false;
+}
 $("#sItems").addEventListener("input",e=>{
-  const row=e.target.closest(".item"); if(!row) return; const it=draft.items[+row.dataset.i]; const k=e.target.dataset.k;
-  if(k==="name"){ it.name=e.target.value; drawGenLabels(); }
-  if(k==="dec") it.dec=+e.target.value;
-  if(k==="step") it.step=+e.target.value;
-  if(k==="allow") it.allow=e.target.value;
-  if(k==="options") it.options=e.target.value.split(/[、,，]/).map(s=>s.trim()).filter(Boolean);
-  if(k&&k.startsWith("cmp.")){ it.cmp=normCmp(it.cmp); const sub=k.slice(4); it.cmp[sub]=sub==="tol"?Math.abs(+String(e.target.value).normalize("NFKC")||0):e.target.value; }
+  const row=e.target.closest(".item"); if(!row) return; const k=e.target.dataset.k;
+  itemInputApply(draft.items[+row.dataset.i],k,e.target);
+  if(k==="name") drawGenLabels();
 });
 function drawGenLabels(){ const ids=draft.items.filter(it=>it.role==="id"); $("#sListHead").textContent=ids.map(it=>it.name).join(" ／ "); $("#sGen").querySelectorAll("label.gen").forEach((l,i)=>{ if(ids[i]) l.querySelector("span").textContent=ids[i].name; }); }
 $("#sItems").addEventListener("change",e=>{
-  const row=e.target.closest(".item"); if(!row) return; const it=draft.items[+row.dataset.i]; const k=e.target.dataset.k;
-  if(k==="role"){ it.role=e.target.value; drawItems(); }
-  if(k==="type"){ it.type=e.target.value; if(it.type!=="num") it.step=0; if(it.type==="count") it.dec=0; drawItems(); }
+  const row=e.target.closest(".item"); if(!row) return;
+  if(itemChangeApply(draft.items[+row.dataset.i],e.target.dataset.k,e.target)) drawItems();
 });
+/* 種類を変えた列：記録済みの値を新しい種類に直す（直せない値はそのまま）。設定画面・列の編集（4.9〜）で共通。
+   数値・カウンター＝"0" などの文字を数に、カウンター＝小数を整数に、日付＝「11/5」などを YYYY-MM-DD に、複数選択＝候補の順に並べ直す */
+function convTypes(wasType){
+  const conv=S.items.filter(it=>wasType.has(it.id)&&wasType.get(it.id)!==it.type&&(isNum(it)||it.type==="date"||it.type==="multi")); let nconv=0;
+  if(!conv.length) return 0;
+  const fix=row=>{ if(!row) return; conv.forEach(it=>{ const v=row[it.id]; if(!hasVal(v)) return; let nv=null;
+    if(isNum(it)){ const x=typeof v==="number"?v:parseNumber(String(v)); if(x!==null&&!Number.isNaN(x)) nv=roundVal(it,x); }
+    else if(it.type==="date") nv=parseDateVal(String(v));
+    else nv=multiOf(it,String(v));
+    if(nv!==null&&nv!==v){ row[it.id]=nv; nconv++; } }); };
+  D.forEach(fix); Object.values(S.sessions).forEach(a=>Array.isArray(a)&&a.forEach(fix));
+  if(nconv) setTimeout(()=>note(`${conv.map(it=>it.name).join("・")} の種類を変えたため、記録済みの値 ${nconv}件を新しい種類に合わせて直しました`),0);
+  return nconv;
+}
 /* 新しい項目を入れる（at の位置）。種類・入力のしかたは基にした項目に合わせる */
+const newItemLike=base=>normItem({name:"",role:base?.role||"meas",type:base&&base.type==="text"?"text":"num",dec:base&&isNum(base)?base.dec:0});
 function insertItem(at,base){
-  const ni=normItem({name:"",role:base?.role||"meas",type:base&&base.type==="text"?"text":"num",dec:base&&isNum(base)?base.dec:0});
+  const ni=newItemLike(base);
   draft.items.splice(at,0,ni); drawItems();
   const el=$("#sItems").querySelectorAll(".item")[at];
   if(el){ el.classList.add("newitem"); el.scrollIntoView({block:"nearest"}); el.querySelector("input.iname").focus(); }
@@ -3237,15 +3433,29 @@ $("#sItems").addEventListener("click",e=>{
   if(b.dataset.a==="del"){ if(a.length<=1){ note("項目は1つ以上必要です"); return; } a.splice(i,1); }
   drawItems();
 });
-/* 並べ替え：⠿ をつかんで上下に動かす（マウス・指どちらも）。画面の端に近づくと自動でスクロール */
+/* 並べ替え（4.9〜）：⠿ をつかむと項目が浮き、指（マウス）に付いて動く。ほかの項目は空き（点線）に合わせて滑らかにずれる。
+   離すと空きに収まり、動いた項目を一瞬色付けする。画面の端に近づくと自動でスクロール。「動きを減らす」の端末ではアニメーションを省く */
 let idrag=null;
+const reduceMotion=()=>!!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches);
+/* FLIP：動かす前の位置を測り、動かした後に差の分だけ戻してから 0 へ滑らせる */
+function flipSnap(els){ const m=new Map(); els.forEach(x=>m.set(x,x.getBoundingClientRect())); return m; }
+function flipPlay(m,ms=170){
+  if(reduceMotion()) return;
+  m.forEach((r0,x)=>{ if(!x.isConnected) return; const r1=x.getBoundingClientRect(), dx=r0.left-r1.left, dy=r0.top-r1.top; if(!dx&&!dy) return;
+    x.style.transition="none"; x.style.transform=`translate(${dx}px,${dy}px)`; x.getBoundingClientRect();
+    x.style.transition=`transform ${ms}ms cubic-bezier(.2,.7,.3,1)`; x.style.transform="";
+    const done=()=>{ x.style.transition=""; x.removeEventListener("transitionend",done); }; x.addEventListener("transitionend",done); setTimeout(done,ms+80); });
+}
 function idragMove(){
   if(!idrag) return;
-  const box=$("#sItems"), el=idrag.el;
+  const {el,ph}=idrag, box=$("#sItems");
+  el.style.top=(idrag.top0+idrag.y-idrag.y0)+"px";
   const others=[...box.querySelectorAll(".item")].filter(x=>x!==el);
-  const before=others.find(x=>{ const r=x.getBoundingClientRect(); return idrag.y<r.top+r.height/2; });
-  if(before){ if(el.nextElementSibling!==before) box.insertBefore(el,before); }
-  else if(box.lastElementChild!==el) box.appendChild(el);
+  const before=others.find(x=>{ const r=x.getBoundingClientRect(); return idrag.y<r.top+r.height/2; })||null;
+  if((before&&ph.nextElementSibling===before)||(!before&&ph.nextElementSibling===null)||(!before&&ph.nextElementSibling===el&&!el.nextElementSibling)) return;
+  const snap=flipSnap(others);
+  if(before) box.insertBefore(ph,before); else box.appendChild(ph);
+  flipPlay(snap);
 }
 function idragScroll(){
   if(!idrag) return;
@@ -3257,23 +3467,43 @@ function idragScroll(){
 }
 function idragEnd(e){
   if(!idrag||(e&&e.pointerId!==idrag.pid)) return;
-  cancelAnimationFrame(idrag.raf);
-  const order=[...$("#sItems").querySelectorAll(".item")].map(x=>+x.dataset.i);
-  const movedId=draft.items[+idrag.el.dataset.i]?.id;
-  idrag.el.classList.remove("dragging"); document.body.classList.remove("itemdrag"); idrag=null;
+  const g=idrag; idrag=null;
+  cancelAnimationFrame(g.raf);
   document.removeEventListener("pointermove",idragPMove); document.removeEventListener("pointerup",idragEnd); document.removeEventListener("pointercancel",idragEnd);
-  if(order.some((v,k)=>v!==k)) draft.items=order.map(k=>draft.items[k]);
-  drawItems();
-  const el=$("#sItems").querySelectorAll(".item")[draft.items.findIndex(x=>x.id===movedId)];
-  if(el) el.querySelector(".handle")?.focus({preventScroll:true});
+  const movedId=draft.items[+g.el.dataset.i]?.id;
+  const finish=()=>{
+    g.ph.replaceWith(g.el);
+    g.el.classList.remove("dragging"); g.el.removeAttribute("style"); document.body.classList.remove("itemdrag");
+    const order=[...$("#sItems").querySelectorAll(".item")].map(x=>+x.dataset.i);
+    const changed=order.some((v,k)=>v!==k);
+    if(changed) draft.items=order.map(k=>draft.items[k]);
+    drawItems();
+    const el=$("#sItems").querySelectorAll(".item")[draft.items.findIndex(x=>x.id===movedId)];
+    if(el){ if(changed) el.classList.add("moved"); el.querySelector(".handle")?.focus({preventScroll:true}); }
+  };
+  /* 空きの位置へ吸い込まれるように収める */
+  const r=g.ph.getBoundingClientRect();
+  if(reduceMotion()){ finish(); return; }
+  g.el.style.transition="top .16s cubic-bezier(.2,.7,.3,1), left .16s cubic-bezier(.2,.7,.3,1), transform .16s ease, box-shadow .16s ease";
+  g.el.style.top=r.top+"px"; g.el.style.left=r.left+"px"; g.el.style.transform="scale(1)"; g.el.style.boxShadow="none";
+  setTimeout(finish,170);
 }
 function idragPMove(e){ if(!idrag||e.pointerId!==idrag.pid) return; e.preventDefault(); idrag.y=e.clientY; idragMove(); }
 $("#sItems").addEventListener("pointerdown",e=>{
   const h=e.target.closest(".handle"); if(!h||idrag) return;
   if(e.pointerType==="mouse"&&e.button!==0) return;
   e.preventDefault();
-  const el=h.closest(".item"); idrag={el,y:e.clientY,pid:e.pointerId,raf:0};
+  const el=h.closest(".item"), r=el.getBoundingClientRect();
+  /* 空き（点線）を元の場所に置き、項目は浮かせて指に付ける */
+  const ph=document.createElement("div"); ph.className="item-ph"; ph.style.height=r.height+"px"; ph.setAttribute("aria-hidden","true");
+  el.parentNode.insertBefore(ph,el);
+  /* dialog の中の fixed は、dialog の左上を基準にする端末があるので、実際の位置を測って合わせる */
+  el.style.position="fixed"; el.style.width=r.width+"px"; el.style.left=r.left+"px"; el.style.top=r.top+"px"; el.style.margin="0";
+  const r2=el.getBoundingClientRect(), ox=r2.left-r.left, oy=r2.top-r.top;
+  el.style.left=(r.left-ox)+"px"; el.style.top=(r.top-oy)+"px";
   el.classList.add("dragging"); document.body.classList.add("itemdrag");
+  idrag={el,ph,y:e.clientY,y0:e.clientY,top0:r.top-oy,pid:e.pointerId,raf:0};
+  try{ if(navigator.vibrate) navigator.vibrate(12); }catch(_){}
   document.addEventListener("pointermove",idragPMove,{passive:false});
   document.addEventListener("pointerup",idragEnd); document.addEventListener("pointercancel",idragEnd);
   idrag.raf=requestAnimationFrame(idragScroll);
@@ -3285,8 +3515,11 @@ $("#sItems").addEventListener("keydown",e=>{
   e.preventDefault();
   const i=+h.closest(".item").dataset.i, j=e.key==="ArrowUp"?i-1:i+1, a=draft.items;
   if(j<0||j>=a.length) return;
+  const snap=flipSnap([...$("#sItems").querySelectorAll(".item")]), ids=a.map(x=>x.id);
   [a[i],a[j]]=[a[j],a[i]]; drawItems();
-  $("#sItems").querySelectorAll(".item")[j]?.querySelector(".handle")?.focus();
+  /* 描き直した後の同じ項目へ、前の位置を移して滑らせる */
+  const m=new Map(), els=[...$("#sItems").querySelectorAll(".item")]; [...snap.values()].forEach((r,k)=>{ const ni=a.findIndex(x=>x.id===ids[k]); if(els[ni]) m.set(els[ni],r); }); flipPlay(m);
+  els[j]?.classList.add("moved"); els[j]?.querySelector(".handle")?.focus();
 });
 $("#sAdd").onclick=()=>{ insertItem(draft.items.length,draft.items[draft.items.length-1]); };
 $("#sPreset").onclick=()=>{ draft.items=PRESET_FRUIT(); drawItems(); };
@@ -3460,16 +3693,7 @@ $("#sSave").onclick=()=>{
   const curId=S.items[cur.c]?.id;
   const wasType=new Map(S.items.map(it=>[it.id,it.type]));
   S=draft; normS();
-  /* 種類を変えた列：記録済みの値を新しい種類に直す（直せない値はそのまま）。
-     数値・カウンター＝"0" などの文字を数に、カウンター＝小数を整数に、日付＝「11/5」などを YYYY-MM-DD に、複数選択＝候補の順に並べ直す */
-  { const conv=S.items.filter(it=>wasType.has(it.id)&&wasType.get(it.id)!==it.type&&(isNum(it)||it.type==="date"||it.type==="multi")); let nconv=0;
-    if(conv.length){ const fix=row=>{ if(!row) return; conv.forEach(it=>{ const v=row[it.id]; if(!hasVal(v)) return; let nv=null;
-        if(isNum(it)){ const x=typeof v==="number"?v:parseNumber(String(v)); if(x!==null&&!Number.isNaN(x)) nv=roundVal(it,x); }
-        else if(it.type==="date") nv=parseDateVal(String(v));
-        else nv=multiOf(it,String(v));
-        if(nv!==null&&nv!==v){ row[it.id]=nv; nconv++; } }); };
-      D.forEach(fix); Object.values(S.sessions).forEach(a=>Array.isArray(a)&&a.forEach(fix));
-      if(nconv) setTimeout(()=>note(`${conv.map(it=>it.name).join("・")} の種類を変えたため、記録済みの値 ${nconv}件を新しい種類に合わせて直しました`),0); } }
+  convTypes(wasType);
   /* 個体リストを反映（事前入力の列だけを書き換え、測定値はそのまま） */
   const txt=$("#sList").value.replace(/\r/g,"").replace(/\n+$/,"");
   let trimmed=0, before=null;
@@ -3509,7 +3733,7 @@ $("#sClear").onclick=()=>{
 /* 読み込んだ中身 j を今の調査にする（入力中の状態はリセット） */
 function svApply(j){
   try{ iosReset(); }catch(e){}
-  S=S_DEFAULT(); D=[]; cur={r:0,c:0}; logs=[];
+  S=S_DEFAULT(); D=[]; cur={r:0,c:0}; logs=[]; hSel=-1;
   if(j&&j.S){ S=Object.assign(S,j.S); D=j.D||[]; cur=j.cur||cur; logs=j.logs||[]; }
   normS(); if(cur.c>=n()||S.items[cur.c]?.role==="id") cur.c=firstMeas();
   pend=null; hideAlert(); sel=null; undoSnap=null; bulkSnap=null; rangeMode=false; anchor=null; halt=false;
@@ -4766,7 +4990,7 @@ const HELP=[
 {g:"start",id:"history",t:"更新の記録（どの版で何が増えたか）",k:"更新 記録 履歴 版 バージョン 新しい機能 変更点 こうしん きろく りれき ばーじょん",b:
 "<p>この画面の上の「更新の記録」を押すと、どの版でどの機能が加わったかを一覧で見られます。項目を押すと、その機能の説明を開きます。新しい版に切り替わったときは、増えたことを画面の下に知らせます。</p>"},
 {g:"start",id:"settings",t:"設定画面の使い方",k:"設定 見出し 折りたたみ 開く 閉じる すべて開く せってい",b:
-"<p>設定は見出しごとに折りたたんであります。見出しを押すと開いたり閉じたりでき、その状態は次に設定を開いたときも残ります。閉じた見出しの右には、今の設定が短く出ます。上の「すべて開く」「すべて閉じる」でまとめて切り替えられます。変更は「保存」を押すまで反映されません。</p>"},
+"<p>設定は見出しごとに折りたたんであります。見出しを押すと開いたり閉じたりでき、その状態は次に設定を開いたときも残ります。閉じた見出しの右には、今の設定が短く出ます。上の「すべて開く」「すべて閉じる」でまとめて切り替えられます。変更は「保存」を押すまで反映されません。</p><p>「調査項目」の順番は、左端の ⠿ をつかんで動かします。つかんだ項目が浮き、ほかの項目は空いた場所に合わせてずれます。離すと点線の場所に入ります。1つの列だけを直すときは、入力の画面で表の見出しを押す方法もあります（「表の見出しから列を編集する」）。</p>"},
 {g:"start",id:"code",t:"利用コード",k:"ライセンス コード 期限 期限切れ 更新 変更 KOE メール メールアドレス 試用 お試し 申し込み 申込 ホーム画面 引き継ぎ iPhone Safari りようこーど きげん めーる しよう もうしこみ",b:
 "<p>Proは利用コードを入れて使います。コードごとに使える期間が決まっていて、期限の少し前からお知らせが出ます。新しいコードは、画面下の「利用コードを変更」から入れます。期限が切れても入力したデータは消えず、Excel保存とバックアップはできます。</p>"+
 "<p>メールアドレス付きのコードは、初めて入れるときに、コードを受け取ったメールアドレスも入れます（別のメールアドレスでは使えません）。メールアドレスはこの端末の中にだけ保存し、外部へは送りません。画面やExcelのプロパティ（作成者）には一部を伏せて表示します（例 o***@example.jp）。</p><p>試用のコードは、この端末で初めて使った日から決まった日数だけ使えます（コードによっては最終の期限もあります）。同じ試用コードを同じ端末で入れ直しても、期間は延びません。続けて使うときは、利用コードの確認画面の「メールで申し込む」から申し込んでください。</p><p>iPhone・iPad では、Safari とホーム画面のアプリで保存場所が別です。Safari で利用コードを確認してから「ホーム画面に追加」すると、追加したアプリに利用コードを引き継ぎます（初めて開いたときに同意だけ求めます）。引き継がれなかったときは、アプリでもう一度コードを入れてください。入力したデータは引き継がれないので、調査はどちらか一方（ふつうはホーム画面のアプリ）で行ってください。</p><p class=\"licnow\"></p>"},
@@ -4806,6 +5030,8 @@ const HELP=[
 "<p>今のセル（黄色）をもう一度押すと、そのセルの上に入力欄が出て、キーボードでその場に入れられます（PCはダブルクリックか F2）。手入力欄までスクロールする必要はありません。</p><ul><li>「入力」かキーボードの Enter・次へ で入り、入力の進む順番どおりに次のセルへ移って、そのまま続けて入れられます。</li><li>入っている値は選んだ状態で出ます。そのまま打てば置き換え、変えずに「入力」なら次へ進むだけです。空にして「入力」するとその値を消します（直後なら「元に戻す」で戻せます）。</li><li>入力中にほかのセルを押すと、打ちかけの値を入れてから、押したセルへ入力欄が移ります。</li><li>前回比の確認が出たときは、入力欄の下の「はい」「やり直し」で答えます。</li><li>「✕」かキーボードを閉じると終わります。復唱・言い換え・入力できる値の確認は、手入力欄と同じに働きます。</li><li>事前入力の列は、設定の「個体リスト」で直します。</li></ul>"},
 {g:"table",id:"tableops",t:"表の操作（クリア・削除して詰める・行を削除）",k:"クリア 消す 削除 詰める 行を削除 範囲選択 コピー 貼り付け 貼付 元に戻す Ctrl Delete くりあ さくじょ つめる はんいせんたく こぴー はりつけ もとにもどす",b:
 "<ul><li><b>クリア</b>：選んだセル（範囲）の値を消す</li><li><b>削除して詰める</b>：今のセルを消し、後ろの値を1つずつ前へ詰める（2回入ってしまったとき）</li><li><b>行を削除</b>：今の行を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も消える</li><li><b>範囲選択</b>：オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）</li><li><b>コピー</b>・<b>貼付</b>：Excelとの間でも使える（PCは Ctrl+C・Ctrl+V・Delete も可）</li></ul><p>操作のあとは「元に戻す」で戻せます。</p>"},
+{g:"table",id:"coledit",t:"表の見出しから列を編集する（名前・種類・追加・移動・削除）",k:"見出し 項目名 列 編集 追加 挿入 移動 削除 左 右 種類 名前 変える 鉛筆 ドラッグ つかむ 並べ替え みだし れつ へんしゅう ついか いどう さくじょ どらっぐ ならべかえ",go:"items",b:
+"<p>入力の画面の表で、見出し（項目名）を押すと選ばれ、✎ の印が出ます。もう一度押すと<b>列の編集</b>が開きます（PCはダブルクリックでも開きます）。設定画面を開かなくても、その場で直せます。</p><ul><li><b>名前・種類・桁・候補・入力できる値・前回比</b>：設定画面の「調査項目」と同じ欄です。種類を変えると、記録済みの値を新しい種類に合わせて直します。</li><li><b>＋ 左に列を追加／＋ 右に列を追加</b>：今の列のすぐ左・右に新しい列を入れます。前の調査日では空欄になります。</li><li><b>← 左へ移動／右へ移動 →</b>：列の並びを入れ替えます。</li></ul><p><b>見出しをつかんで動かす</b>：選んだ見出し（✎ の印）をつかんで左右に動かすと、列ごと浮いて動き、ほかの列はずれて点線の空きができます。離した所に入ります（前の調査日の値の列も一緒に動きます）。PCはどの見出しでもドラッグできます。キーボードは見出しで Alt+← →。直後なら「元に戻す」で戻せます。画面の端に近づけると表が横に送られます。</p><ul><li><b>この列を削除</b>：値が入っている列は確かめてから消します。保存の直後なら「元に戻す」で戻せます。</li><li>上の<b>列の並び</b>を押すと、ほかの列に切り替えて続けて直せます。</li></ul><p>変更は「保存」を押すまで反映されません。開くと聞き取りは止まります（続けるときはマイクを押します）。項目の内部の番号は変えないので、経時調査の前の調査日・データの統合・ひな形はそのまま使えます。固定している列の内側に列を足したときは、固定の範囲も合わせて広げます。</p>"},
 {g:"table",id:"order",t:"入力の進む順番（行・列・グループ）",k:"順番 行単位 列単位 グループ 横 縦 進む方向 じゅんばん ぎょう れつ ぐるーぷ",go:"dir",b:
 "<ul><li><b>行単位</b>：1個体の全項目 → 次の個体</li><li><b>列単位</b>：1項目を全個体 → 次の項目</li><li><b>グループ単位</b>：決めた列数のまとまりごとに 横 → 次の個体。例 <code>2,1</code> なら、左の2列を全個体分、次の1列を全個体分</li></ul><p>列単位・グループ単位で次の列（まとまり）に移るときは、そのまとまりで最初に空いているセルから始めます。前半の個体を調べた後に個体を足して続きを調べるときも、調べ終わった先頭に戻りません。すべて埋まっているときは先頭の個体から始めます。</p>"},
 {g:"table",id:"list",t:"個体リスト（事前入力の列）",k:"個体リスト 事前入力 樹番号 処理区 果実番号 組み合わせ Excel 貼り付け こたいりすと じぜんにゅうりょく じゅばんごう しょりく",go:"list",b:
@@ -4908,7 +5134,9 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
-{v:"Pro 4.8.4",d:"2026-11-12",a:[["表のセルに直接入力（今のセルをもう一度押すと、その場でキーボード入力。PCはダブルクリック・F2）","celledit"],["個体リストを少しずつ付け足して作る（個体ごとに株・反復の数が違ってもよい。空の欄も可）","list"]]},
+{v:"Pro 4.9.2",d:"2026-11-14",a:[["表の見出しをつかんで、列を左右に動かせるように（列ごと浮いて動く。PCはドラッグ、キーボードは Alt+←→）","coledit"]]},
+{v:"Pro 4.9.1",d:"2026-11-14",a:[["表のセルに直接入力（今のセルをもう一度押すと、その場でキーボード入力。PCはダブルクリック・F2）","celledit"],["個体リストを少しずつ付け足して作る（個体ごとに株・反復の数が違ってもよい。空の欄も可）","list"]]},
+{v:"Pro 4.9",d:"2026-11-10",a:[["表の見出しから列を編集（名前・種類の変更、左・右への列の追加、移動、削除）","coledit"],["設定の調査項目の並べ替えを、つかんで滑らかに動かせるように","settings"]]},
 {v:"Pro 4.8.2",d:"2026-11-05",a:[["全調査日の一覧（1行＝1個体。項目ごと／調査日ごと、絞り込み、前回比の色・外れ値・除外の表示、押すとそのセルへ）","lslist"],["入力の表に前の調査日の値を並べる（1〜3回、前回からの増減の矢印）","prevcols"]]},
 {v:"Pro 4.8.1",d:"2026-11-05",a:[["iPhone の聞き取りと読み上げの安定化（止まったときの「再開」ボタン、続けて入った値の読み上げをまとめる、試験的な設定「iPhoneでも聞き取りを止めずに読み上げる」）","iosmic"],["その他の不具合の修正",""]]},
 {v:"Pro 4.8",d:"2026-11-05",a:[["今日の調査を終える（空欄・外れ値の確認、次回も続ける／完了、中身を確かめたバックアップ）","end"],["画面の下に最終バックアップの日時（しばらく取っていないときは色を変えて知らせる）","autosave"],["PCでは選んだフォルダーへ自動で保存（Googleドライブなどの同期フォルダーを選べばクラウドにも入る）","autosave"],["調査一覧に完了の印とバックアップの日時","surveys"]]},
@@ -5745,121 +5973,248 @@ $("#sList").addEventListener("input",listEditWarn);
 /* ========= セルに直接入力 =========
    今のセル（黄色）をもう一度押すと、表の中に入力欄を出す（PCはダブルクリック・F2）。
    入れる処理は手入力欄と同じ handleText。表を描き直しても入力欄は作り直さない（キーボードを閉じさせないため） */
-let ce=null, ceTapPrev=null, ceKeep=0, ceBusy=false, ceAuto=null, ceNote="";
-const ceIn=$("#cellIn"), ceBar=$("#cellBar");
-function ceCellText(){ const it=S.items[cur.c]; return it?fmt(D[cur.r]?.[it.id],it):""; }
-function ceSelectAll(){ try{ ceIn.setSelectionRange(0,ceIn.value.length); }catch(e){} }
-function ceMsgSync(){
-  const m=$("#cellMsg"); if(!ce){ m.hidden=true; return; }
-  const al=!$("#alertBar").hidden, txt=al?$("#alertMsg").textContent:ceNote;
+let cin=null, cinTapPrev=null, cinKeep=0, cinBusy=false, cinAuto=null, cinNote="";
+const cinIn=$("#cellIn"), cinBar=$("#cellBar");
+function cinCellText(){ const it=S.items[cur.c]; return it?fmt(D[cur.r]?.[it.id],it):""; }
+function cinSelectAll(){ try{ cinIn.setSelectionRange(0,cinIn.value.length); }catch(e){} }
+function cinMsgSync(){
+  const m=$("#cellMsg"); if(!cin){ m.hidden=true; return; }
+  const al=!$("#alertBar").hidden, txt=al?$("#alertMsg").textContent:cinNote;
   if(!txt){ m.hidden=true; return; }
   $("#cellMsgT").textContent=txt; const ask=al&&!!pend&&!$("#alBtns").hidden;
   $("#cellYes").hidden=!ask; $("#cellNo").hidden=!ask; m.hidden=false;
 }
-function cePlace(){
-  if(!ce) return;
+function cinPlace(){
+  if(!cin) return;
   const td=$("#tbl td.cur"), it=S.items[cur.c];
-  if(!td||!it||it.role==="id"||sel||rangeMode||document.querySelector("dialog[open]")||!$("#gate").hidden){ ceEnd(); return; }
-  const moved=ce.r!==cur.r||ce.c!==cur.c||ce.d!==S.curDate||ce.sv!==svId, cell=ceCellText();
-  if(moved||cell!==ce.cell){
-    ce.r=cur.r; ce.c=cur.c; ce.d=S.curDate; ce.sv=svId; ce.cell=cell; ce.orig=cell; ceIn.value=cell; if(moved) ceNote="";
-    ceIn.setAttribute("inputmode",isNum(it)?"decimal":"text"); ceIn.classList.toggle("txt",!isNum(it));
-    ceIn.setAttribute("aria-label",`${cellName(cur)} に直接入力`);
-    if(document.activeElement===ceIn) ceSelectAll();
+  if(!td||!it||it.role==="id"||sel||rangeMode||document.querySelector("dialog[open]")||!$("#gate").hidden){ cinEnd(); return; }
+  const moved=cin.r!==cur.r||cin.c!==cur.c||cin.d!==S.curDate||cin.sv!==svId, cell=cinCellText();
+  if(moved||cell!==cin.cell){
+    cin.r=cur.r; cin.c=cur.c; cin.d=S.curDate; cin.sv=svId; cin.cell=cell; cin.orig=cell; cinIn.value=cell; if(moved) cinNote="";
+    cinIn.setAttribute("inputmode",isNum(it)?"decimal":"text"); cinIn.classList.toggle("txt",!isNum(it));
+    cinIn.setAttribute("aria-label",`${cellName(cur)} に直接入力`);
+    if(document.activeElement===cinIn) cinSelectAll();
   }
-  ceMsgSync();
+  cinMsgSync();
   const box=$("#tablebox"), b=box.getBoundingClientRect(), t=td.getBoundingClientRect();
-  ceBar.hidden=false; ceBar.style.minWidth=Math.ceil(t.width)+"px";
-  ceIn.style.minHeight=Math.max(40,Math.ceil(t.height)-8)+"px";
-  const w=ceBar.offsetWidth, x=t.left-b.left+box.scrollLeft-box.clientLeft, y=t.top-b.top+box.scrollTop-box.clientTop;
-  ceBar.style.left=Math.max(0,Math.min(x,Math.max(box.scrollWidth,box.clientWidth)-w))+"px"; ceBar.style.top=Math.max(0,y)+"px";
-  if(moved) try{ ceBar.scrollIntoView({block:"nearest",inline:"nearest"}); }catch(e){}
+  cinBar.hidden=false; cinBar.style.minWidth=Math.ceil(t.width)+"px";
+  cinIn.style.minHeight=Math.max(40,Math.ceil(t.height)-8)+"px";
+  const w=cinBar.offsetWidth, x=t.left-b.left+box.scrollLeft-box.clientLeft, y=t.top-b.top+box.scrollTop-box.clientTop;
+  cinBar.style.left=Math.max(0,Math.min(x,Math.max(box.scrollWidth,box.clientWidth)-w))+"px"; cinBar.style.top=Math.max(0,y)+"px";
+  if(moved) try{ cinBar.scrollIntoView({block:"nearest",inline:"nearest"}); }catch(e){}
 }
-function ceStart(){
+function cinStart(){
   const it=S.items[cur.c]; if(!it) return false;
   if(it.role==="id"){ note("事前入力の列は、設定の「個体リスト」で直します"); return false; }
   if(sel||rangeMode) return false;
-  ce={r:-1,c:-1,d:"",sv:"",cell:"",orig:""}; ceNote=""; cePlace(); if(!ce) return false;
-  ceIn.focus(); ceSelectAll(); return true;
+  cin={r:-1,c:-1,d:"",sv:"",cell:"",orig:""}; cinNote=""; cinPlace(); if(!cin) return false;
+  cinIn.focus(); cinSelectAll(); return true;
 }
-function ceEnd(){
-  if(!ce) return; ce=null; ceKeep=0; clearTimeout(ceAuto); ceBar.hidden=true; ceNote="";
-  if(document.activeElement===ceIn) ceIn.blur();
+function cinEnd(){
+  if(!cin) return; cin=null; cinKeep=0; clearTimeout(cinAuto); cinBar.hidden=true; cinNote="";
+  if(document.activeElement===cinIn) cinIn.blur();
 }
 /* 入れる。変えていなければ次のセルへ進むだけ、空にしていればその値を消す。move=false：進まない（ほかのセルを押したとき・閉じるとき） */
-function ceCommit(move){
-  if(!ce||ceBusy) return; ceBusy=true; clearTimeout(ceAuto);
+function cinCommit(move){
+  if(!cin||cinBusy) return; cinBusy=true; clearTimeout(cinAuto);
   try{
-    const v=ceIn.value.trim(), was=String(ce.orig||"").trim(); ceNote="";
+    const v=cinIn.value.trim(), was=String(cin.orig||"").trim(); cinNote="";
     if(v===was){ if(move){ clearPend(); sel=null; cur=nextPos(cur); save(); render(); } }
-    else if(!v){ clearCells(); if(move&&ce){ cur=nextPos(cur); save(); render(); } }
+    else if(!v){ clearCells(); if(move&&cin){ cur=nextPos(cur); save(); render(); } }
     else{
       const at={r:cur.r,c:cur.c};
       handleText(v,false,!!S.rbManual);
-      if(ce&&cur.r===at.r&&cur.c===at.c&&!pend){ const h=$("#heard"); if(h.classList.contains("ng")){ ceNote=h.textContent; ceMsgSync(); } }
+      if(cin&&cur.r===at.r&&cur.c===at.c&&!pend){ const h=$("#heard"); if(h.classList.contains("ng")){ cinNote=h.textContent; cinMsgSync(); } }
     }
-  } finally{ ceBusy=false; }
+  } finally{ cinBusy=false; }
 }
-{ const r0=render; render=function(){ const out=r0.apply(this,arguments); try{ cePlace(); }catch(e){} return out; }; }
-ceIn.addEventListener("keydown",e=>{
+{ const r0=render; render=function(){ const out=r0.apply(this,arguments); try{ cinPlace(); }catch(e){} return out; }; }
+cinIn.addEventListener("keydown",e=>{
   if(e.isComposing||e.keyCode===229) return;
-  if(e.key==="Enter"){ e.preventDefault(); if(!e.repeat) ceCommit(true); return; }
-  if(e.key==="Escape"){ e.preventDefault(); ceEnd(); return; }
+  if(e.key==="Enter"){ e.preventDefault(); if(!e.repeat) cinCommit(true); return; }
+  if(e.key==="Escape"){ e.preventDefault(); cinEnd(); return; }
   if(e.repeat&&/^[0-9.\-+]$/.test(e.key)) e.preventDefault();
 });
-ceIn.addEventListener("input",()=>{ ceNote=""; clearTimeout(ceAuto); if(S.autoCommit&&ceIn.value.trim()) ceAuto=setTimeout(()=>ceCommit(true),1200); });
+cinIn.addEventListener("input",()=>{ cinNote=""; clearTimeout(cinAuto); if(S.autoCommit&&cinIn.value.trim()) cinAuto=setTimeout(()=>cinCommit(true),1200); });
 /* キーボードを閉じた・ほかの所を押した：打ちかけの値を入れて終わる（入力欄のボタンや表のセルを押したときは続ける） */
-function ceBlurCheck(){
-  if(!ce||document.activeElement===ceIn) return;
-  const w=ceKeep-Date.now(); if(w>0){ setTimeout(ceBlurCheck,w+60); return; }
-  if(ceIn.value.trim()!==String(ce.orig||"").trim()&&ceIn.value.trim()) ceCommit(false);
-  ceEnd();
+function cinBlurCheck(){
+  if(!cin||document.activeElement===cinIn) return;
+  const w=cinKeep-Date.now(); if(w>0){ setTimeout(cinBlurCheck,w+60); return; }
+  if(cinIn.value.trim()!==String(cin.orig||"").trim()&&cinIn.value.trim()) cinCommit(false);
+  cinEnd();
 }
-ceIn.addEventListener("blur",()=>setTimeout(ceBlurCheck,250));
-ceBar.addEventListener("pointerdown",e=>{ if(e.target.closest("button")) ceKeep=Date.now()+1200; });
-ceBar.addEventListener("mousedown",e=>{ if(e.target.closest("button")) e.preventDefault(); });
-$("#cellOk").onclick=()=>{ ceCommit(true); if(ce) ceIn.focus(); };
-$("#cellX").onclick=()=>ceEnd();
-$("#cellYes").onclick=()=>{ $("#alYes").click(); if(ce) ceIn.focus(); };
-$("#cellNo").onclick=()=>{ const c=ce; $("#alNo").click(); if(c&&ce){ ceIn.focus(); ceSelectAll(); } };
-try{ new MutationObserver(()=>{ if(ce) ceMsgSync(); }).observe($("#alertBar"),{attributes:true,childList:true,subtree:true,characterData:true}); }catch(e){}
+cinIn.addEventListener("blur",()=>setTimeout(cinBlurCheck,250));
+cinBar.addEventListener("pointerdown",e=>{ if(e.target.closest("button")) cinKeep=Date.now()+1200; });
+cinBar.addEventListener("mousedown",e=>{ if(e.target.closest("button")) e.preventDefault(); });
+$("#cellOk").onclick=()=>{ cinCommit(true); if(cin) cinIn.focus(); };
+$("#cellX").onclick=()=>cinEnd();
+$("#cellYes").onclick=()=>{ $("#alYes").click(); if(cin) cinIn.focus(); };
+$("#cellNo").onclick=()=>{ const c=cin; $("#alNo").click(); if(c&&cin){ cinIn.focus(); cinSelectAll(); } };
+try{ new MutationObserver(()=>{ if(cin) cinMsgSync(); }).observe($("#alertBar"),{attributes:true,childList:true,subtree:true,characterData:true}); }catch(e){}
 /* 表を押す前の今のセルを覚える（同じセルをもう一度押したかを見るため）。入力中にほかのセルを押したら、先に打ちかけの値を入れる */
-function ceBefore(e){
+function cinBefore(e){
   const td=e.target.closest&&e.target.closest("#tbl td.v"); if(!td) return;
-  if(ce){ ceKeep=Date.now()+1500;
+  if(cin){ cinKeep=Date.now()+1500;
     const p={r:+td.dataset.r,c:+td.dataset.c};
-    if((p.r!==cur.r||p.c!==cur.c)&&ceIn.value.trim()&&ceIn.value.trim()!==String(ce.orig||"").trim()) ceCommit(false);
+    if((p.r!==cur.r||p.c!==cur.c)&&cinIn.value.trim()&&cinIn.value.trim()!==String(cin.orig||"").trim()) cinCommit(false);
   }
 }
 document.addEventListener("pointerdown",e=>{
   const td=e.target.closest&&e.target.closest("#tbl td.v");
-  ceTapPrev=td?{r:cur.r,c:cur.c,pt:e.pointerType}:null;
-  if(ce&&td) ceKeep=Date.now()+1500;
-  if(e.pointerType==="mouse"&&e.button===0) ceBefore(e);
+  cinTapPrev=td?{r:cur.r,c:cur.c,pt:e.pointerType}:null;
+  if(cin&&td) cinKeep=Date.now()+1500;
+  if(e.pointerType==="mouse"&&e.button===0) cinBefore(e);
 },true);
-document.addEventListener("click",e=>{ if(!mouseTap) ceBefore(e); },true);
+document.addEventListener("click",e=>{ if(!mouseTap) cinBefore(e); },true);
 $("#tbl").addEventListener("click",e=>{
   const td=e.target.closest("td.v"); if(!td) return;
   const p={r:+td.dataset.r,c:+td.dataset.c};
-  if(ce){ ceIn.focus(); ceSelectAll(); return; }
+  if(cin){ cinIn.focus(); cinSelectAll(); return; }
   if(e.shiftKey||sel||rangeMode) return;
-  if(!ceTapPrev||ceTapPrev.pt==="mouse") return;
-  if(ceTapPrev.r===p.r&&ceTapPrev.c===p.c&&cur.r===p.r&&cur.c===p.c) ceStart();
+  if(!cinTapPrev||cinTapPrev.pt==="mouse") return;
+  if(cinTapPrev.r===p.r&&cinTapPrev.c===p.c&&cur.r===p.r&&cur.c===p.c) cinStart();
 });
 /* PC（マウス）：表は押した時点で描き直すので click・dblclick は届かない。押した時点で、続けて同じセルを押したか（ダブルクリック）を見る */
-let ceLastDown=null;
+let cinLastDown=null;
 $("#tbl").addEventListener("pointerdown",e=>{
   if(e.pointerType!=="mouse"||e.button!==0) return;
   const td=e.target.closest("td.v"); if(!td) return;
   const p={r:+td.dataset.r,c:+td.dataset.c}, now=Date.now();
-  const dbl=!!ceLastDown&&ceLastDown.r===p.r&&ceLastDown.c===p.c&&now-ceLastDown.t<450;
-  ceLastDown={r:p.r,c:p.c,t:now};
+  const dbl=!!cinLastDown&&cinLastDown.r===p.r&&cinLastDown.c===p.c&&now-cinLastDown.t<450;
+  cinLastDown={r:p.r,c:p.c,t:now};
   if(e.shiftKey||rangeMode) return;
-  if(ce){ setTimeout(()=>{ if(ce){ ceIn.focus(); ceSelectAll(); } },0); return; }
-  if(dbl){ ceLastDown=null; setTimeout(()=>{ dragging=false; ceStart(); },0); }
+  if(cin){ setTimeout(()=>{ if(cin){ cinIn.focus(); cinSelectAll(); } },0); return; }
+  if(dbl){ cinLastDown=null; setTimeout(()=>{ dragging=false; cinStart(); },0); }
 });
-document.addEventListener("keydown",e=>{ if(e.key==="F2"&&!ce&&tableKeysOn(e)){ e.preventDefault(); ceStart(); } });
-window.addEventListener("resize",()=>{ if(ce) try{ cePlace(); }catch(e){} });
+document.addEventListener("keydown",e=>{ if(e.key==="F2"&&!cin&&tableKeysOn(e)){ e.preventDefault(); cinStart(); } });
+window.addEventListener("resize",()=>{ if(cin) try{ cinPlace(); }catch(e){} });
+
+/* ========= 表の見出しをつかんで列を動かす（4.9.2） =========
+   選んだ見出し（hSel）をつかむ（タッチ・ペン）か、PC はどの見出しでもドラッグする。
+   動かしている間は表を描き直さず、セルに transform をかけて見せるだけ。離したら S.items の順を変えて描き直す（列の編集の「移動」と同じ扱い：項目の id・値はそのまま、固定する列の数は変えない） */
+let cdrag=null, cdEat=0, cdUndo=null, cdHinted=false;
+const cdRM=()=>{ try{ return matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){ return false; } };
+function cdCellsOf(c,rows){
+  const out=[]; const head=$("#tbl").tHead?.rows[0];
+  if(head) [...head.cells].forEach(el=>{ if(el.dataset.c===String(c)) out.push(el); });
+  rows.forEach(tr=>[...tr.cells].forEach(el=>{ if(el.dataset.c===String(c)||(el.classList.contains("pv")&&el.dataset.p===String(c))) out.push(el); }));
+  return out;
+}
+function cdBegin(st){
+  const tb=$("#tbl"), box=$("#tablebox"), head=tb.tHead?.rows[0]; if(!head) return false;
+  const B=box.getBoundingClientRect(), sl=box.scrollLeft;
+  /* 列（項目）ごとの左右の端（表の中の位置）。見出しの行で測る */
+  const geo=[]; [...head.cells].forEach(th=>{ if(th.dataset.c===undefined) return; const c=+th.dataset.c, r=th.getBoundingClientRect(), l=r.left-B.left+sl, rr=r.right-B.left+sl; if(geo[c]){ geo[c].l=Math.min(geo[c].l,l); geo[c].r=Math.max(geo[c].r,rr); } else geo[c]={l,r:rr}; });
+  if(!geo[st.c]) return false;
+  /* 動かすのは見出しと、画面に見えている行のセルだけ（行が多くても重くしない） */
+  const rows=[...(tb.tBodies[0]?.rows||[])].filter(tr=>{ const r=tr.getBoundingClientRect(); return r.bottom>=B.top-60&&r.top<=B.bottom+60; });
+  const cells=S.items.map((_,c)=>geo[c]?cdCellsOf(c,rows):[]);
+  const H=head.getBoundingClientRect(), last=rows.length?rows[rows.length-1].getBoundingClientRect():H;
+  cdrag={...st, on:true, geo, cells, sl0:sl, k:st.c, W:geo[st.c].r-geo[st.c].l, top:H.top-B.top+box.scrollTop, h:last.bottom-H.top, raf:0, cx:st.x};
+  if(cin) try{ cinEnd(); }catch(e){}
+  clearPend(); sel=null;
+  cells[st.c].forEach(el=>el.classList.add("cdrag"));
+  cells.forEach((a,c)=>{ if(c!==st.c) a.forEach(el=>el.classList.add("cdshift")); });
+  document.body.classList.add("itemdrag");
+  try{ navigator.vibrate&&navigator.vibrate(12); }catch(e){}
+  cdrag.raf=requestAnimationFrame(cdTick);
+  return true;
+}
+function cdTarget(dx){
+  /* 動かしている列の中心より左にある、ほかの列の数＝入る位置（S.items の番号） */
+  const d=cdrag, g=d.geo, from=d.c, center=(g[from].l+g[from].r)/2+dx;
+  let k=0; g.forEach((x,c)=>{ if(x&&c!==from&&(x.l+x.r)/2<center) k++; });
+  return k;
+}
+function cdApply(){
+  const d=cdrag, box=$("#tablebox"), dx=d.cx-d.x+(box.scrollLeft-d.sl0), from=d.c, k=cdTarget(dx), W=d.W, g=d.geo;
+  d.dx=dx; d.k=k;
+  d.cells[from].forEach(el=>{ el.style.transform=`translateX(${dx}px)`; });
+  d.cells.forEach((a,c)=>{ if(c===from||!g[c]) return; let s=0; if(k>from&&c>from&&c<=k) s=-W; else if(k<from&&c>=k&&c<from) s=W; const t=s?`translateX(${s}px)`:""; a.forEach(el=>{ if(el.style.transform!==t) el.style.transform=t; }); });
+  /* 点線の空き：入る位置 */
+  let L; if(k===from) L=g[from].l; else if(k>from) L=g[k].r-W; else L=g[k].l;
+  const ph=$("#cdPh"); ph.hidden=false; ph.style.left=L+"px"; ph.style.top=d.top+"px"; ph.style.width=W+"px"; ph.style.height=Math.max(20,d.h)+"px";
+}
+function cdTick(){
+  if(!cdrag||!cdrag.on) return;
+  const box=$("#tablebox"), B=box.getBoundingClientRect(), m=48; let v=0;
+  if(cdrag.cx<B.left+m) v=-Math.ceil((B.left+m-cdrag.cx)/6); else if(cdrag.cx>B.right-m) v=Math.ceil((cdrag.cx-(B.right-m))/6);
+  if(v){ const b=box.scrollLeft; box.scrollLeft+=v; if(box.scrollLeft!==b) cdApply(); }
+  cdrag.raf=requestAnimationFrame(cdTick);
+}
+function cdClear(d){
+  if(!d) return;
+  cancelAnimationFrame(d.raf);
+  d.cells.forEach(a=>a.forEach(el=>{ el.classList.remove("cdrag","cdshift"); el.style.transform=""; }));
+  $("#cdPh").hidden=true; document.body.classList.remove("itemdrag");
+}
+/* 列を from から to（S.items の番号）へ動かす。flip：動かす前の見た目の位置（あれば、そこから滑らせる） */
+function cdMove(from,to,flip){
+  if(from===to||!S.items[from]||to<0||to>=S.items.length) return false;
+  clearPend(); sel=null;
+  const ids=S.items.map(it=>it.id), curId=ids[cur.c], lcId=lastCommit?ids[lastCommit.c]:null;
+  cdUndo=JSON.stringify({ids,cur,hSel});
+  const a=S.items.slice(); const [it]=a.splice(from,1); a.splice(to,0,it);
+  if(flip===undefined) flip=colFlipSnap();
+  S.items=a; normS();
+  const idx=id=>S.items.findIndex(x=>x.id===id);
+  { const ni=idx(curId); cur.c=(ni<0||S.items[ni].role==="id")?firstMeas():ni; }
+  if(lastCommit&&lcId){ const ni=idx(lcId); if(ni>=0) lastCommit.c=ni; else lastCommit=null; }
+  hSel=to;
+  save(); render(); colFlipPlay(flip);
+  note(`「${it.name}」の列を移動しました。間違えた場合は「元に戻す」を押してください。`,true);
+  $("#note").insertAdjacentHTML("beforeend",' <button type="button" class="ghost" id="cdUndoBtn" style="padding:4px 10px">元に戻す</button>');
+  $("#cdUndoBtn").onclick=()=>{ if(!cdUndo) return; const o=JSON.parse(cdUndo); cdUndo=null;
+    const lc=lastCommit?S.items[lastCommit.c]?.id:null;
+    const fl=colFlipSnap(); S.items=o.ids.map(id=>S.items.find(x=>x.id===id)).filter(Boolean).concat(S.items.filter(x=>!o.ids.includes(x.id)));
+    normS(); const ci=S.items.findIndex(x=>x.id===o.ids[o.cur.c]); cur={r:o.cur.r,c:ci<0?firstMeas():ci};
+    if(lastCommit&&lc){ const ni=S.items.findIndex(x=>x.id===lc); if(ni>=0) lastCommit.c=ni; }
+    hSel=-1; save(); render(); colFlipPlay(fl); note("元に戻しました"); };
+  return true;
+}
+function cdEnd(ok){
+  const d=cdrag; if(!d) return; cdrag=null;
+  document.removeEventListener("pointermove",cdPMove); document.removeEventListener("pointerup",cdPUp); document.removeEventListener("pointercancel",cdPCancel);
+  if(!d.on) return;
+  cdEat=Date.now()+250;
+  if(ok&&d.k!==d.c){ const flip=colFlipSnap(); cdClear(d); cdMove(d.c,d.k,flip); }
+  else{ cdClear(d); }
+}
+function cdPMove(e){
+  const d=cdrag; if(!d||e.pointerId!==d.pid) return;
+  d.cx=e.clientX;
+  if(!d.on){ if(Math.abs(e.clientX-d.x)<7) { if(Math.abs(e.clientY-d.y)>12&&d.pt==="mouse"){ cdEnd(false); } return; } if(!cdBegin(d)){ cdEnd(false); return; } d.on=true; }
+  e.preventDefault(); cdApply();
+}
+const cdPUp=e=>{ if(cdrag&&e.pointerId===cdrag.pid) cdEnd(true); };
+const cdPCancel=e=>{ if(cdrag&&e.pointerId===cdrag.pid) cdEnd(false); };
+$("#tbl").addEventListener("pointerdown",e=>{
+  if(cdrag) return;
+  const th=e.target.closest("th[data-c]"); if(!th) return;
+  if(e.pointerType==="mouse"&&e.button!==0) return;
+  const c=+th.dataset.c; if(!S.items[c]) return;
+  if(e.pointerType!=="mouse"&&hSel!==c) return;   /* 指・ペンは選んだ見出しだけ（ほかは表の横スクロール） */
+  cdrag={c,x:e.clientX,y:e.clientY,cx:e.clientX,pid:e.pointerId,pt:e.pointerType,on:false};
+  document.addEventListener("pointermove",cdPMove,{passive:false}); document.addEventListener("pointerup",cdPUp); document.addEventListener("pointercancel",cdPCancel);
+});
+/* 動かした直後の click は、見出しの選択・列の編集を開く処理に渡さない */
+document.addEventListener("click",e=>{ if(Date.now()<cdEat&&e.target.closest&&e.target.closest("#tbl th")){ e.stopImmediatePropagation(); e.preventDefault(); } },true);
+document.addEventListener("dblclick",e=>{ if(Date.now()<cdEat&&e.target.closest&&e.target.closest("#tbl th")){ e.stopImmediatePropagation(); e.preventDefault(); } },true);
+/* キーボード：見出しで Alt+← → */
+$("#tbl").addEventListener("keydown",e=>{
+  const th=e.target.closest("th[data-c]"); if(!th||!e.altKey||(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")) return;
+  e.preventDefault(); const c=+th.dataset.c, to=e.key==="ArrowLeft"?c-1:c+1;
+  if(cdMove(c,to)) $(`#tbl th[data-c="${to}"]:not(.pvh)`)?.focus();
+});
+/* 4.9 からの不具合の修正：選んである見出しをダブルクリックすると、1回目で開いた列の編集の、同じ位置のボタンに2回目のクリックが当たってしまう。開いた直後（0.4秒）の画面の中のクリックは受け付けない */
+let cdOpenAt=0;
+{ const o0=openColEdit; openColEdit=function(){ const r=o0.apply(this,arguments); if($("#colDlg").open) cdOpenAt=Date.now(); return r; }; }
+["click","dblclick"].forEach(t=>document.addEventListener(t,e=>{ if(Date.now()-cdOpenAt<400&&e.target.closest&&e.target.closest("#colDlg")){ e.stopImmediatePropagation(); e.preventDefault(); } },true));
+/* 見出しを初めて選んだとき（タッチ）に、つかんで動かせることを1回だけ知らせる */
+$("#tbl").addEventListener("click",e=>{
+  if(cdHinted||e.pointerType==="mouse") return; const th=e.target.closest("th[data-c]"); if(!th) return;
+  setTimeout(()=>{ if(hSel>=0&&!$("#colDlg").open&&!cdHinted){ cdHinted=true; note("選んだ見出し（✎）をつかんで左右に動かすと、列を移動できます。もう一度押すと列の編集が開きます"); } },0);
+});
 
 boot();
 </script>
