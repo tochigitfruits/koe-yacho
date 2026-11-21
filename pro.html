@@ -513,6 +513,12 @@ td.cur .pva{color:inherit}
 .cellbar button.sec{background:transparent;color:var(--ink);border:1.5px solid var(--line);padding:0 10px}
 .cellbar .cbmsg{font-size:.8rem;color:var(--warn);font-family:var(--f-ui);white-space:normal;max-width:19em;text-align:left;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .cellbar .cbmsg button{min-height:34px}
+/* 4.9.5 選択肢の列：表の中の候補の一覧 */
+.cellbar .cblist{display:flex;flex-direction:column;gap:3px;max-height:min(50vh,22em);overflow-y:auto;min-width:8em}
+.cellbar .cblist button{background:var(--bg);color:var(--ink);border:1.5px solid var(--line);text-align:left;min-height:42px;font-family:var(--f-ui)}
+.cellbar .cblist button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.cellbar .cblist button.cbclr{color:var(--muted);font-weight:400}
+.cellbar.lst .cbrow{display:none}
 .listbtns{display:flex;gap:6px;flex-wrap:wrap}
 .listbtns .add{flex:1 1 12em}
 #sListWarn{color:var(--warn);font-size:.82rem}
@@ -668,7 +674,7 @@ td.cur .pva{color:inherit}
     <button type="button" class="ghost" id="newDateGo">この日の調査を始める</button>
     <button type="button" class="ghost" id="newDateCancel">やめる</button>
   </div>
-  <div class="tablebox" id="tablebox"><table id="tbl"></table><div class="cdph" id="cdPh" hidden></div><div class="cellbar" id="cellBar" hidden><div class="cbrow"><input id="cellIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" aria-label="今のセルに直接入力"><button type="button" id="cellOk">入力</button><button type="button" id="cellX" class="sec" aria-label="直接入力を終える" title="直接入力を終える">✕</button></div><div class="cbmsg" id="cellMsg" hidden><span id="cellMsgT"></span><button type="button" id="cellYes">はい</button><button type="button" id="cellNo" class="sec">やり直し</button></div></div></div>
+  <div class="tablebox" id="tablebox"><table id="tbl"></table><div class="cdph" id="cdPh" hidden></div><div class="cellbar" id="cellBar" hidden><div class="cblist" id="cellList" role="listbox" aria-label="候補から選ぶ" hidden></div><div class="cbrow"><input id="cellIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" aria-label="今のセルに直接入力"><button type="button" id="cellOk">入力</button><button type="button" id="cellX" class="sec" aria-label="直接入力を終える" title="直接入力を終える">✕</button></div><div class="cbmsg" id="cellMsg" hidden><span id="cellMsgT"></span><button type="button" id="cellYes">はい</button><button type="button" id="cellNo" class="sec">やり直し</button></div></div></div>
   <div class="ver" id="ceHint">今のセル（黄色）をもう一度押すと、その場でキーボード入力できます（PCはダブルクリック）</div>
 
   <div class="out">
@@ -1079,7 +1085,7 @@ td.cur .pva{color:inherit}
     </details>
     <details class="fold" data-fold="cmd"><summary><span class="ftitle">音声コマンド・まとめて入力・表の操作の説明</span></summary>
     <div class="fbody fhelp">
-    <p class="help">音声コマンド：<code>取り消し</code> 直前を消す（続けて言うときは、「読み上げ・音・その他」で決めた間隔をあける）／<code>スキップ</code> 空欄で進む／<code>次</code> 次の行・列へ／<code>戻る</code> 1つ前へ。<code>待機</code>（<code>一時停止</code>・<code>休憩</code>）聞き取りを休む／<code>再開</code> 待機から戻る／<code>停止</code>（<code>ストップ</code>・<code>終了</code>）聞き取りを止める（続けるときはマイクを押す）。<code>除外</code>（<code>落果</code>・<code>枯死</code>・<code>欠株</code>）その個体をこの調査日以降は飛ばす／<code>復帰</code> 除外を取り消す。<code>どこ</code>（<code>今どこ</code>）今の個体・項目・入っている値を読み上げる／<code>さっき</code>（<code>直前</code>）直前に確定した値／<code>前回</code>（<code>前回値</code>）経時調査で今のセルの前回の値／<code>残り</code>（<code>あと何個</code>）今日の残りの個体数。この4つは入力も移動もせず、読み上げがオフでも、待機中でも答えます。前回比の「注意」が出たら <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）、または正しい値を言い直します。文字の列は話した言葉がそのまま入り、選択肢の列は登録した候補から一番近いものが入ります。数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます（数字の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます）。小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。表のセルをタップすると、そこから入力を再開します。</p>
+    <p class="help">音声コマンド：<code>取り消し</code> 直前を消す（続けて言うときは、「読み上げ・音・その他」で決めた間隔をあける）／<code>スキップ</code> 空欄で進む／<code>次</code> 次の行・列へ／<code>戻る</code> 1つ前へ。<code>待機</code>（<code>一時停止</code>・<code>休憩</code>）聞き取りを休む／<code>再開</code> 待機から戻る／<code>停止</code>（<code>ストップ</code>・<code>終了</code>）聞き取りを止める（続けるときはマイクを押す）。<code>除外</code>（<code>落果</code>・<code>枯死</code>・<code>欠株</code>）その個体をこの調査日以降は飛ばす／<code>復帰</code> 除外を取り消す。<code>どこ</code>（<code>今どこ</code>）今の個体・項目・入っている値を読み上げる／<code>さっき</code>（<code>直前</code>）直前に確定した値／<code>前回</code>（<code>前回値</code>）経時調査で今のセルの前回の値／<code>残り</code>（<code>あと何個</code>）今日の残りの個体数。この4つは入力も移動もせず、読み上げがオフでも、待機中でも答えます。前回比の「注意」が出たら <code>はい</code>（このまま確定）か <code>いいえ</code>（入力し直す）、または正しい値を言い直します。文字の列は話した言葉がそのまま入り、選択肢の列は登録した候補から一番近いものが入ります（候補のボタン・表の中の一覧からも選べます）。数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます（数字の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます）。小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。表のセルをタップすると、そこから入力を再開します。</p>
     <p class="help">まとめて入力：<code>32.5 31.2 30.8</code> 続けて言うと今のセルから順に入る（値の間に少し間を置くか「と」を挟む）／<code>ゼロ 6個</code>（<code>0を6つ</code>）今の列の今の個体から6個体分（列単位では、列の最後まで来たら次の列へ続く）／<code>残り全部ゼロ</code>（<code>残りゼロ</code>）今の列の最後の個体まで／<code>5から10 ゼロ</code>（<code>5番から10番まで0</code>）今の列の No.5〜10。除外した個体は飛ばします。前回比で「禁止」になるセルには入れず、「注意」のセルは入れたうえで件数を知らせます。直後に「取り消し」と言うか「元に戻す」を押すと、まとめて入れた分をすべて戻せます。</p>
     <p class="help">表の操作：<code>クリア</code> 選んだセル（範囲）の値を消す／<code>削除して詰める</code> 今のセルを消し、入力の順番で後ろの値を1つずつ前へ詰める（2回入ってしまったとき）／<code>行を削除</code> 今の行（範囲を選んでいればその行すべて）を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も一緒に消える（余計な行を増やしてしまったとき）／<code>範囲選択</code> オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）／<code>コピー</code> 選んだ範囲の「音声で入力」の列をコピー（Excelにも貼れる）／<code>貼付</code> 今のセルを左上にして貼り付け（PCは Ctrl+C・Ctrl+V・Delete も使えます）。操作のあとは「元に戻す」で戻せます。表の左の列や上の行を固定するには、「表の表示（ウインドウ枠の固定）」で列数・行数を指定します。</p>
     </div>
@@ -1461,10 +1467,13 @@ function allowSpec(it){
   }
   return out.length?out:null;
 }
-function allowOk(it,v){ const sp=allowSpec(it); if(!sp||typeof v!=="number") return true; return sp.some(([a,b])=>v>=a-1e-9&&v<=b+1e-9); }
-function allowText(it){ const sp=allowSpec(it); if(!sp) return ""; return sp.map(([a,b])=>a===b?fmt(a,it):`${fmt(a,it)}〜${fmt(b,it)}`).join("・"); }
+/* 4.9.5：刻み（0.5刻みなど）に合う値か。丸めずに、合わない値は入れない */
+function stepOk(it,v){ if(!isNum(it)||!(+it.step>0)||typeof v!=="number") return true; const q=v/it.step; return Math.abs(q-Math.round(q))<1e-6; }
+function allowOk(it,v){ if(!stepOk(it,v)) return false; const sp=allowSpec(it); if(!sp||typeof v!=="number") return true; return sp.some(([a,b])=>v>=a-1e-9&&v<=b+1e-9); }
+function allowRange(it){ const sp=allowSpec(it); if(!sp) return ""; return sp.map(([a,b])=>a===b?fmt(a,it):`${fmt(a,it)}〜${fmt(b,it)}`).join("・"); }
+function allowText(it){ return [allowRange(it), isNum(it)&&+it.step>0?`${it.step}刻み`:""].filter(Boolean).join("・"); }
 function typeLabel(it){
-  const al=allowText(it);
+  const al=allowRange(it);
   let b = it.type==="text"?"文字": it.type==="choice"?"選択肢": it.type==="multi"?"複数選択": it.type==="date"?"日付": it.type==="count"?"カウンター"+(al?`・${al.length>14?al.slice(0,13)+"…":al}`:""): (it.dec===0?"整数":"小数"+it.dec)+(it.step?`・${it.step}刻み`:"")+(al?`・${al.length>14?al.slice(0,13)+"…":al}`:"");
   return (it.role==="id"?"事前入力・":"")+b;
 }
@@ -1825,13 +1834,19 @@ function advance(){
 let putCount=0, lastPut=null, alerted=false;
 /* 手入力の復唱：「復唱」ボタンがオンのとき、手入力で入った値も読み上げる */
 let manualRb=false;
-function roundVal(it,x){ if(it.step>0) x=Math.round(x/it.step)*it.step; const m=Math.pow(10,it.dec); return Math.round(x*m)/m; }
+function roundVal(it,x){ const m=Math.pow(10,it.dec); return Math.round(x*m)/m; }
 function putValue(v){
   const it=S.items[cur.c]; if(!it) return null;
   let val, said;
   if(isNum(it)){
-    let x=v; if(it.step>0) x=Math.round(x/it.step)*it.step;
-    const m=Math.pow(10,it.dec); val=Math.round(x*m)/m; said=fmt(val,it).replace(/^-/,"マイナス");
+    const m=Math.pow(10,it.dec); val=Math.round(v*m)/m; said=fmt(val,it).replace(/^-/,"マイナス");
+    if(!stepOk(it,v)||!stepOk(it,val)){
+      const raw=String(+(+v).toFixed(6)), sraw=raw.replace(/^-/,"マイナス");
+      halt=true; alerted=true; badCells.add(cur.r+":"+cur.c); sound("block");
+      addLog(`${cellName(cur)} ${raw} は入力しない（${it.step}刻みに合わない）`);
+      showAlert("block",`${cellName(cur)}：${raw} は ${it.step}刻みに合いません。入力し直してください。`);
+      return `${sraw}、刻みに合いません、入力し直してください`;
+    }
   } else { val=String(v).trim(); if(!val) return null; said=it.type==="date"?dateSay(val):val; }
   if(isNum(it)&&!allowOk(it,val)){
     halt=true; alerted=true; badCells.add(cur.r+":"+cur.c); sound("block");
@@ -2305,7 +2320,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.9.4（2026-11-15）";
+const APP_VER="Pro 4.9.5（2026-11-21）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -2667,6 +2682,7 @@ function renderQuick(it){
     const v=D[cur.r]?.[it.id];
     if(it.type==="count") h=`<button type="button" class="big" data-q="cnt" data-n="-1" aria-label="1つ減らす">−1</button><button type="button" class="big" data-q="cnt" data-n="1" aria-label="1つ増やす">＋1</button><span class="qh">今 ${hasVal(v)?fmt(v,it):"0（空欄）"}。声は「プラス」「プラス3」「マイナス」。数を言うとその数にして次へ進みます。</span>`;
     else if(it.type==="date") h=`<button type="button" data-q="date" data-v="今日">今日</button><button type="button" data-q="date" data-v="昨日">昨日</button><span class="qh">声は「今日」「11月5日」「5日」など。</span>`;
+    else if(it.type==="choice"&&it.options.length){ h=it.options.map((o,i)=>`<button type="button" class="opt" data-q="ch" data-i="${i}" aria-pressed="${hasVal(v)&&String(v)===o}">${esc(o)}</button>`).join("")+`<span class="qh">押すと入れて次へ進みます。声でも言えます。</span>`; }
     else if(it.type==="multi"&&it.options.length){ const s=multiSet(v); h=it.options.map((o,i)=>`<button type="button" class="opt" data-q="opt" data-i="${i}" aria-pressed="${s.has(o)}">${esc(o)}</button>`).join("")+`<span class="qh">押して入れる・外す（進みません。終わったら「次」）。声は「虫害と日焼け」のように続けて言えます。</span>`; }
   }
   q.innerHTML=h; q.hidden=!h;
@@ -2676,6 +2692,7 @@ $("#quickBar").addEventListener("click",e=>{
   sel=null; bulkSnap=null; if(pend) clearPend();
   if(b.dataset.q==="cnt"){ const k=+b.dataset.n; handleText(k>0?"+"+k:"-"+(-k),false,!!S.rbManual); return; }
   if(b.dataset.q==="date"){ handleText(b.dataset.v,false,!!S.rbManual); return; }
+  if(b.dataset.q==="ch"){ const it=S.items[cur.c]; const o=it?.options[+b.dataset.i]; if(o===undefined||it.type!=="choice") return; handleText(o,false,!!S.rbManual); return; }
   if(b.dataset.q==="opt"){ const it=S.items[cur.c]; const o=it?.options[+b.dataset.i]; if(o===undefined) return; hideAlert(); multiToggle(o); save(); render(); }
 });
 /* ウインドウ枠の固定：左の列は left、上の行は top を、実際の幅・高さを測って積み上げる */
@@ -3209,7 +3226,7 @@ function applyPaste(text){
       const v=String(raw).trim(); if(!v) return;
       const it=S.items[pl.cols[j]]; let val; const v2=aliasFor(it,v)??v;
       if(isNum(it)){ const x=parseNumber(v2); if(x===null||Number.isNaN(x)){ bad++; return; }
-        let y=x; if(it.step>0) y=Math.round(y/it.step)*it.step; const m=Math.pow(10,it.dec); val=Math.round(y*m)/m;
+        const m=Math.pow(10,it.dec); val=Math.round(x*m)/m;
         if(!allowOk(it,val)){ bad++; badCells.add(r+":"+pl.cols[j]); return; } }
       else if(it.type==="choice"){ val=matchChoice(v2,it.options); if(val===null){ bad++; return; } }
       else if(it.type==="multi"){ val=multiOf(it,v2); if(val===null){ bad++; return; } }
@@ -5033,9 +5050,9 @@ const HELP=[
 {g:"input",id:"voice",t:"声で入力する（マイク）",k:"マイク 音声 話す 開始 停止 連続認識 1回ずつ 聞き取り方 セルをタップ まいく おんせい れんぞく",go:"listen",b:
 "<p>マイクを押して話すと、黄色のセルに値が入り、次のセルへ進みます。聞き取った言葉は「次に入るセル」の下に出ます。</p><ul><li><b>連続認識</b>：止めるまで聞き続けます。</li><li><b>1回ずつ</b>：押すたびに1回だけ聞きます。</li></ul><p>表のセルをタップすると、そのセルから入力を続けます。</p>"},
 {g:"input",id:"numbers",t:"数値の言い方",k:"数字 小数 てん 点 マイナス 単位 ミリ グラム 続けて 刻み 桁 丸め すうじ しょうすう てん まいなす たんい",go:"items",b:
-"<p>小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。負の値は「マイナス」を付けます。ミリ・センチ・グラム・度などの単位は付けても無視します。</p><p><code>32.5 31.2 30.8</code> のように続けて言うと、今のセルから順に入ります（値の間に少し間を置くか「と」を挟みます）。くっついて聞き取られた数値（32.531.2）は、その項目の小数の桁で切り分けます。値は項目ごとの小数の桁数と刻み（0.5刻みなど）に合わせて丸めます。</p>"},
+"<p>小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。負の値は「マイナス」を付けます。ミリ・センチ・グラム・度などの単位は付けても無視します。</p><p><code>32.5 31.2 30.8</code> のように続けて言うと、今のセルから順に入ります（値の間に少し間を置くか「と」を挟みます）。くっついて聞き取られた数値（32.531.2）は、その項目の小数の桁で切り分けます。値は項目ごとの小数の桁数に合わせて丸めます。刻み（0.5刻みなど）を決めた項目では、刻みに合わない値（0.5刻みで 3.2 など）は丸めずに入れず、「刻みに合いません」と知らせます。</p>"},
 {g:"input",id:"textchoice",t:"文字・選択肢の列",k:"文字 備考 選択肢 候補 品種 テキスト もじ びこう せんたくし",go:"items",b:
-"<p>文字の列には、話した言葉がそのまま入ります。選択肢の列は、登録した候補（例 にっこり、幸水、豊水）から一番近いものが入ります。ひらがな・カタカナの違いは気にしません。うまく聞き取れない言葉や短く言いたい言葉は、「言い換え」に登録できます。</p><p>このほか、<b>複数選択・日付・カウンター</b>の列も作れます（それぞれの説明を見てください）。</p>"},
+"<p>文字の列には、話した言葉がそのまま入ります。選択肢の列は、登録した候補（例 にっこり、幸水、豊水）から一番近いものが入ります。ひらがな・カタカナの違いは気にしません。</p><p>選択肢の列にいるときは、表の下に候補のボタンが並びます。押すとその値が入り、次へ進みます。表の今のセル（黄色）をもう一度押す（PCはダブルクリック・F2）と、セルの所に候補の一覧が出て、そこからも選べます（「空欄にする」で値を消します。一覧の外を押すと閉じます）。うまく聞き取れない言葉や短く言いたい言葉は、「言い換え」に登録できます。</p><p>このほか、<b>複数選択・日付・カウンター</b>の列も作れます（それぞれの説明を見てください）。</p>"},
 {g:"input",id:"multi",t:"複数選択の列（被害の種類など）",k:"複数選択 複数 いくつも 被害 症状 病害虫 チェック 両方 ふくすうせんたく",go:"items",b:
 "<p>1つのセルに、登録した候補からいくつでも入れられる列です（例 候補「虫害、日焼け、裂果、さび」）。設定の「調査項目」で種類を「複数選択」にし、候補を「、」で区切って入れます。</p><ul><li><b>声</b>：「虫害と日焼け」「虫害 日焼け」のように続けて言うと、両方が入って次へ進みます。値は候補の順に「、」でつないで記録します（例「虫害、日焼け」）。</li><li><b>ボタン</b>：手入力欄の下に候補のボタンが出ます。押すたびに入れる・外すが切り替わり、次へは進みません。終わったら「次」を押します。</li><li>候補にない言葉が混じると入力しません（「聞き取れません」）。言い換えも使えます。「なし」を記録したいときは、候補に「なし」を足してください。</li><li>集計・外れ値の対象にはなりません。Excel・CSVには「虫害、日焼け」の文字で出ます。</li></ul>"},
 {g:"input",id:"date",t:"日付の列（開花日・収穫日など）",k:"日付 開花日 収穫日 満開日 発芽日 今日 昨日 ひづけ きょう",go:"items",b:
@@ -5169,6 +5186,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.9.5",d:"2026-11-21",a:[["選択肢の列も、候補のボタンを押して入れられるように（押すと次へ進む）","textchoice"],["選択肢の列は、表のセルを押すと候補の一覧から選べるように","textchoice"],["刻み（0.5刻みなど）を決めた項目は、刻みに合わない値を丸めずに「刻みに合いません」と知らせて入れないように","numbers"]]},
 {v:"Pro 4.9.4",d:"2026-11-15",a:[["調査日の予定のカレンダーに祝日（振替休日・国民の休日を含む）を表示","plan"]]},
 {v:"Pro 4.9.3",d:"2026-11-14",a:[["調査日の予定を、月のカレンダーで日を押して選べるように（日付を並べるとき。間隔で決めた予定も見られる）","plan"]]},
 {v:"Pro 4.9.2",d:"2026-11-14",a:[["表の見出しをつかんで、列を左右に動かせるように（列ごと浮いて動く。PCはドラッグ、キーボードは Alt+←→）","coledit"]]},
@@ -6026,6 +6044,16 @@ function cinPlace(){
   const td=$("#tbl td.cur"), it=S.items[cur.c];
   if(!td||!it||it.role==="id"||sel||rangeMode||document.querySelector("dialog[open]")||!$("#gate").hidden){ cinEnd(); return; }
   const moved=cin.r!==cur.r||cin.c!==cur.c||cin.d!==S.curDate||cin.sv!==svId, cell=cinCellText();
+  const lst=it.type==="choice"&&it.options.length>0&&!isEx(cur.r);
+  /* 入力欄と一覧を、列に合わせて切り替える（行単位で数値の列から選択肢の列へ進んだときなど） */
+  const sw=cin.r>=0&&!!cin.lst!==lst;
+  cin.lst=lst; if(sw) setTimeout(cinFocus,0); cinBar.classList.toggle("lst",lst); $("#cellList").hidden=!lst;
+  if(lst&&(moved||cell!==cin.cell)){
+    const v=D[cur.r]?.[it.id];
+    $("#cellList").innerHTML=it.options.map((o,i)=>`<button type="button" role="option" data-ci="${i}" aria-selected="${hasVal(v)&&String(v)===o}">${esc(o)}</button>`).join("")
+      +`<button type="button" class="cbclr" data-ci="-1">空欄にする</button><button type="button" class="sec" data-ci="x">閉じる</button>`;
+    $("#cellList").setAttribute("aria-label",`${cellName(cur)} を候補から選ぶ`);
+  }
   if(moved||cell!==cin.cell){
     cin.r=cur.r; cin.c=cur.c; cin.d=S.curDate; cin.sv=svId; cin.cell=cell; cin.orig=cell; cinIn.value=cell; if(moved) cinNote="";
     cinIn.setAttribute("inputmode",isNum(it)?"decimal":"text"); cinIn.classList.toggle("txt",!isNum(it));
@@ -6045,10 +6073,16 @@ function cinStart(){
   if(it.role==="id"){ note("事前入力の列は、設定の「個体リスト」で直します"); return false; }
   if(sel||rangeMode) return false;
   cin={r:-1,c:-1,d:"",sv:"",cell:"",orig:""}; cinNote=""; cinPlace(); if(!cin) return false;
-  cinIn.focus(); cinSelectAll(); return true;
+  cinFocus(); return true;
+}
+/* 入力欄に戻す。選択肢の一覧のときは、選んでいる候補（なければ先頭）にフォーカス（キーボードは出さない） */
+function cinFocus(){
+  if(!cin) return;
+  if(cin.lst){ const b=$("#cellList button[aria-selected=\"true\"]")||$("#cellList button"); try{ b&&b.focus({preventScroll:true}); }catch(e){} return; }
+  cinIn.focus(); cinSelectAll();
 }
 function cinEnd(){
-  if(!cin) return; cin=null; cinKeep=0; clearTimeout(cinAuto); cinBar.hidden=true; cinNote="";
+  if(!cin) return; cin=null; cinKeep=0; clearTimeout(cinAuto); cinBar.hidden=true; cinNote=""; cinBar.classList.remove("lst"); $("#cellList").hidden=true;
   if(document.activeElement===cinIn) cinIn.blur();
 }
 /* 入れる。変えていなければ次のセルへ進むだけ、空にしていればその値を消す。move=false：進まない（ほかのセルを押したとき・閉じるとき） */
@@ -6075,7 +6109,7 @@ cinIn.addEventListener("keydown",e=>{
 cinIn.addEventListener("input",()=>{ cinNote=""; clearTimeout(cinAuto); if(S.autoCommit&&cinIn.value.trim()) cinAuto=setTimeout(()=>cinCommit(true),1200); });
 /* キーボードを閉じた・ほかの所を押した：打ちかけの値を入れて終わる（入力欄のボタンや表のセルを押したときは続ける） */
 function cinBlurCheck(){
-  if(!cin||document.activeElement===cinIn) return;
+  if(!cin||cin.lst||document.activeElement===cinIn) return;
   const w=cinKeep-Date.now(); if(w>0){ setTimeout(cinBlurCheck,w+60); return; }
   if(cinIn.value.trim()!==String(cin.orig||"").trim()&&cinIn.value.trim()) cinCommit(false);
   cinEnd();
@@ -6083,7 +6117,31 @@ function cinBlurCheck(){
 cinIn.addEventListener("blur",()=>setTimeout(cinBlurCheck,250));
 cinBar.addEventListener("pointerdown",e=>{ if(e.target.closest("button")) cinKeep=Date.now()+1200; });
 cinBar.addEventListener("mousedown",e=>{ if(e.target.closest("button")) e.preventDefault(); });
-$("#cellOk").onclick=()=>{ cinCommit(true); if(cin) cinIn.focus(); };
+$("#cellOk").onclick=()=>{ cinCommit(true); if(cin) cinFocus(); };
+/* 4.9.5：候補の一覧から選ぶ。入れる処理は手入力と同じ（handleText）。空欄にする・閉じる */
+$("#cellList").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-ci]"); if(!b||!cin) return;
+  const it=S.items[cur.c]; if(!it||it.type!=="choice") return;
+  const k=b.dataset.ci;
+  if(k==="x"){ cinEnd(); return; }
+  if(k==="-1"){ if(hasVal(D[cur.r]?.[it.id])) clearCells(); if(cin){ cur=nextPos(cur); save(); render(); cinFocus(); } return; }
+  const o=it.options[+k]; if(o===undefined) return;
+  cinNote=""; handleText(o,false,!!S.rbManual);
+  if(cin){ const h=$("#heard"); if(h.classList.contains("ng")){ cinNote=h.textContent; cinMsgSync(); } cinFocus(); }
+});
+$("#cellList").addEventListener("keydown",e=>{
+  if(e.key==="Escape"){ e.preventDefault(); cinEnd(); return; }
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){
+    e.preventDefault(); e.stopPropagation(); const bs=[...$("#cellList").querySelectorAll("button")], i=bs.indexOf(document.activeElement);
+    const j=Math.max(0,Math.min(bs.length-1,(i<0?0:i)+(e.key==="ArrowDown"?1:-1))); bs[j].focus();
+  }
+});
+/* 一覧の外（表のセル・一覧以外）を押したら閉じる */
+document.addEventListener("pointerdown",e=>{
+  if(!cin||!cin.lst) return;
+  if(e.target.closest&&(e.target.closest("#cellBar")||e.target.closest("#tbl td.v"))) return;
+  cinEnd();
+},true);
 $("#cellX").onclick=()=>cinEnd();
 $("#cellYes").onclick=()=>{ $("#alYes").click(); if(cin) cinIn.focus(); };
 $("#cellNo").onclick=()=>{ const c=cin; $("#alNo").click(); if(c&&cin){ cinIn.focus(); cinSelectAll(); } };
@@ -6106,7 +6164,7 @@ document.addEventListener("click",e=>{ if(!mouseTap) cinBefore(e); },true);
 $("#tbl").addEventListener("click",e=>{
   const td=e.target.closest("td.v"); if(!td) return;
   const p={r:+td.dataset.r,c:+td.dataset.c};
-  if(cin){ cinIn.focus(); cinSelectAll(); return; }
+  if(cin){ cinFocus(); return; }
   if(e.shiftKey||sel||rangeMode) return;
   if(!cinTapPrev||cinTapPrev.pt==="mouse") return;
   if(cinTapPrev.r===p.r&&cinTapPrev.c===p.c&&cur.r===p.r&&cur.c===p.c) cinStart();
@@ -6120,7 +6178,7 @@ $("#tbl").addEventListener("pointerdown",e=>{
   const dbl=!!cinLastDown&&cinLastDown.r===p.r&&cinLastDown.c===p.c&&now-cinLastDown.t<450;
   cinLastDown={r:p.r,c:p.c,t:now};
   if(e.shiftKey||rangeMode) return;
-  if(cin){ setTimeout(()=>{ if(cin){ cinIn.focus(); cinSelectAll(); } },0); return; }
+  if(cin){ setTimeout(()=>{ if(cin) cinFocus(); },0); return; }
   if(dbl){ cinLastDown=null; setTimeout(()=>{ dragging=false; cinStart(); },0); }
 });
 document.addEventListener("keydown",e=>{ if(e.key==="F2"&&!cin&&tableKeysOn(e)){ e.preventDefault(); cinStart(); } });
