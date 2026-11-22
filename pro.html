@@ -982,6 +982,8 @@ td.cur .pva{color:inherit}
       <div class="items" id="sItems"></div>
       <div class="addrow"><button type="button" class="add" id="sAdd">＋ 項目を最後に追加</button><button type="button" class="add" id="sPreset">果実品質調査のひな形</button></div>
       <p class="help">「事前入力」の列（樹番号・処理区など）は、下の個体リストで先に入れておきます。音声では「音声で入力」の列だけを順に入力します。項目の順番を変えたり項目を足したりしても、これまでに入力した値はそのまま残ります。</p>
+      <p class="help"><b>名前で呼んで入れる</b>に印を付けた列（備考など）は、入力の順番では回りません。どの列を入力中でも「備考 小玉」「さっきの備考欄に小玉入れて」「5番の備考に小玉」のように、列の名前を先に言うとその列に入ります（今のセルは動きません）。グループ単位の数には、この列を数えません。</p>
+      <label class="toggle" for="sCallDef"><span>名前だけで言ったときの個体<small class="ver" style="display:block">「備考 小玉」のように個体を言わなかったとき。行単位では、個体の最後の値を入れると次の個体へ進むので、「さっき値を入れた個体」にすると、測り終えた個体の備考を続けて言えます</small></span><select id="sCallDef"><option value="cur">今のセル（黄色）の個体</option><option value="last">さっき値を入れた個体</option></select></label>
     </fieldset>
     </details>
     <details class="fold" data-fold="alias"><summary><span class="ftitle">言い換え（聞き違い・略語）</span><span class="fsum" data-sum="alias"></span></summary>
@@ -1268,7 +1270,7 @@ const PRESET_FRUIT=()=>[
   {name:"地色",type:"num",dec:1,step:0.5},
   {name:"硬度",type:"num",dec:1},
   {name:"水浸状障害",type:"num",dec:0},
-  {name:"備考",type:"text"}
+  {name:"備考",type:"text",call:true}
 ].map(normItem);
 const S_DEFAULT=()=>({ name:"果実品質調査", items:PRESET_FRUIT(), dir:"row", mode:"cont", readback:true, serial:true, autoCommit:false });
 /* ========= 複数の調査 =========
@@ -1419,6 +1421,8 @@ function normS(){
   if(typeof S.fastCommit!=="boolean") S.fastCommit=false;
   if(typeof S.rbManual!=="boolean") S.rbManual=false;
   if(!["off","low","mid","high"].includes(S.outlier)) S.outlier="mid";
+  /* 4.9.6：名前で呼んで入れる列。名前だけで言ったときの個体（cur＝今のセル／last＝さっき値を入れた個体） */
+  if(!["cur","last"].includes(S.callDef)) S.callDef="cur";
   S.plan=planNorm(S.plan);
   S.aliases=(Array.isArray(S.aliases)?S.aliases:[]).map(a=>({from:String(a?.from??"").trim(),to:String(a?.to??"").trim(),item:String(a?.item??"")})).filter(a=>a.from&&a.to);
   S.freezeCols=Math.max(0,Math.min(30,Math.floor(+S.freezeCols||0)));
@@ -1470,18 +1474,45 @@ function allowSpec(it){
 /* 4.9.5：刻み（0.5刻みなど）に合う値か。丸めずに、合わない値は入れない */
 function stepOk(it,v){ if(!isNum(it)||!(+it.step>0)||typeof v!=="number") return true; const q=v/it.step; return Math.abs(q-Math.round(q))<1e-6; }
 function allowOk(it,v){ if(!stepOk(it,v)) return false; const sp=allowSpec(it); if(!sp||typeof v!=="number") return true; return sp.some(([a,b])=>v>=a-1e-9&&v<=b+1e-9); }
+/* 4.9.7：数値の列で、入力できる値が少数の決まった値のとき（例 0,1,2,3／0〜5／0〜3 で 0.5刻み）、その値を候補として並べる。
+   値は数値のまま記録するので、前回比（増えた・減った）・集計・外れ値はふつうの数値の列と同じに働く。多すぎる（NUM_OPT_MAX 超）ときは並べない */
+const NUM_OPT_MAX=24;
+function numOpts(it){
+  if(!it||it.type!=="num"||it.role==="id") return null;
+  const sp=allowSpec(it); if(!sp) return null;
+  const st=+it.step>0?+it.step:Math.pow(10,-(+it.dec||0)), set=new Set();
+  for(const [a,b] of sp){
+    if(a===b){ set.add(+a.toFixed(6)); continue; }
+    if((b-a)/st>NUM_OPT_MAX) return null;
+    const i0=Math.ceil(a/st-1e-9);
+    for(let i=i0;i*st<=b+1e-9;i++){ set.add(+(i*st).toFixed(6)); if(set.size>NUM_OPT_MAX) return null; }
+  }
+  const out=[...set].filter(v=>allowOk(it,v)&&Math.abs(+v.toFixed(+it.dec||0)-v)<1e-9).sort((x,y)=>x-y);
+  return out.length>=2&&out.length<=NUM_OPT_MAX?out:null;
+}
+/* 候補から選べる列の候補（表示の文字）。選択肢＝登録した候補、数値＝入力できる値。なければ null */
+function pickOpts(it){
+  if(!it) return null;
+  if(it.type==="choice") return it.options.length?it.options:null;
+  const ns=numOpts(it); return ns?ns.map(v=>fmt(v,it)):null;
+}
+const pickIs=(it,v,o)=>hasVal(v)&&(isNum(it)?fmt(v,it):String(v))===o;
+const numericOpts=it=>!!it&&Array.isArray(it.options)&&it.options.length>=2&&it.options.every(o=>/^-?\d+(\.\d+)?$/.test(String(o).normalize("NFKC").trim()));
 function allowRange(it){ const sp=allowSpec(it); if(!sp) return ""; return sp.map(([a,b])=>a===b?fmt(a,it):`${fmt(a,it)}〜${fmt(b,it)}`).join("・"); }
 function allowText(it){ return [allowRange(it), isNum(it)&&+it.step>0?`${it.step}刻み`:""].filter(Boolean).join("・"); }
 function typeLabel(it){
   const al=allowRange(it);
   let b = it.type==="text"?"文字": it.type==="choice"?"選択肢": it.type==="multi"?"複数選択": it.type==="date"?"日付": it.type==="count"?"カウンター"+(al?`・${al.length>14?al.slice(0,13)+"…":al}`:""): (it.dec===0?"整数":"小数"+it.dec)+(it.step?`・${it.step}刻み`:"")+(al?`・${al.length>14?al.slice(0,13)+"…":al}`:"");
-  return (it.role==="id"?"事前入力・":"")+b;
+  return (it.role==="id"?"事前入力・":"")+b+(it.role!=="id"&&it.call?"・名前で入力":"");
 }
 function rowLabel(r){
   const parts=idItems().map(it=>{ const v=D[r]?.[it.id]; if(!hasVal(v)) return ""; return isNum(it)?`${it.name}${fmt(v,it)}`:fmt(v,it); }).filter(Boolean);
   return parts.length?parts.join(" "):`No.${r+1}`;
 }
-function firstMeas(){ const M=meas(); return M.length?M[0]:0; }
+function firstMeas(){ const M=meas(), o=M.filter(i=>!S.items[i].call); return o.length?o[0]:(M.length?M[0]:0); }
+/* 4.9.6：名前で呼んで入れる列（順番では回らない） */
+const isCall=c=>!!S.items[c]&&S.items[c].role!=="id"&&!!S.items[c].call;
+const ordMeas=()=>meas().filter(i=>!isCall(i));
 /* 除外：D[r]._ex（除外した調査日）以降の調査日では、その個体を自動で飛ばす */
 const isEx=r=>{ const e=D[r]?._ex; return !!e && e<=S.curDate; };
 function nextRow(r){ let x=r+1; while(isEx(x)) x++; return x; }
@@ -1507,7 +1538,7 @@ if(S.items[cur.c]?.role==="id") cur.c=firstMeas();
 /* 入力の進み方：グループ（横に進む列のまとまり）ごとに「横→次の個体」、リストの最後で次のグループへ。
    行単位＝全列で1グループ、列単位＝1列ずつのグループ */
 function groupsFrom(items,dir,spec){
-  const M=items.map((it,i)=>it.role==="id"?-1:i).filter(i=>i>=0);
+  const M=items.map((it,i)=>it.role==="id"||it.call?-1:i).filter(i=>i>=0);
   if(!M.length) return [];
   if(dir==="row") return [M];
   if(dir==="col") return M.map(c=>[c]);
@@ -1522,6 +1553,7 @@ const groupIdx=c=>groupsOf().findIndex(g=>g.includes(c));
 const groupLabel=c=>{ const g=groupsOf()[groupIdx(c)]||[]; return g.map(i=>S.items[i].name).join("・"); };
 function nextPos(p){
   const G=groupsOf(); if(!G.length) return p;
+  if(isCall(p.c)) return callNext(p,G);
   const gi=groupIdx(p.c); if(gi<0) return {r:p.r,c:G[0][0]};
   const g=G[gi], k=g.indexOf(p.c);
   if(k+1<g.length) return {r:p.r,c:g[k+1]};
@@ -1532,6 +1564,8 @@ function nextPos(p){
 /* 4.3.3〜：次のグループ（列単位では次の列）に移るときは、そのまとまりで最初に空いているセルから始める
    （前半を調査済みで、後から個体を足して続きを調べる場合に、調査済みの先頭へ戻らないように）。除外した個体は飛ばす。
    すべて埋まっていれば、これまでどおり先頭の個体へ */
+/* 名前で呼ぶ列のセルから進むとき：その個体で最初に空いている順番の列、なければその個体の最初の列 */
+function callNext(p,G){ const cs=G.flat(); const c=cs.find(c=>!hasVal(D[p.r]?.[S.items[c].id])); return {r:p.r,c:c!==undefined?c:cs[0]}; }
 function firstEmptyIn(g,L){
   for(let r=firstRow(); r<L; r=nextRow(r)){ const c=g.find(c=>!hasVal(D[r]?.[S.items[c].id])); if(c!==undefined) return {r,c}; }
   return null;
@@ -1759,7 +1793,7 @@ function planIcs(S0,id){
 /* ========= 音（アラート・待機） ========= */
 let actx=null;
 function audioUnlock(){
-  try{ if(!actx){ const AC=window.AudioContext||window.webkitAudioContext; if(AC) actx=new AC(); } if(actx&&actx.state==="suspended") actx.resume(); }catch(e){}
+  try{ if(!actx){ const AC=window.AudioContext||window.webkitAudioContext; if(AC) actx=new AC(); } if(actx&&actx.state!=="running"&&actx.state!=="closed"){ const p=actx.resume(); if(p&&p.catch) p.catch(()=>{}); } }catch(e){}
 }
 function beep(seq){
   if(!actx) return;
@@ -1824,6 +1858,9 @@ function diffLabel(a,b){
 }
 const rowSay=(a,b)=>S.rbMode==="full"?rowLabel(b):diffLabel(a,b);
 function advance(){
+  if(isCall(cur.c)){ const b=callRet; callRet=null;
+    cur=(b&&b.d===S.curDate&&b.sv===svId&&S.items[b.c]&&!isCall(b.c)&&b.r<Math.max(listLen(),D.length))?{r:b.r,c:b.c}:nextPos(cur);
+    return "、次は "+cellName(cur); }
   const prevR=cur.r, prevC=cur.c; cur=nextPos(cur); const L=listLen();
   if(L && prevR<L && cur.r>=L){ note("最後の個体まで入力しました"); return "、最後の個体です"; }
   if(groupIdx(cur.c)!==groupIdx(prevC)) return "、次は "+groupLabel(cur.c)+(S.dir==="col"?"":"、"+rowSay(prevR,cur.r));
@@ -1836,7 +1873,7 @@ let putCount=0, lastPut=null, alerted=false;
 let manualRb=false;
 function roundVal(it,x){ const m=Math.pow(10,it.dec); return Math.round(x*m)/m; }
 function putValue(v){
-  const it=S.items[cur.c]; if(!it) return null;
+  const it=S.items[cur.c]; if(!it) return null; const prev0=D[cur.r]?.[it.id];
   let val, said;
   if(isNum(it)){
     const m=Math.pow(10,it.dec); val=Math.round(v*m)/m; said=fmt(val,it).replace(/^-/,"マイナス");
@@ -1864,7 +1901,7 @@ function putValue(v){
       showAlert("block",`${cellName(cur)}：${fmt(val,it)} は入力できません。${what}。正しい値を入力し直してください。`);
       return `${said}、${vsPrev(spv,"",a.kind)}、入力し直してください`;
     }
-    ensureRow(cur.r); D[cur.r][it.id]=val; flashCells.add(cur.r+":"+cur.c); markCommit(cur.r,cur.c);
+    ensureRow(cur.r); D[cur.r][it.id]=val; flashCells.add(cur.r+":"+cur.c); markCommit(cur.r,cur.c); if(it.call) callEdit={r:cur.r,c:cur.c,d:S.curDate,prev:prev0,val};
     if(a.level==="warn"){
       halt=true; pend={r:cur.r,c:cur.c};
       addLog(`${cellName(cur)} ← ${fmt(val,it)}（前回比 ${KIND_S[a.kind]}・確認待ち）`);
@@ -1877,7 +1914,7 @@ function putValue(v){
     return `${said}、${a.kind==="same"?"前回と同じ":"前回より"+KIND_S[a.kind]}`+(ol?"、外れ値かも":"")+advance();
   }
   ensureRow(cur.r); D[cur.r][it.id]=val;
-  flashCells.add(cur.r+":"+cur.c); markCommit(cur.r,cur.c);
+  flashCells.add(cur.r+":"+cur.c); markCommit(cur.r,cur.c); if(it.call) callEdit={r:cur.r,c:cur.c,d:S.curDate,prev:prev0,val};
   addLog(`${cellName(cur)} ← ${fmt(val,it)}`);
   const r0=cur.r, c0=cur.c, ol=olAfterPut(r0,c0,val);
   const suf=advance(); putCount++; lastPut={said,suf};
@@ -2001,7 +2038,7 @@ function tryBulk(clean){
 }
 /* ========= 声で確かめる（4.5〜）：今の個体・項目・値／さっき確定した値／今日の残り ========= */
 let lastCommit=null; /* {r,c,d:調査日,sv:調査のid} */
-function markCommit(r,c){ lastCommit={r,c,d:S.curDate,sv:svId}; }
+function markCommit(r,c){ lastCommit={r,c,d:S.curDate,sv:svId}; callEdit=null; }
 function sayVal(v,it){ return it?.type==="date"?dateSay(v):fmt(v,it).replace(/^-/,"マイナス"); }
 function infoWhere(){
   const it=S.items[cur.c]; if(!it) return "項目がありません";
@@ -2024,7 +2061,7 @@ function infoLeft(){
   const M=meas(); if(!M.length) return "測定の項目がありません";
   const L=listLen();
   if(!L){ let n=0; D.forEach(row=>{ if(M.some(i=>hasVal(row?.[S.items[i].id]))) n++; }); return `個体リストがありません、入力済み ${n}行`; }
-  const cols=S.dir==="col"?[cur.c]:M;
+  const cols=S.dir==="col"&&!isCall(cur.c)?[cur.c]:(ordMeas().length?ordMeas():M);
   let left=0, all=0;
   for(let r=0;r<L;r++){ if(isEx(r)) continue; all++; if(cols.some(i=>!hasVal(D[r]?.[S.items[i].id]))) left++; }
   const what=S.dir==="col"?S.items[cur.c].name+"、":"";
@@ -2051,7 +2088,7 @@ function doCommand(cmd){
   const M=meas(); if(!M.length) return null;
   if(cmd==="skip"){ addLog(`${cellName(cur)} スキップ`); return "スキップ"+advance(); }
   if(cmd==="next"){
-    if(S.dir==="col"){ const nx=M.find(i=>i>cur.c); if(nx!==undefined) cur=firstEmptyIn([nx],listLen())||{r:firstRow(),c:nx}; else { note("最後の列です"); return "最後の列です"; } }
+    if(S.dir==="col"){ const nx=ordMeas().find(i=>i>cur.c); if(nx!==undefined) cur=firstEmptyIn([nx],listLen())||{r:firstRow(),c:nx}; else { note("最後の列です"); return "最後の列です"; } }
     else { const g=groupsOf()[Math.max(0,groupIdx(cur.c))]; const gi0=groupIdx(cur.c); cur=nextPos({r:cur.r,c:g[g.length-1]});
       if(groupIdx(cur.c)!==gi0){ addLog(`次のグループへ → ${cellName(cur)}`); return "次、"+groupLabel(cur.c); } }
     addLog(`次へ → ${cellName(cur)}`); return "次、"+(S.dir==="col"?S.items[cur.c].name:rowLabel(cur.r));
@@ -2092,12 +2129,83 @@ function doCommand(cmd){
       return "まとめて取り消しました";
     }
     /* カウンターの増減・複数選択のボタンの直後は、その操作だけを戻す（前のセルへは戻らない） */
+    if(callUndo()) return voiceCtx?"消しました":"取り消し";
     if(stayUndo()) return voiceCtx?"消しました":"取り消し";
     const p=prevPos(cur); if(!p) return voiceCtx?"消しました":"取り消し";
     const id=S.items[p.c].id; ensureRow(p.r); delete D[p.r][id];
     addLog(`${cellName(p)} 取り消し`); cur=p; return voiceCtx?"消しました":"取り消し";
   }
   return null;
+}
+
+/* ========= 名前で呼んで入れる列（4.9.6〜） =========
+   項目の設定「名前で呼んで入れる（順番では回らない）」（it.call）。備考のように、たまにしか値が入らない列のため。
+   入力の順番（groupsFrom）から外し、どの列を入力中でも、列の名前を先に言うとその列に入れる。今のセルは動かない。
+   言い方：［だれの］＋列名＋［欄］［に・は・へ・を］＋値＋［を・って・と］［入れて・入力して・お願いします］
+     だれの：なし＝設定の既定（S.callDef）／今の・今の個体の＝今のセルの個体／さっきの・直前の・1つ前の＝直前に値を入れた個体（lastCommit）／5番の・No.5の＝No.5 の個体
+   文字の列は、値があれば「、」でつないで足す（数値への変換・言い換えはしない）。ほかの種類は置き換える（複数選択は足す）。
+   「取り消し」で、その列の値を入れる前に戻す（callEdit）。 */
+let callEdit=null; /* {r,c,d,prev,val} */
+let callRet=null;  /* 表で名前で呼ぶ列のセルを押したときの、押す前のセル {r,c,d,sv} */
+const CALL_LAST=/^(?:さっき|直前|ちょくぜん|1つ前|ひとつ前|一つ前|前の個体|さっきの個体|直前の個体)\s*の?\s*/;
+const CALL_CUR=/^(?:今|いま)\s*(?:の個体)?\s*の\s*/;
+const CALL_NO=/^(?:(?:no|ナンバー|番号)\.?\s*([0-9]+)|([0-9]+|[〇一二三四五六七八九十百千]+)\s*番目?)\s*(?:の個体)?\s*の?\s*/i;
+const CALL_SUF=/\s*(?:を|って|と|で)?\s*(?:入れて(?:おいて|ください|下さい|ね)?|いれて(?:おいて|ください|ね)?|入れる|入れます|入力して(?:ください)?|入力|書いて|記録して|お願いします|おねがいします|お願い|おねがい)$/;
+function callItems(){ return S.items.map((it,c)=>({it,c})).filter(x=>isCall(x.c)&&normJ(x.it.name)); }
+/* 先頭が列名か：言葉の先頭から、ひらがな・カタカナ・空白の違いを無視して比べ、合った長さ（元の文字数）を返す */
+function callNameLen(s,name){
+  const k=normJ(name); if(!k) return 0;
+  for(let i=1;i<=s.length;i++){ const t=normJ(s.slice(0,i)); if(t===k) return i; if(t.length>k.length||!k.startsWith(t)) return 0; }
+  return 0;
+}
+function callParse(clean){
+  const cs=callItems(); if(!cs.length) return null;
+  let s=String(clean).normalize("NFKC").trim(), who=null, no=0, m;
+  if((m=s.match(CALL_LAST))&&m[0].length<s.length){ who="last"; s=s.slice(m[0].length); }
+  else if((m=s.match(CALL_NO))){ const x=m[1]||m[2], v=/^[0-9]+$/.test(x)?+x:parseNumber(x); if(Number.isInteger(v)&&v>0){ who="no"; no=v; s=s.slice(m[0].length); } }
+  else if((m=s.match(CALL_CUR))&&m[0].length<s.length){ who="cur"; s=s.slice(m[0].length); }
+  let hit=null;
+  for(const x of cs.sort((a,b)=>normJ(b.it.name).length-normJ(a.it.name).length)){ const n=callNameLen(s,x.it.name)||(/欄$/.test(x.it.name)?callNameLen(s,x.it.name.replace(/欄$/,"")):0); if(n){ hit={...x,n}; break; } }
+  if(!hit) return null;
+  let v=s.slice(hit.n).replace(/^\s*(?:の\s*)?(?:欄|らん|ラン)?\s*(?:に|は|へ|を|には|:|、|,)?\s*/,"");
+  v=v.replace(CALL_SUF,"").replace(/[、,\s]+$/,"").trim();
+  if(!v) return {c:hit.c,who:who||S.callDef,no,err:"empty"};
+  return {c:hit.c,who:who||S.callDef,no,v};
+}
+function callDo(cp){
+  const it=S.items[cp.c], L=listLen();
+  if(cp.err==="empty") return {t:`${it.name}、入れる言葉が聞き取れません`,err:1};
+  let r;
+  if(cp.who==="last"){
+    const lc=lastCommit;
+    if(!lc||lc.sv!==svId||lc.d!==S.curDate) return {t:`さっき値を入れた個体がありません、${it.name}は入れませんでした`,err:1};
+    r=lc.r;
+  } else if(cp.who==="no"){ r=cp.no-1; if(L&&r>=L) return {t:`No.${cp.no} はありません、${it.name}は入れませんでした`,err:1}; }
+  else { r=cur.r; if(L&&r>=L) return {t:`個体リストの最後を過ぎています、${it.name}は入れませんでした`,err:1}; }
+  if(isEx(r)) return {t:`${rowLabel(r)} は除外しています、${it.name}は入れませんでした`,err:1};
+  const prev=D[r]?.[it.id]; let nv, said;
+  if(it.type==="text"){ said=cp.v; nv=hasVal(prev)&&String(prev).trim()?String(prev)+"、"+cp.v:cp.v; }
+  else if(it.type==="multi"){
+    const add=multiOf(it,cp.v); if(add===null) return {t:`${it.name}、「${cp.v}」は候補にありません`,err:1};
+    const st=multiSet(prev); multiSet(add).forEach(x=>st.add(x)); nv=it.options.filter(x=>st.has(x)).join(MULTI_SEP); said=add;
+  } else {
+    const v=valFor(it,cp.v); if(v===null) return {t:`${it.name}、「${cp.v}」は入れられません`,err:1};
+    if(isNum(it)&&!stepOk(it,v)) return {t:`${it.name}、${fmt(v,it)} は${it.step}刻みに合いません`,err:1};
+    if(isNum(it)&&!allowOk(it,v)) return {t:`${it.name}、${fmt(v,it)} は入力できる値の外です`,err:1};
+    nv=v; said=sayVal(v,it);
+  }
+  ensureRow(r); D[r][it.id]=nv; flashCells.add(r+":"+cp.c);
+  markCommit(r,cp.c); callEdit={r,c:cp.c,d:S.curDate,prev,val:nv};
+  addLog(`${rowLabel(r)} ${it.name} ← ${fmt(nv,it)}（名前で入力）`);
+  return {t:`${rowLabel(r)} ${it.name} ${said}`};
+}
+function callUndo(){
+  const e=callEdit; callEdit=null;
+  if(!e||e.d!==S.curDate) return false;
+  const it=S.items[e.c]; if(!it) return false; const v=D[e.r]?.[it.id];
+  if(!(v===e.val||(!hasVal(v)&&!hasVal(e.val)))) return false;
+  ensureRow(e.r); if(hasVal(e.prev)) D[e.r][it.id]=e.prev; else delete D[e.r][it.id];
+  addLog(`${rowLabel(e.r)} ${it.name} 取り消し → ${hasVal(e.prev)?fmt(e.prev,it):"空欄"}`); return true;
 }
 /* 選択肢：ひらがな・カタカナ・全角半角の違いを無視して一番近い候補を選ぶ */
 const normJ=s=>String(s).normalize("NFKC").replace(/[。、.,\s]/g,"").replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)).toLowerCase();
@@ -2234,6 +2342,11 @@ function handleText(raw, fromVoice, rbNow){
     voiceCtx=0; manualRb=false; if(fromVoice||rbNow) speak(s,true);
     return;
   }
+  /* 4.9.6：名前で呼んで入れる（「備考 小玉」「さっきの備考欄に小玉入れて」「5番の備考に小玉」）。今のセル・確認待ちは変えない */
+  if(!whole){ const cp=callParse(clean); if(cp){
+    const s=callDo(cp); bulkSnap=null;
+    h.className=cp.err||s.err?"heard ng":"heard ok"; h.textContent=`「${raw}」→ ${s.t}`;
+    voiceCtx=0; save(); render(); if(fromVoice) speak(s.t); else if(rbNow) speak(s.t,true); manualRb=false; return; } }
   if(whole!=="undo") bulkSnap=null;
   let done=false;
   if(pend){
@@ -2320,13 +2433,13 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.9.5（2026-11-21）";
+const APP_VER="Pro 4.9.7（2026-11-22）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
   r.onresult=e=>{
     let interim="";
-    if(!listening) return;
+    if(!listening||(IS_IOS&&r!==rec)) return;
     if(Date.now()<ignoreUntil){ for(let i=e.resultIndex;i<e.results.length;i++) if(e.results[i].isFinal){ processed.add(i); fastDone.delete(i); } fastCancel(); return; }
     if(IS_IOS) iosHeard();
     for(let i=e.resultIndex;i<e.results.length;i++){
@@ -2336,8 +2449,9 @@ function makeRec(){
     }
     if(interim && !standby){ const h=$("#heard"); h.className="heard"; h.textContent="… "+interim; }
   };
-  r.onstart=()=>{ gestureStart=false; IOSQ.startAt=Date.now(); IOSQ.heard=false; };
+  r.onstart=()=>{ if(IS_IOS&&r!==rec) return; gestureStart=false; IOSQ.startAt=Date.now(); IOSQ.heard=false; };
   r.onerror=e=>{
+    if(IS_IOS&&r!==rec) return;
     const when=gestureStart?"ボタン操作時":"自動再開時";
     if(e.error==="not-allowed"||e.error==="service-not-allowed"){
       /* iPhone：自動の再開を拒否されたら、止めたままにせず大きな「再開」ボタンを出す（4.8.1） */
@@ -2350,9 +2464,11 @@ function makeRec(){
     else if(e.error==="audio-capture"){ listening=false; standby=false; note("マイクが見つかりません。"); updateMic(); }
   };
   r.onend=()=>{
+    /* 4.9.7：iPhone で、もう使っていない部品（マイクを押し直して作り直した前の部品）の終わりは無視する */
+    if(IS_IOS&&r!==rec){ if(IOSQ.denied) IOSQ.denied=false; return; }
     processed=new Set(); fastDone.clear(); fastCancel(); IOSQ.live=false;
     if(IOSQ.denied){ IOSQ.denied=false; return; }
-    if(ttsPause){ setTimeout(flushSpeak,IS_IOS?iosLv().gap:150); return; }
+    if(ttsPause){ if(IS_IOS) setTimeout(()=>iosFlush(false),iosLv().gap); else setTimeout(flushSpeak,150); return; }
     if(listening && (S.mode==="cont"||standby)){
       if(IS_IOS){ const w=iosEnded(); if(w<0) return; setTimeout(()=>{ if(listening&&!ttsPause) startRec(); },w); }
       else setTimeout(()=>{ if(listening&&!ttsPause) startRec(); },200);
@@ -2445,26 +2561,45 @@ function releaseWake(){ try{ wake&&wake.release(); }catch(e){} wake=null; }
 /* 読み上げ：iPhoneでは認識を完全に止めてから話す（録音中は音が出ない／小さくなるため） */
 const HAS_TTS="speechSynthesis" in window;
 let jaVoice=null, pendingUtter=null, ttsUnlocked=false;
+/* 4.9.7：iPhone の読み上げの記録（マイク診断に出す）と、準備のやり直し。ttsStale＝次に画面を押したときに準備し直す */
+const TTSD={ask:0,start:0,miss:0,err:"",missAt:0}; let ttsStale=false, ttsPrimeAt=0;
 function pickVoice(){ try{ const vs=speechSynthesis.getVoices(); jaVoice=vs.find(v=>/^ja(-|_|$)/i.test(v.lang))||null; }catch(_){} }
 if(HAS_TTS){ pickVoice(); try{ speechSynthesis.addEventListener("voiceschanged",pickVoice); }catch(_){} }
 function utter(text,vol=1){ const u=new SpeechSynthesisUtterance(text); u.lang="ja-JP"; if(jaVoice) u.voice=jaVoice; u.rate=(+S.rate||1.1); u.volume=vol; return u; }
 function say(u){
+  TTSD.ask++; try{ if(IS_IOS&&speechSynthesis.paused) speechSynthesis.resume(); }catch(_){}
   if(speechSynthesis.speaking||speechSynthesis.pending){ speechSynthesis.cancel(); setTimeout(()=>speechSynthesis.speak(u),60); }
   else speechSynthesis.speak(u);
 }
-function unlockTTS(){ if(!HAS_TTS||ttsUnlocked) return; try{ speechSynthesis.speak(utter(" ",0)); ttsUnlocked=true; }catch(_){} }
+/* again：iPhone で、すでに準備済みでももう一度準備する（聞き取りの停止・画面の切り替えのあと、読み上げが鳴らなくなることがあるため）。
+   聞き取り中・読み上げ中には行わない（聞き取り中に音を出すとマイクが止まることがある） */
+function unlockTTS(again){
+  if(!HAS_TTS) return;
+  if(ttsUnlocked){
+    if(!again||!IS_IOS||listening||pendingUtter||IOSQ.cycle||IOSQ.own||IOSQ.gather) return;
+    try{ if(speechSynthesis.speaking||speechSynthesis.pending) return; }catch(_){}
+    if(Date.now()-ttsPrimeAt<1200) return;
+  }
+  try{ speechSynthesis.speak(utter(" ",0)); ttsUnlocked=true; ttsPrimeAt=Date.now(); ttsStale=false; }catch(_){}
+}
+/* iPhone：読み上げが始まらなかった（開始の通知が来ないまま終わった） */
+function ttsMissed(why){
+  TTSD.miss++; TTSD.err=why; ttsStale=true;
+  addLog(`iPhone：読み上げが始まりませんでした（${why}）`);
+  if(Date.now()-TTSD.missAt>60000){ TTSD.missAt=Date.now(); note("読み上げが始まりませんでした。「復唱」ボタンを押し直すか、聞き取りを止めて画面を1回押すと戻ります（説明書「読み上げが聞こえない」）。"); }
+}
 function flushSpeak(){ if(pendingUtter){ const u=pendingUtter; pendingUtter=null; say(u); } }
 const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 let ignoreUntil=0;
-/* force：「声で入力した値を読み上げる」がオフでも読む（手入力の復唱） */
-function speak(text,force){
+/* force：「声で入力した値を読み上げる」がオフでも読む（手入力の復唱）。now：iPhone で、まとめる時間を待たずにすぐ読む（ボタンを押したその場で鳴らすため） */
+function speak(text,force,now){
   if(!text) return;
   const on=S.readback||!!force;
   /* 「区切りだけ」：声の代わりに短い音（ほぼ遅れなし） */
   if(text==="#tick"){ if(on){ audioUnlock(); beep(SND.tick); } return; }
   if(!on||!HAS_TTS) return;
   /* iPhone（4.8.1〜）：続けて入った値はまとめて1回で読み、聞き取りの止め・再開を減らす */
-  if(IS_IOS&&!(listening&&rec&&iosNoPause())){ iosSay(text); return; }
+  if(IS_IOS&&!(listening&&rec&&iosNoPause())){ iosSay(text,now); return; }
   const u=utter(text);
   if(listening && rec && (!IS_IOS||iosNoPause())){
     /* PC・Android：認識は止めずに、読み上げ中に聞こえた声だけを無視する（止めると再開のたびに許可を聞かれるため） */
@@ -2564,10 +2699,22 @@ function iosStopped(){
   /* 止める前にためていた読み上げは、聞き取りを止めたまま読む */
   if(IS_IOS&&IOSQ.q.length&&!IOSQ.cycle&&!IOSQ.own){ IOSQ.own=true; say(iosUtter()); }
 }
+/* 聞き取りを止めてから読む（4.9.7）。待っている間にマイクを押し直して聞き取りが始まっていたら（ttsPause が消えて聞き取り中）、
+   もう一度止めてから読む（iPhone は聞き取り中に読むと鳴らない）。force：聞き取りの終わりが来ないときの保険 */
+function iosFlush(force){
+  if(!pendingUtter) return;
+  if(listening&&rec&&IOSQ.live&&!ttsPause){
+    ttsPause=true; try{ rec.abort(); }catch(e){}
+    setTimeout(()=>{ if(pendingUtter){ IOSQ.live=false; flushSpeak(); } },Math.max(500,iosLv().gap+350)); return;
+  }
+  if(force) IOSQ.live=false;
+  flushSpeak();
+}
 /* 読み上げをためる（少し待ってまとめて読む） */
-function iosSay(text){
+function iosSay(text,now){
   IOSQ.q.push(text);
   if(IOSQ.cycle||IOSQ.own) return;   /* 止めている間・読んでいる間に来た分は、続けて読む */
+  if(now&&!(listening&&rec)){ clearTimeout(IOSQ.gather); IOSQ.gather=null; iosBegin(); return; }   /* 4.9.7：聞き取っていないときは、押したその場で読む */
   if(IOSQ.gather) return;            /* まとめる時間の中：最初の分から数えて IOS_GATHER 後に読む */
   IOSQ.gather=setTimeout(iosBegin,IOS_GATHER);
 }
@@ -2577,7 +2724,7 @@ function iosBegin(){
     IOSQ.cycle=true; ttsPause=true;
     pendingUtter=iosUtter();          /* 聞き取りが止まったら（onend）、gap ms 後に flushSpeak で読む */
     try{ rec.abort(); }catch(e){}
-    setTimeout(()=>{ if(pendingUtter){ IOSQ.live=false; flushSpeak(); } },Math.max(500,iosLv().gap+350));   /* onend が来ない場合の保険 */
+    setTimeout(()=>iosFlush(true),Math.max(500,iosLv().gap+350));   /* onend が来ない場合の保険 */
   } else { IOSQ.own=true; say(iosUtter()); }
 }
 /* ためた言葉を1つの読み上げにする。4件以上は「◯件、（アラートの言葉）、最後の値」 */
@@ -2588,12 +2735,16 @@ function iosJoin(){
 }
 function iosUtter(){
   const t=iosJoin(); IOSQ.lastSaid=t;
-  const u=utter(t); let done=false;
-  const fin=()=>{ if(done) return; done=true;
+  const u=utter(t); let done=false, started=false;
+  u.onstart=()=>{ started=true; TTSD.start++; };
+  const fin=ev=>{ if(done) return; done=true;
+    { const er=ev&&ev.type==="error"?String(ev.error||"error"):"";
+      /* 始まらなかった＝エラー（こちらで取り消した分は除く）か、何の通知も来ないまま時間切れ。通知なしで読み終えた分は数えない */
+      if(!started&&(!ev||(er&&!/^(canceled|interrupted)$/.test(er)))) ttsMissed(er||"時間切れ"); }
     if(IOSQ.q.length){ say(iosUtter()); return; }   /* 読んでいる間に来た分を続けて読む（聞き取りは止めたまま） */
     IOSQ.own=false;
     if(IOSQ.cycle){ IOSQ.cycle=false; iosResume(); } };
-  u.onend=fin; u.onerror=fin; setTimeout(fin,3000+t.length*300);
+  u.onend=fin; u.onerror=fin; setTimeout(()=>fin(null),3000+t.length*300);
   return u;
 }
 /* 読み終えた：res ms 待って聞き取りを再開する */
@@ -2683,6 +2834,7 @@ function renderQuick(it){
     if(it.type==="count") h=`<button type="button" class="big" data-q="cnt" data-n="-1" aria-label="1つ減らす">−1</button><button type="button" class="big" data-q="cnt" data-n="1" aria-label="1つ増やす">＋1</button><span class="qh">今 ${hasVal(v)?fmt(v,it):"0（空欄）"}。声は「プラス」「プラス3」「マイナス」。数を言うとその数にして次へ進みます。</span>`;
     else if(it.type==="date") h=`<button type="button" data-q="date" data-v="今日">今日</button><button type="button" data-q="date" data-v="昨日">昨日</button><span class="qh">声は「今日」「11月5日」「5日」など。</span>`;
     else if(it.type==="choice"&&it.options.length){ h=it.options.map((o,i)=>`<button type="button" class="opt" data-q="ch" data-i="${i}" aria-pressed="${hasVal(v)&&String(v)===o}">${esc(o)}</button>`).join("")+`<span class="qh">押すと入れて次へ進みます。声でも言えます。</span>`; }
+    else if(it.type==="num"&&pickOpts(it)){ h=pickOpts(it).map((o,i)=>`<button type="button" class="opt" data-q="ch" data-i="${i}" aria-pressed="${pickIs(it,v,o)}">${esc(o)}</button>`).join("")+`<span class="qh">押すと入れて次へ進みます（数値で記録）。声・手入力でも入れられます。</span>`; }
     else if(it.type==="multi"&&it.options.length){ const s=multiSet(v); h=it.options.map((o,i)=>`<button type="button" class="opt" data-q="opt" data-i="${i}" aria-pressed="${s.has(o)}">${esc(o)}</button>`).join("")+`<span class="qh">押して入れる・外す（進みません。終わったら「次」）。声は「虫害と日焼け」のように続けて言えます。</span>`; }
   }
   q.innerHTML=h; q.hidden=!h;
@@ -2692,7 +2844,7 @@ $("#quickBar").addEventListener("click",e=>{
   sel=null; bulkSnap=null; if(pend) clearPend();
   if(b.dataset.q==="cnt"){ const k=+b.dataset.n; handleText(k>0?"+"+k:"-"+(-k),false,!!S.rbManual); return; }
   if(b.dataset.q==="date"){ handleText(b.dataset.v,false,!!S.rbManual); return; }
-  if(b.dataset.q==="ch"){ const it=S.items[cur.c]; const o=it?.options[+b.dataset.i]; if(o===undefined||it.type!=="choice") return; handleText(o,false,!!S.rbManual); return; }
+  if(b.dataset.q==="ch"){ const it=S.items[cur.c]; const o=(pickOpts(it)||[])[+b.dataset.i]; if(o===undefined) return; handleText(o,false,!!S.rbManual); return; }
   if(b.dataset.q==="opt"){ const it=S.items[cur.c]; const o=it?.options[+b.dataset.i]; if(o===undefined) return; hideAlert(); multiToggle(o); save(); render(); }
 });
 /* ウインドウ枠の固定：左の列は left、上の行は top を、実際の幅・高さを測って積み上げる */
@@ -2821,7 +2973,7 @@ $("#mic").onclick=()=>{
   if(!SR){ note("このブラウザは音声認識に対応していません。AndroidはChrome、iPhoneはSafariで開いてください。手入力欄は使えます。"); return; }
   audioUnlock();
   iosHideTap(); if(IS_IOS&&IOSQ.live&&!listening){ rec=null; IOSQ.live=false; }
-  if(listening){ stopRec(); renderStandby(); return; }
+  if(listening){ stopRec(); renderStandby(); ttsStale=true; unlockTTS(true); return; }
   if(standby){ const s=leaveStandby(); if(s) speak(s); return; }
   /* iPhone：画面に触れたときに読み上げを一度始めておかないと、後から鳴らない。「読み上げ」がオフでも「どこ」などは読むので、常に準備する（4.5.2） */
   unlockTTS();
@@ -2844,17 +2996,20 @@ $("#btnRb").onclick=()=>{
   S.rbManual=!S.rbManual; save(); render();
   addLog(`復唱 ${S.rbManual?"オン":"オフ"}`);
   note(S.rbManual?"復唱オン：手入力（ノギス・はかり等）で入った値を読み上げます。もう一度押すとやめます。":"復唱オフ：手入力の値は読み上げません。");
-  if(S.rbManual) speak("復唱します",true);
+  if(S.rbManual) speak("復唱します",true,true); else unlockTTS(true);
   $("#btnRb").blur();
 };
 $("#alYes").onclick=()=>{ const s=confirmPend(); save(); render(); if(s) speak(s); };
 $("#alNo").onclick=()=>{ const s=rejectPend(); save(); render(); if(s) speak(s); $("#manualIn").focus(); };
 /* 読み上げ・音の解禁（iOS）：ページ上の最初のタップで行う */
-document.addEventListener("pointerdown",e=>{ audioUnlock(); if(!e.target.closest("#mic")) unlockTTS(); },true);
+document.addEventListener("pointerdown",e=>{ audioUnlock(); if(!e.target.closest("#mic")) unlockTTS(ttsStale); },true);
+/* 4.9.7：iPhone で、ほかのアプリや画面から戻ったあとは、止まったままの読み上げを片付け、次に押したときに準備し直す */
+document.addEventListener("visibilitychange",()=>{ if(!IS_IOS||!HAS_TTS||document.visibilityState!=="visible") return; ttsStale=true;
+  try{ if(!IOSQ.own&&!IOSQ.cycle&&!pendingUtter&&(speechSynthesis.speaking||speechSynthesis.pending)) speechSynthesis.cancel(); }catch(e){} });
 $("#sRate").addEventListener("input",()=>{ $("#sRateVal").textContent="×"+(+$("#sRate").value).toFixed(1); });
 $("#sTest").onclick=()=>{
   if(!HAS_TTS){ $("#sTestOut").textContent="このブラウザは読み上げに対応していません"; return; }
-  pickVoice(); ttsUnlocked=true;
+  pickVoice(); ttsUnlocked=true; ttsStale=false; ttsPrimeAt=Date.now();
   const u=utter("さんじゅうにてんご、次は 樹番号1 無処理 果実番号3"); u.rate=+$("#sRate").value||1.1;
   u.onstart=()=>{ $("#sTestOut").textContent="読み上げ中… 聞こえない場合は消音スイッチと音量を確認"; };
   u.onend=()=>{ $("#sTestOut").textContent=`読み上げ完了（音声：${jaVoice?jaVoice.name:"既定"}）`; };
@@ -2866,6 +3021,8 @@ $("#sSoundTest").onclick=()=>{ audioUnlock(); beep(SND.info); setTimeout(()=>bee
 $("#diag").onclick=async()=>{
   const lines=[`アプリ版：${APP_VER}`,`URL：${location.protocol}//${location.host}`,`安全な接続（https）：${window.isSecureContext?"はい":"いいえ"}`,
     `音声認識の機能：${SR?"あり":"なし"}`,`ホーム画面から起動：${(navigator.standalone||matchMedia("(display-mode: standalone)").matches)?"はい":"いいえ"}`];
+  try{ lines.push(`読み上げ：頼んだ ${TTSD.ask}回・始まった ${TTSD.start}回・始まらなかった ${TTSD.miss}回${TTSD.err?`（最後の理由 ${TTSD.err}）`:""}`+(IS_IOS?"":"（始まった回数は iPhone だけ数えます）"));
+    lines.push(`音（区切り・アラート音）の状態：${actx?actx.state:"まだ使っていません"}`); }catch(e){}
   if(!navigator.mediaDevices?.getUserMedia){ lines.push("マイク：確認できません（httpsで開いていない可能性）"); }
   else{
     try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); st.getTracks().forEach(t=>t.stop()); lines.push("マイク：使えます → 止められているのは音声認識（Siri・音声入力）側です"); }
@@ -2944,7 +3101,7 @@ function tapCell(p,extend){
   if(extend||rangeMode){
     const a=anchor||cur; const s=mkSel(a,p);
     sel=(s.r1===s.r2&&s.c1===s.c2)?null:s;
-  } else { cur=p; anchor=p; sel=null; }
+  } else { if(isCall(p.c)&&!isCall(cur.c)) callRet={r:cur.r,c:cur.c,d:S.curDate,sv:svId}; else if(!isCall(p.c)) callRet=null; cur=p; anchor=p; sel=null; }
   save(); render();
 }
 /* PC（マウス）：押した位置から、ドラッグで範囲を選ぶ。Shift+クリックで今のセルからの範囲 */
@@ -3310,6 +3467,8 @@ function itemCard(it,i,ts,compact){ const c=normCmp(it.cmp); return `
         ${it.role!=="id"?`<input type="text" data-k="allow" value="${esc(it.allow||"")}" placeholder="入力できる値（例 0,1,2,3／0〜3）空なら制限なし" class="iopts" aria-label="入力できる値">`:""}`:""}
         ${hasOpts(it)?`<input type="text" data-k="options" value="${esc(it.options.join("、"))}" placeholder="${it.type==="multi"?"候補を「、」区切りで（例 虫害、日焼け、裂果）":"候補を「、」区切りで（例 にっこり、幸水、豊水）"}" class="iopts" aria-label="候補">`:""}
       </div>
+      ${it.type==="choice"&&it.role!=="id"&&numericOpts(it)?`<p class="help" style="margin:.2em 0">候補が数字だけです。種類を<b>数値</b>に変えると、候補はそのまま「入力できる値」に移り、同じようにボタン・一覧から選べます。数値として記録するので、前回比（増えた・減った）や集計も使えます。</p>`:""}
+      ${it.role!=="id"?`<div class="irow icall"><label class="chk"><input type="checkbox" data-k="call" ${it.call?"checked":""}><span>名前で呼んで入れる（順番では回らない。例「${esc(it.name||"備考")} ○○」）</span></label></div>`:""}
       ${ts&&isNum(it)&&it.role!=="id"?`<div class="irow cmp"><span class="cmpl">前回比</span>
         <label>減った${lvSel("dec",c.dec)}</label><label>増えた${lvSel("inc",c.inc)}</label><label>同じ${lvSel("same",c.same)}</label>
         <label>許容±<input type="text" inputmode="decimal" data-k="cmp.tol" value="${c.tol||""}" placeholder="0"></label></div>`:""}
@@ -3443,7 +3602,11 @@ function itemInputApply(it,k,el){
 function itemChangeApply(it,k,el){
   if(!it) return false;
   if(k==="role"){ it.role=el.value; return true; }
-  if(k==="type"){ it.type=el.value; if(it.type!=="num") it.step=0; if(it.type==="count") it.dec=0; return true; }
+  if(k==="call"){ if(el.checked) it.call=true; else delete it.call; try{ if(typeof drawGroupPrev==="function"&&document.querySelector("input[name=dir]:checked")) drawGroupPrev(); }catch(e){} return false; }
+  if(k==="type"){ const was=it.type; it.type=el.value; if(it.type!=="num") it.step=0; if(it.type==="count") it.dec=0;
+    /* 4.9.7：数字だけの候補の選択肢を数値に変えたら、候補を「入力できる値」に引き継ぐ（候補のボタン・一覧はそのまま使える） */
+    if(was==="choice"&&it.type==="num"&&!String(it.allow||"").trim()&&numericOpts(it)){ const ns=it.options.map(o=>String(o).normalize("NFKC").trim()); it.allow=ns.join(","); it.dec=Math.min(4,Math.max(0,...ns.map(o=>(o.split(".")[1]||"").length))); }
+    return true; }
   return false;
 }
 $("#sItems").addEventListener("input",e=>{
@@ -3608,7 +3771,7 @@ function openSettings(go,then){
   document.querySelector(`input[name=sbm][value=${draft.standbyMode}]`).checked=true;
   $("#sRead").checked=draft.readback; $("#sSerial").checked=draft.serial; $("#sAuto").checked=!!draft.autoCommit; $("#sSound").checked=!!draft.alertSound;
   $("#sUndoGap").value=String(draft.undoGap);
-  $("#sRbMode").value=draft.rbMode; $("#sFast").checked=!!draft.fastCommit; $("#sOutlier").value=draft.outlier;
+  $("#sCallDef").value=draft.callDef||"cur"; $("#sRbMode").value=draft.rbMode; $("#sFast").checked=!!draft.fastCommit; $("#sOutlier").value=draft.outlier;
   $("#sIosNp").checked=iosNoPause();
   planToForm(planNorm(draft.plan)); $("#planFold").hidden=!draft.ts;
   $("#sFzCols").value=draft.freezeCols; $("#sFzRows").value=draft.freezeRows; drawFzPrev();
@@ -3735,7 +3898,7 @@ $("#sSave").onclick=()=>{
   draft.standbyMode=document.querySelector("input[name=sbm]:checked").value;
   draft.readback=$("#sRead").checked; draft.serial=$("#sSerial").checked; draft.autoCommit=$("#sAuto").checked; draft.rate=+$("#sRate").value||1.1;
   draft.alertSound=$("#sSound").checked; draft.undoGap=+$("#sUndoGap").value;
-  draft.rbMode=$("#sRbMode").value; draft.fastCommit=$("#sFast").checked; draft.outlier=$("#sOutlier").value;
+  draft.callDef=$("#sCallDef").value==="last"?"last":"cur"; draft.rbMode=$("#sRbMode").value; draft.fastCommit=$("#sFast").checked; draft.outlier=$("#sOutlier").value;
   try{ if($("#sIosNp").checked) localStorage.setItem(IOS_NP_KEY,"1"); else localStorage.removeItem(IOS_NP_KEY); }catch(e){}
   draft.plan=planFromForm();
   draft.freezeCols=+String($("#sFzCols").value).normalize("NFKC")||0; draft.freezeRows=+String($("#sFzRows").value).normalize("NFKC")||0;
@@ -4047,7 +4210,7 @@ function importTable(rows){
    配り方：ファイル（.json）／リンク（pro.html#tpl=…）／QRコード（リンクを載せる）。リンクの # 以降はサーバーへ送られない。
    受け取ると、確かめたうえで新しい調査を作る（今の調査は変えない） */
 const TPL_APP="koe-yacho-v2-template";
-const TPL_KEYS=["name","items","aliases","ts","outFmt","dir","groups","mode","standbyMode","readback","rbMode","rate","fastCommit","serial","autoCommit","alertSound","undoGap","freezeCols","freezeRows","outlier","plan","prevCols"];
+const TPL_KEYS=["name","items","aliases","callDef","ts","outFmt","dir","groups","mode","standbyMode","readback","rbMode","rate","fastCommit","serial","autoCommit","alertSound","undoGap","freezeCols","freezeRows","outlier","plan","prevCols"];
 const TPL_HOME="https://tochigitfruits.github.io/koe-yacho/pro.html";
 const QR_SRC="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
 const QR_SRI="sha384-8FWZA6BGMXhsfO+BLtrJK0We6gg5o1JyO8xQm6peWDEUs17ACA5ziE/NIAkl9z2k";
@@ -4101,7 +4264,7 @@ function tplSanitize(o){
     let id=typeof x.id==="string"&&/^[\w-]{1,40}$/.test(x.id)?x.id:uid(); if(seen.has(id)) id=uid(); seen.add(id);
     return normItem({id,name:String(x.name??"項目").slice(0,60),type:TYPES.includes(x.type)?x.type:"num",
       dec:Math.max(0,Math.min(4,Math.floor(+x.dec||0))),step:Math.max(0,+x.step||0),role:x.role==="id"?"id":"meas",
-      options:Array.isArray(x.options)?x.options.slice(0,200).map(v=>String(v).slice(0,60)):[],allow:String(x.allow??"").slice(0,200),cmp:x.cmp&&typeof x.cmp==="object"?x.cmp:{}}); });
+      options:Array.isArray(x.options)?x.options.slice(0,200).map(v=>String(v).slice(0,60)):[],allow:String(x.allow??"").slice(0,200),cmp:x.cmp&&typeof x.cmp==="object"?x.cmp:{},call:x.call===true}); });
   if(!nS.items.length) nS.items=[normItem({name:"項目1",type:"num",dec:0})];
   nS.aliases=Array.isArray(src.aliases)?src.aliases.slice(0,300).map(a=>({from:String(a?.from??"").slice(0,200),to:String(a?.to??"").slice(0,100),item:String(a?.item??"").slice(0,40)})):[];
   nS.name=String(src.name||o.name||"ひな形").slice(0,80);
@@ -4369,7 +4532,7 @@ function gdRows(){
 /* ひな形と同じ形式の設定を作る */
 function gdBuild(){
   const its=[...gdSel("id"),...gdSel("meas")];
-  const items=its.map(x=>({id:uid(),name:x.n,type:x.t,dec:x.d,step:x.s,role:x.role,options:x.o,allow:x.a,cmp:x.cmp||{}}));
+  const items=its.map(x=>({id:uid(),name:x.n,type:x.t,dec:x.d,step:x.s,role:x.role,options:x.o,allow:x.a,cmp:x.cmp||{},...(x.role==="meas"&&x.n==="備考"?{call:true}:{})}));
   const name=(GD.name||"").trim()||gdDefName();
   const S0={name,items,ts:!!GD.ts,dir:GD.dir,readback:GD.rb!=="off",rbMode:GD.rb==="off"?"full":GD.rb};
   if(GD.ts&&GD.pOn) S0.plan={on:true,mode:"every",start:isDate(GD.start)?GD.start:today(),every:GD.every,count:GD.count,until:"",list:[],time:"",alarms:["eve","morn"]};
@@ -5051,8 +5214,10 @@ const HELP=[
 "<p>マイクを押して話すと、黄色のセルに値が入り、次のセルへ進みます。聞き取った言葉は「次に入るセル」の下に出ます。</p><ul><li><b>連続認識</b>：止めるまで聞き続けます。</li><li><b>1回ずつ</b>：押すたびに1回だけ聞きます。</li></ul><p>表のセルをタップすると、そのセルから入力を続けます。</p>"},
 {g:"input",id:"numbers",t:"数値の言い方",k:"数字 小数 てん 点 マイナス 単位 ミリ グラム 続けて 刻み 桁 丸め すうじ しょうすう てん まいなす たんい",go:"items",b:
 "<p>小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。負の値は「マイナス」を付けます。ミリ・センチ・グラム・度などの単位は付けても無視します。</p><p><code>32.5 31.2 30.8</code> のように続けて言うと、今のセルから順に入ります（値の間に少し間を置くか「と」を挟みます）。くっついて聞き取られた数値（32.531.2）は、その項目の小数の桁で切り分けます。値は項目ごとの小数の桁数に合わせて丸めます。刻み（0.5刻みなど）を決めた項目では、刻みに合わない値（0.5刻みで 3.2 など）は丸めずに入れず、「刻みに合いません」と知らせます。</p>"},
+{g:"input",id:"callcol",t:"名前で呼んで入れる列（備考など）",k:"名前で呼ぶ 備考 たまに スキップ 飛ばす さっき 欄 入れて メモ なまえでよぶ びこう",go:"items",b:
+"<p>備考のように、たまにしか値が入らない列は、設定の「調査項目」でその列の<b>名前で呼んで入れる</b>に印を付けます。印を付けた列は入力の順番では回らないので、ふだんは止まりません。</p><p>入れたいときは、どの列を入力中でも、<b>列の名前を先に言います</b>。今のセル（黄色）は動かないので、そのまま続けて元の項目に入力できます。</p><ul><li><code>備考 小玉</code>・<code>備考に小玉</code>・<code>備考欄に小玉入れて</code>：名前だけで言ったときの個体（設定で選ぶ。標準は今のセルの個体）</li><li><code>さっきの備考欄に小玉入れて</code>・<code>直前の備考 小玉</code>：さっき値を入れた個体</li><li><code>今の備考に小玉</code>：今のセルの個体</li><li><code>5番の備考に小玉</code>・<code>No.5の備考 小玉</code>：No.5 の個体</li></ul><p>「入れて」「を入れて」「入力して」「お願いします」は付けても付けなくてもかまいません。読み上げで「（個体） 備考 小玉」と、どの個体に入ったかを返します。</p><ul><li>文字の列は、すでに値があれば「、」でつないで足します（上書きしません）。言った言葉がそのまま入り、数値への変換や言い換えはしません。</li><li>選択肢・数値・日付の列にも使えます（例 <code>障害 日焼け</code>）。この場合は置き換えます（複数選択は足します）。</li><li>間違えたら、すぐに「取り消し」で入れる前に戻せます。</li><li>手入力欄に「備考 小玉」と打っても同じです。表のその列のセルを押して入れることもでき、入れた後は押す前のセルに戻ります。</li><li>ガイドで作る・果実品質調査のひな形で作る調査の「備考」には、最初から印が付いています（今までの調査は変わりません。外すこともできます）。</li><li>列の名前は聞き取りやすい言葉にします。グループ単位の数（例 <code>5,1</code>）には、この列を数えません。「調査を終える」の空欄にも数えません。</li></ul>"},
 {g:"input",id:"textchoice",t:"文字・選択肢の列",k:"文字 備考 選択肢 候補 品種 テキスト もじ びこう せんたくし",go:"items",b:
-"<p>文字の列には、話した言葉がそのまま入ります。選択肢の列は、登録した候補（例 にっこり、幸水、豊水）から一番近いものが入ります。ひらがな・カタカナの違いは気にしません。</p><p>選択肢の列にいるときは、表の下に候補のボタンが並びます。押すとその値が入り、次へ進みます。表の今のセル（黄色）をもう一度押す（PCはダブルクリック・F2）と、セルの所に候補の一覧が出て、そこからも選べます（「空欄にする」で値を消します。一覧の外を押すと閉じます）。うまく聞き取れない言葉や短く言いたい言葉は、「言い換え」に登録できます。</p><p>このほか、<b>複数選択・日付・カウンター</b>の列も作れます（それぞれの説明を見てください）。</p>"},
+"<p>文字の列には、話した言葉がそのまま入ります。選択肢の列は、登録した候補（例 にっこり、幸水、豊水）から一番近いものが入ります。ひらがな・カタカナの違いは気にしません。</p><p>選択肢の列にいるときは、表の下に候補のボタンが並びます。押すとその値が入り、次へ進みます。表の今のセル（黄色）をもう一度押す（PCはダブルクリック・F2）と、セルの所に候補の一覧が出て、そこからも選べます（「空欄にする」で値を消します。一覧の外を押すと閉じます）。うまく聞き取れない言葉や短く言いたい言葉は、「言い換え」に登録できます。</p><p>発病度・障害程度のように<b>候補が数字</b>で、前回からの増減も見たいときは、選択肢ではなく数値の列に「入力できる値」（例 <code>0,1,2,3,4,5</code>）を入れます。同じようにボタン・一覧から選べて、前回比も使えます（「入力できる値」の説明）。</p><p>このほか、<b>複数選択・日付・カウンター</b>の列も作れます（それぞれの説明を見てください）。</p>"},
 {g:"input",id:"multi",t:"複数選択の列（被害の種類など）",k:"複数選択 複数 いくつも 被害 症状 病害虫 チェック 両方 ふくすうせんたく",go:"items",b:
 "<p>1つのセルに、登録した候補からいくつでも入れられる列です（例 候補「虫害、日焼け、裂果、さび」）。設定の「調査項目」で種類を「複数選択」にし、候補を「、」で区切って入れます。</p><ul><li><b>声</b>：「虫害と日焼け」「虫害 日焼け」のように続けて言うと、両方が入って次へ進みます。値は候補の順に「、」でつないで記録します（例「虫害、日焼け」）。</li><li><b>ボタン</b>：手入力欄の下に候補のボタンが出ます。押すたびに入れる・外すが切り替わり、次へは進みません。終わったら「次」を押します。</li><li>候補にない言葉が混じると入力しません（「聞き取れません」）。言い換えも使えます。「なし」を記録したいときは、候補に「なし」を足してください。</li><li>集計・外れ値の対象にはなりません。Excel・CSVには「虫害、日焼け」の文字で出ます。</li></ul>"},
 {g:"input",id:"date",t:"日付の列（開花日・収穫日など）",k:"日付 開花日 収穫日 満開日 発芽日 今日 昨日 ひづけ きょう",go:"items",b:
@@ -5062,7 +5227,7 @@ const HELP=[
 {g:"input",id:"alias",t:"言い換え（聞き違い・略語の登録）",k:"言い換え 置き換え 略語 聞き違い 誤変換 登録 虫害 音声コマンド コマンド 言い方 待機 大樹 いいかえ ききちがい りゃくご とうろく",go:"alias",b:
 "<p>よく聞き違える言葉や、短く言いたい言葉を登録しておくと、決めた値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>、<code>びょう</code> → <code>病害</code>。左は「、」で区切って複数書けます。</p><ul><li>話した言葉が登録した言葉と<b>そのまま同じ</b>ときだけ置き換えます（言葉の一部は置き換えません）。</li><li>ひらがな・カタカナ、全角・半角の違いは気にしません。</li><li>対象は「すべての列」か、特定の列だけを選べます。文字・選択肢・数値のどの列にも使えます。選択肢の列では、置き換えた値が候補にあるときだけ入ります。</li><li>手入力・まとめて入力・貼り付けにも効きます。</li><li>「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。</li></ul><p><b>音声コマンドの言い方</b>（同じ見出しの下の欄）：音声コマンドとして受け付ける言葉を足せます。左に言葉、右で操作（待機・再開・停止・次・戻る・取り消し・どこ など）を選びます。例：<code>大樹、大気</code> → 待機。iPhone の音声認識が「たいき」を「大樹」と返すような聞き違いに使います。どの列にいるときでも効き、待機中の「再開」「停止」にも効きます。発話全体が登録した言葉と同じときだけ操作になります。</p><p>iPhone で「たいき」が「大樹」「大気」「待期」になるときは、登録しなくても待機になります（4.6.1〜）。</p><p>置き換えたときは、聞き取った言葉の横に（言い換え むし→虫害）と出ます。言い換えは調査ごとの設定で、「今の調査の設定を使う」で作った調査とバックアップにも引き継がれます。</p>"},
 {g:"input",id:"allow",t:"入力できる値（範囲外の防止）",k:"範囲 範囲外 入力できる値 指数 0〜3 制限 はんい はんいがい しすう",go:"items",b:
-"<p>数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます。病害の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます。</p>"},
+"<p>数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます。病害の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます。</p><p><b>候補から選ぶ（発病度・障害程度など）</b>：入力できる値が、決まった少数の値（<code>0,1,2,3,4,5</code>、<code>0〜5</code>、<code>0〜3</code> で0.5刻み など。24個まで）のときは、選択肢の列と同じように、表の下にその値のボタンが並び、今のセル（黄色）をもう一度押すとセルの所に一覧が出ます。押すと入れて次へ進みます。声・手入力・ノギスなどからの入力もそのまま使えます。</p><p>値は数値として記録するので、経時調査では<b>前回比</b>（前回より増えた・減った・同じのときの表示・注意・禁止）がふつうの数値の列と同じに働き、集計・グラフ・外れ値の対象にもなります。たとえば発病度が前回より減ったら「注意（確認）」にしておくと、ボタンで選んだときも確認を求めます。</p><p>すでに選択肢の列（候補が数字だけ）で作ってあるときは、種類を「数値」に変えると、候補が「入力できる値」に移り、記録済みの値も数値に直ります。</p>"},
 {g:"input",id:"outlier",t:"外れ値のお知らせ",k:"外れ値 外れ 異常値 おかしい値 言い間違い 測り間違い 桁 感度 中央値 伸び方 はずれち いじょうち かんど",go:"outlier",b:
 "<p>入力した値が、ほかの個体の値から大きく外れているとき、画面と声（「外れ値かも」）で知らせます。<b>入力は止めず、値もそのまま残します。</b>言い間違い・測り間違い（例：32.5 を 325）なら「取り消し」で直します。正しい値なら、そのまま続けます。</p><ul><li><b>同じ日の外れ</b>：同じ調査日のほかの個体の値（中央値）から大きく外れている。</li><li><b>伸び方の外れ</b>（経時調査）：前回からの伸びが、ほかの個体と大きく違う。</li></ul><p>比べる相手は、「集計・グラフ」でまとめる列（処理区など）が同じ個体です。比べる値が少ないうちは知らせません（感度 低は10個、中は8個、高は6個から）。感度は設定の「外れ値のお知らせ」で 切・低・中・高 から選びます（標準は中）。</p><p>表では、外れ値の候補のセルを点線の枠で示します（PCではセルに重ねると理由が出ます）。「集計・グラフ」の画面には候補の一覧が出て、押すとそのセルへ移ります。調査の途中では比べる値が少ないため、終わったあとに一覧で見直すと確実です。</p>"},
 {g:"input",id:"commands",t:"音声コマンド",k:"取り消し スキップ 次 戻る 待機 再開 停止 除外 復帰 はい いいえ コマンド とりけし すきっぷ つぎ もどる たいき さいかい ていし じょがい ふっき こまんど",b:
@@ -5126,7 +5291,7 @@ const HELP=[
 {g:"trouble",id:"iosmic",t:"iPhoneで聞き取りが止まる・不安定なとき",k:"iPhone アイフォン ホーム画面 アプリ Safari サファリ 止まる 途切れる 不安定 再開 消音 マナーモード サイレント 復唱 読み上げ 鳴らない 移す あいふぉん ほーむがめん さふぁり とまる ふあんてい さいかい しょうおん まなーもーど",go:"other",b:
 "<p>iPhoneでは、値を読み上げるたびに聞き取りをいったん止め、読み終えてから再開します（聞き取り中は読み上げの音が出ない・小さくなるため）。4.8.1からは次のように動きます。</p><ul><li>再開がうまくいかない・読み上げの声を拾ったときは、その調査の間、止めてから再開するまでの待ち時間を自動で少し延ばします。うまくいき続けると元に戻します。値の記録は遅れません。</li><li>iPhoneが自動の再開を受け付けなかったときは、赤い「押すと再開します」のボタンが出ます。1回押せば聞き取りに戻ります。入力した値は残っています。</li><li>ノギス・はかりなどで続けて入った値や、まとめて入力した値の読み上げは、まとめて1回で読みます。</li></ul><p><b>ホーム画面のアプリで不安定なとき</b>は、Safari のタブで開くと安定することがあります。ホーム画面のアプリと Safari は保存場所が別なので、次の手順で移します。</p><ol><li>ホーム画面のアプリで、「調査一覧」の「保存」（または設定の「バックアップを保存」）でバックアップを保存します（「ファイル」アプリに保存されます）。</li><li>Safari で Pro のページを開きます。利用コードを入れ直す必要がある場合があります。</li><li>Safari で「調査一覧」→「ファイルから作る」を押し、保存したバックアップを選びます。</li></ol><p>読み上げや音が鳴らないときは、<b>消音スイッチ（マナーモード）</b>がオンになっていないか確かめてください。オンだと鳴らない場合があります。音量も確かめます。</p><p>試験的な設定「iPhoneでも聞き取りを止めずに読み上げる」（設定の「読み上げ・音・その他」）をオンにすると、止めずに読み上げます。切り替えは減りますが、読み上げの音が小さくなったり、受話口から出たりすることがあります。</p>"},
 {g:"trouble",id:"tts",t:"読み上げが聞こえない",k:"聞こえない 音が出ない 読み上げ 消音 音量 テスト きこえない よみあげ おんりょう",go:"other",b:
-"<p>消音スイッチと音量を確かめ、設定の「読み上げテスト」を押します。設定の「声で入力した値を読み上げる」がオフだと、声で入れた値は読みません。手入力の値は「復唱」ボタンがオンのときだけ読みます。</p>"},
+"<p>消音スイッチと音量を確かめ、設定の「読み上げテスト」を押します。設定の「声で入力した値を読み上げる」がオフだと、声で入れた値は読みません。手入力の値は「復唱」ボタンがオンのときだけ読みます。</p><p><b>iPhone で読み上げ・復唱が聞こえない・始まらないとき</b></p><ul><li>本体の横の消音スイッチ（マナーモード）と、音量ボタンの音量を確かめます。消音のときは、区切りの音・アラート音は鳴りません。読み上げも鳴らないことがあります。消音を解除した直後は、画面を1回押してから試します。</li><li>iPhone は、聞き取り（マイク）を使ったあとや、ほかのアプリ・画面から戻ったあとに、読み上げが鳴らなくなることがあります。4.9.7 からは、マイクを止めたとき・「復唱」ボタンを押したとき・戻ってから最初に画面を押したときに、読み上げの準備を自動でやり直します。それでも鳴らないときは、「復唱」ボタンを押し直す（オンにするとその場で「復唱します」と読みます）か、設定の「読み上げテスト」を押します。</li><li>聞き取り中は、iPhone の決まりで読み上げの音が出ない・小さくなるため、アプリは聞き取りをいったん止めてから読みます。マイクのボタンを続けて何度も入り切りすると切り替えが追いつかないことがあるので、1〜2秒あけて押します。</li><li>Bluetooth のイヤホン・スピーカーをつないでいると、音はそちらから出ます。</li><li>読み上げが始まらなかったときは、ログに「iPhone：読み上げが始まりませんでした」と残り、画面にも知らせが出ます。「マイク診断」には、読み上げを頼んだ回数・始まった回数・始まらなかった回数が出ます（始まっているのに聞こえないなら、消音・音量・音の出る先が原因です）。</li></ul>"},
 {g:"trouble",id:"mistake",t:"間違えて入れた・取り消しが進みすぎる",k:"間違い 間違えた 取り消し 戻す 進みすぎ 間隔 直す 修正 まちがい とりけし なおす しゅうせい",go:"other",b:
 "<p>直前の値は「取り消し」で消せます。前のセルを直すときは、そのセルをタップして言い直します。表の操作（クリア・削除して詰める）の後は「元に戻す」で戻せます。</p><p>読み上げの声を拾って取り消しが続けて進むときは、設定の「声の『取り消し』を続けるときの間隔」を長くします。</p>"},
 {g:"trouble",id:"home",t:"ホーム画面に追加・複数のタブ",k:"ホーム画面 アイコン インストール アプリ タブ ウインドウ 2か所 読み込みを待って 開き直す ほーむがめん あいこん たぶ",b:
@@ -5186,6 +5351,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.9.7",d:"2026-11-22",a:[["数値の列で、入力できる値が決まった少数の値（例 0,1,2,3,4,5）のとき、候補のボタン・一覧から選べるように（発病度・障害程度など。数値で記録し、前回比の注意もそのまま使える）","allow"],["iPhone で、マイクを入り切りしたあとなどに読み上げ・復唱が鳴らなくなることへの対策（準備の自動やり直し、復唱ボタンを押したその場で読む、マイク診断に読み上げの記録）","tts"],["備考などの列を「名前で呼んで入れる」列にできるように（順番では回らず、「備考 小玉」「さっきの備考欄に小玉入れて」「5番の備考に小玉」と言うとその列に入る。新しく作る調査の備考は最初からこの列）","callcol"]]},
 {v:"Pro 4.9.5",d:"2026-11-21",a:[["選択肢の列も、候補のボタンを押して入れられるように（押すと次へ進む）","textchoice"],["選択肢の列は、表のセルを押すと候補の一覧から選べるように","textchoice"],["刻み（0.5刻みなど）を決めた項目は、刻みに合わない値を丸めずに「刻みに合いません」と知らせて入れないように","numbers"]]},
 {v:"Pro 4.9.4",d:"2026-11-15",a:[["調査日の予定のカレンダーに祝日（振替休日・国民の休日を含む）を表示","plan"]]},
 {v:"Pro 4.9.3",d:"2026-11-14",a:[["調査日の予定を、月のカレンダーで日を押して選べるように（日付を並べるとき。間隔で決めた予定も見られる）","plan"]]},
@@ -5537,7 +5703,7 @@ function endOpen(){
   if(listening||standby) stopRec(); clearPend(); save();
   endDone=false;
   const L=listLen(), R=L||lastRow()+1, M=meas(), blanks=[]; let filled=0, live=0;
-  for(let r=0;r<R;r++){ if(isEx(r)) continue; live++; M.forEach(c=>{ if(hasVal(D[r]?.[S.items[c].id])) filled++; else blanks.push({r,c}); }); }
+  for(let r=0;r<R;r++){ if(isEx(r)) continue; live++; M.forEach(c=>{ if(hasVal(D[r]?.[S.items[c].id])) filled++; else if(!isCall(c)) blanks.push({r,c}); }); }
   const ol=[...olCompute(S.curDate).values()].filter(o=>!isEx(o.r)).sort((a,b)=>a.r-b.r||a.c-b.c);
   $("#endSub").textContent=(S.name||"調査")+(S.ts?`・調査日 ${S.curDate}`:"");
   const box=(v,l,bad)=>`<div${bad?' class="bad"':""}><b>${v.toLocaleString()}</b><small>${esc(l)}</small></div>`;
@@ -5547,7 +5713,7 @@ function endOpen(){
   let bh="";
   if(!filled) bh=`<p class="help">${S.ts?`この調査日（${esc(S.curDate)}）には`:""}まだ値が入っていません。</p>`;
   else if(blanks.length){
-    const per=new Map(); M.forEach(c=>per.set(c,0)); blanks.forEach(b=>per.set(b.c,per.get(b.c)+1));
+    const per=new Map(); M.filter(c=>!isCall(c)).forEach(c=>per.set(c,0)); blanks.forEach(b=>per.set(b.c,per.get(b.c)+1));
     bh=`<h3>空欄（押すとそのセルへ）　${blanks.length}件</h3><p class="help">${[...per].filter(([,k])=>k).map(([c,k])=>`${esc(S.items[c].name)} ${k}`).join("・")}</p>`
       +blanks.slice(0,MAXB).map(b=>`<button type="button" data-r="${b.r}" data-c="${b.c}"><span><b>${esc(rowLabel(b.r))}</b>　${esc(S.items[b.c].name)}</span></button>`).join("")
       +(blanks.length>MAXB?`<p class="help">ほか ${blanks.length-MAXB}件</p>`:"");
@@ -6044,13 +6210,13 @@ function cinPlace(){
   const td=$("#tbl td.cur"), it=S.items[cur.c];
   if(!td||!it||it.role==="id"||sel||rangeMode||document.querySelector("dialog[open]")||!$("#gate").hidden){ cinEnd(); return; }
   const moved=cin.r!==cur.r||cin.c!==cur.c||cin.d!==S.curDate||cin.sv!==svId, cell=cinCellText();
-  const lst=it.type==="choice"&&it.options.length>0&&!isEx(cur.r);
+  const os=pickOpts(it), lst=!!os&&!isEx(cur.r);
   /* 入力欄と一覧を、列に合わせて切り替える（行単位で数値の列から選択肢の列へ進んだときなど） */
   const sw=cin.r>=0&&!!cin.lst!==lst;
   cin.lst=lst; if(sw) setTimeout(cinFocus,0); cinBar.classList.toggle("lst",lst); $("#cellList").hidden=!lst;
   if(lst&&(moved||cell!==cin.cell)){
     const v=D[cur.r]?.[it.id];
-    $("#cellList").innerHTML=it.options.map((o,i)=>`<button type="button" role="option" data-ci="${i}" aria-selected="${hasVal(v)&&String(v)===o}">${esc(o)}</button>`).join("")
+    $("#cellList").innerHTML=os.map((o,i)=>`<button type="button" role="option" data-ci="${i}" aria-selected="${pickIs(it,v,o)}">${esc(o)}</button>`).join("")
       +`<button type="button" class="cbclr" data-ci="-1">空欄にする</button><button type="button" class="sec" data-ci="x">閉じる</button>`;
     $("#cellList").setAttribute("aria-label",`${cellName(cur)} を候補から選ぶ`);
   }
@@ -6121,16 +6287,23 @@ $("#cellOk").onclick=()=>{ cinCommit(true); if(cin) cinFocus(); };
 /* 4.9.5：候補の一覧から選ぶ。入れる処理は手入力と同じ（handleText）。空欄にする・閉じる */
 $("#cellList").addEventListener("click",e=>{
   const b=e.target.closest("button[data-ci]"); if(!b||!cin) return;
-  const it=S.items[cur.c]; if(!it||it.type!=="choice") return;
+  const it=S.items[cur.c], os=pickOpts(it); if(!it||!os) return;
   const k=b.dataset.ci;
   if(k==="x"){ cinEnd(); return; }
   if(k==="-1"){ if(hasVal(D[cur.r]?.[it.id])) clearCells(); if(cin){ cur=nextPos(cur); save(); render(); cinFocus(); } return; }
-  const o=it.options[+k]; if(o===undefined) return;
+  const o=os[+k]; if(o===undefined) return;
   cinNote=""; handleText(o,false,!!S.rbManual);
   if(cin){ const h=$("#heard"); if(h.classList.contains("ng")){ cinNote=h.textContent; cinMsgSync(); } cinFocus(); }
 });
+let cinTA="", cinTAat=0;
 $("#cellList").addEventListener("keydown",e=>{
   if(e.key==="Escape"){ e.preventDefault(); cinEnd(); return; }
+  if(e.key.length===1&&e.key!==" "&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.isComposing){
+    const now=Date.now(); cinTA=(now-cinTAat<900?cinTA:"")+e.key.normalize("NFKC"); cinTAat=now;
+    const bs=[...$("#cellList").querySelectorAll("button[role=option]")];
+    const b=bs.find(x=>x.textContent===cinTA)||bs.find(x=>normJ(x.textContent).startsWith(normJ(cinTA)));
+    if(b){ e.preventDefault(); b.focus(); } return;
+  }
   if(e.key==="ArrowDown"||e.key==="ArrowUp"){
     e.preventDefault(); e.stopPropagation(); const bs=[...$("#cellList").querySelectorAll("button")], i=bs.indexOf(document.activeElement);
     const j=Math.max(0,Math.min(bs.length-1,(i<0?0:i)+(e.key==="ArrowDown"?1:-1))); bs[j].focus();
@@ -6143,8 +6316,8 @@ document.addEventListener("pointerdown",e=>{
   cinEnd();
 },true);
 $("#cellX").onclick=()=>cinEnd();
-$("#cellYes").onclick=()=>{ $("#alYes").click(); if(cin) cinIn.focus(); };
-$("#cellNo").onclick=()=>{ const c=cin; $("#alNo").click(); if(c&&cin){ cinIn.focus(); cinSelectAll(); } };
+$("#cellYes").onclick=()=>{ $("#alYes").click(); if(cin){ if(cin.lst) cinFocus(); else cinIn.focus(); } };
+$("#cellNo").onclick=()=>{ const c=cin; $("#alNo").click(); if(c&&cin){ if(cin.lst) cinFocus(); else { cinIn.focus(); cinSelectAll(); } } };
 try{ new MutationObserver(()=>{ if(cin) cinMsgSync(); }).observe($("#alertBar"),{attributes:true,childList:true,subtree:true,characterData:true}); }catch(e){}
 /* 表を押す前の今のセルを覚える（同じセルをもう一度押したかを見るため）。入力中にほかのセルを押したら、先に打ちかけの値を入れる */
 function cinBefore(e){
