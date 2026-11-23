@@ -151,6 +151,7 @@ td.v{cursor:pointer;min-width:5em}
 td.al-info{box-shadow:inset 4px 0 0 var(--accent)}
 td.al-warn{background:color-mix(in srgb,var(--warn) 20%,transparent)}
 td.al-block{background:color-mix(in srgb,var(--rec) 20%,transparent)}
+td.osk{background:color-mix(in srgb,var(--line) 60%,transparent)}
 td.sel{background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:inset 0 0 0 1px var(--accent)}
 td.cur{background:var(--mark);color:var(--mark-ink);font-weight:700;box-shadow:inset 0 0 0 2px var(--mark-ink)}
 td.flash{animation:flash .6s ease-out}
@@ -1510,6 +1511,33 @@ function rowLabel(r){
   return parts.length?parts.join(" "):`No.${r+1}`;
 }
 function firstMeas(){ const M=meas(), o=M.filter(i=>!S.items[i].call); return o.length?o[0]:(M.length?M[0]:0); }
+/* 4.9.8：調べる個体を限る項目（it.only）。同じ表の中で、項目によって調べる個体が違う設計のため（例：果実重は果実 1〜10、糖度は 1〜5）。
+   it.only＝[{by:事前入力の列の id, min?, max?}]（2つまで。全部に合う個体だけを順番で回る）。
+   範囲の外の個体では、その項目のセルを入力の順番でだけとばす（押せば入力でき、名前で呼んでも入る。CSV は変えない）。
+   とばさない（今までどおり回る）場合：only がない／by の列がない・事前入力でない・数値でない／その個体の by の値が数値でない。 */
+const onlyOf=it=>it&&it.role!=="id"&&Array.isArray(it.only)&&it.only.length?it.only:null;
+function onlySkipIn(items,row,it){
+  const on=onlyOf(it); if(!on) return false;
+  let out=false;
+  for(const o of on){
+    if(!o||typeof o.by!=="string") return false;
+    const by=items.find(x=>x.id===o.by&&x.role==="id"); if(!by||!isNum(by)) return false;
+    const v=row?row[by.id]:undefined; if(typeof v!=="number"||!Number.isFinite(v)) return false;
+    if((typeof o.min==="number"&&v<o.min)||(typeof o.max==="number"&&v>o.max)) out=true;
+  }
+  return out;
+}
+const onlySkip=(r,c)=>onlySkipIn(S.items,D[r],S.items[c]);
+const onlyNum=v=>{ const n=typeof v==="number"?v:(typeof v==="string"&&v.trim()!==""?Number(v.normalize("NFKC").trim()):NaN); return Number.isFinite(n)?n:null; };
+/* 受け取った only を安全な形に直す。mapId：by の文字列 → この調査の事前入力の列の id（なければ undefined） */
+function onlyNorm(a,mapId){
+  if(!Array.isArray(a)) return null; const out=[];
+  for(const o of a.slice(0,8)){ if(out.length>=2) break; if(!o||typeof o!=="object") continue;
+    const by=mapId(o.by); if(!by) continue;
+    const lo=onlyNum(o.min), hi=onlyNum(o.max); if(lo===null&&hi===null) continue;
+    const c={by}; if(lo!==null) c.min=lo; if(hi!==null) c.max=hi; out.push(c); }
+  return out.length?out:null;
+}
 /* 4.9.6：名前で呼んで入れる列（順番では回らない） */
 const isCall=c=>!!S.items[c]&&S.items[c].role!=="id"&&!!S.items[c].call;
 const ordMeas=()=>meas().filter(i=>!isCall(i));
@@ -1551,7 +1579,20 @@ function groupsFrom(items,dir,spec){
 const groupsOf=()=>groupsFrom(S.items,S.dir,S.groups);
 const groupIdx=c=>groupsOf().findIndex(g=>g.includes(c));
 const groupLabel=c=>{ const g=groupsOf()[groupIdx(c)]||[]; return g.map(i=>S.items[i].name).join("・"); };
-function nextPos(p){
+/* 4.9.8：とばすセル（onlySkip）に当たったら、その先へ送る。only のない調査では nextPos0・prevPos0 の答えのまま */
+function onlyFwd(q){
+  let n=(Math.max(D.length,listLen())+2)*(S.items.length+1)+10;
+  while(onlySkip(q.r,q.c)&&n-->0){ const z=nextPos0(q); if(z.r===q.r&&z.c===q.c) break; q=z; }
+  return q;
+}
+function nextPos(p){ return onlyFwd(nextPos0(p)); }
+/* 戻るとき：空のとばすセルは通り過ぎる（値を入れてあるとばすセルには止まる。例外で入れた値を取り消せるように） */
+function prevPos(p){
+  let q=prevPos0(p), n=(Math.max(D.length,listLen())+2)*(S.items.length+1)+10;
+  while(q&&onlySkip(q.r,q.c)&&!hasVal(D[q.r]?.[S.items[q.c].id])&&n-->0) q=prevPos0(q);
+  return q;
+}
+function nextPos0(p){
   const G=groupsOf(); if(!G.length) return p;
   if(isCall(p.c)) return callNext(p,G);
   const gi=groupIdx(p.c); if(gi<0) return {r:p.r,c:G[0][0]};
@@ -1565,13 +1606,13 @@ function nextPos(p){
    （前半を調査済みで、後から個体を足して続きを調べる場合に、調査済みの先頭へ戻らないように）。除外した個体は飛ばす。
    すべて埋まっていれば、これまでどおり先頭の個体へ */
 /* 名前で呼ぶ列のセルから進むとき：その個体で最初に空いている順番の列、なければその個体の最初の列 */
-function callNext(p,G){ const cs=G.flat(); const c=cs.find(c=>!hasVal(D[p.r]?.[S.items[c].id])); return {r:p.r,c:c!==undefined?c:cs[0]}; }
+function callNext(p,G){ const cs=G.flat(); let c=cs.find(c=>!onlySkip(p.r,c)&&!hasVal(D[p.r]?.[S.items[c].id])); if(c===undefined) c=cs.find(c=>!onlySkip(p.r,c)); return {r:p.r,c:c!==undefined?c:cs[0]}; }
 function firstEmptyIn(g,L){
-  for(let r=firstRow(); r<L; r=nextRow(r)){ const c=g.find(c=>!hasVal(D[r]?.[S.items[c].id])); if(c!==undefined) return {r,c}; }
+  for(let r=firstRow(); r<L; r=nextRow(r)){ const c=g.find(c=>!onlySkip(r,c)&&!hasVal(D[r]?.[S.items[c].id])); if(c!==undefined) return {r,c}; }
   return null;
 }
 function lastFilledRow(c){ const id=S.items[c]?.id; let last=-1; D.forEach((row,i)=>{ if(hasVal(row[id])) last=i; }); return last; }
-function prevPos(p){
+function prevPos0(p){
   const G=groupsOf(); if(!G.length) return null;
   const gi=groupIdx(p.c); if(gi<0) return null;
   const g=G[gi], k=g.indexOf(p.c);
@@ -1980,28 +2021,29 @@ let bulkSnap=null;
 function tryBulk(clean){
   const it=S.items[cur.c]; if(!it||it.role==="id"||it.type==="text") return null;
   const b=parseBulk(clean,it); if(!b) return null;
-  const L=listLen(), c=cur.c, cells=[];
+  const L=listLen(), c=cur.c, cells=[]; let osk=0;
+  const put=(r)=>{ if(isEx(r)) return; if(onlySkip(r,c)) osk++; else cells.push({r,c}); };
   if(b.kind==="count"&&S.dir!=="col"){
     /* 行単位・グループ単位：今の列を下へ n 個体（除外は数えずに飛ばす） */
-    for(let r=cur.r;cells.length<b.n&&(!L||r<L)&&r<cur.r+b.n+500;r++) if(!isEx(r)) cells.push({r,c});
+    for(let r=cur.r;cells.length<b.n&&(!L||r<L)&&r<cur.r+b.n+500+osk;r++) put(r);
   } else if(b.kind==="count"){
     /* 列単位：今のセルから入力の順番で。除外した個体と、この値を入れられない列（文字の列など）は数えずに飛ばす */
     let p={r:cur.r,c:cur.c}, guard=0;
     while(cells.length<b.n&&guard++<b.n*50+200){
       if(L&&p.r>=L) break;
       const x=S.items[p.c];
-      if(!isEx(p.r)&&(x===it||valFor(x,typeof b.val==="number"?String(b.val):b.val)!==null)) cells.push(p);
+      if(onlySkip(p.r,p.c)) osk++; else if(!isEx(p.r)&&(x===it||valFor(x,typeof b.val==="number"?String(b.val):b.val)!==null)) cells.push(p);
       const q=nextPos(p); if(q.r===p.r&&q.c===p.c) break; p=q;
     }
   } else if(b.kind==="rest"){
     if(!L){ note("「残り全部」は、個体リストがあるときに使えます"); return "残り全部は、個体リストがあるときに使えます"; }
-    for(let r=cur.r;r<L;r++) if(!isEx(r)) cells.push({r,c});
+    for(let r=cur.r;r<L;r++) put(r);
   } else {
     let a=Math.min(b.a,b.b)-1, z=Math.max(b.a,b.b)-1;
     if(L) z=Math.min(z,L-1); if(z-a>499) z=a+499;
-    for(let r=a;r<=z;r++) if(!isEx(r)) cells.push({r,c});
+    for(let r=a;r<=z;r++) put(r);
   }
-  if(!cells.length){ note("入れられるセルがありません"); return "入れられるセルがありません"; }
+  if(!cells.length){ note(osk?"入れられるセルがありません（順番でとばすセルには、まとめて入力では入れません）":"入れられるセルがありません"); return "入れられるセルがありません"; }
   if(isNum(it)&&!allowOk(it,b.val)){
     alerted=true; sound("block"); badCells.add(cur.r+":"+cur.c);
     showAlert("block",`${it.name}：${fmt(b.val,it)} は入力できる値（${allowText(it)}）の外のため、まとめて入力はしませんでした。`);
@@ -2026,7 +2068,7 @@ function tryBulk(clean){
   bulkSnap=undoSnap;
   const vs=it.type==="date"?dateSay(b.val):fmt(b.val,it).replace(/^-/,"マイナス");
   const where=b.kind==="range"?`No.${cells[0].r+1}〜${last.r+1} `:b.kind==="rest"?"残り ":"";
-  addLog(`${where}${it.name} ← ${fmt(b.val,it)} を${cnt}件`+(block?`（禁止 ${block}件は入れない）`:""));
+  addLog(`${where}${it.name} ← ${fmt(b.val,it)} を${cnt}件`+(block?`（禁止 ${block}件は入れない）`:"")+(osk?`（順番でとばすセル ${osk}件は入れない）`:""));
   if(warn||block){
     alerted=true; sound(block?"block":"warn");
     showAlert(block?"block":"warn",`まとめて入力：${cnt}件入れました。`+(warn?`前回比の「注意」が${warn}件あります（表の色で確認してください）。`:"")+(block?`前回比の「禁止」になる${block}件は入れていません。`:""));
@@ -2063,7 +2105,7 @@ function infoLeft(){
   if(!L){ let n=0; D.forEach(row=>{ if(M.some(i=>hasVal(row?.[S.items[i].id]))) n++; }); return `個体リストがありません、入力済み ${n}行`; }
   const cols=S.dir==="col"&&!isCall(cur.c)?[cur.c]:(ordMeas().length?ordMeas():M);
   let left=0, all=0;
-  for(let r=0;r<L;r++){ if(isEx(r)) continue; all++; if(cols.some(i=>!hasVal(D[r]?.[S.items[i].id]))) left++; }
+  for(let r=0;r<L;r++){ if(isEx(r)) continue; const cs=cols.filter(i=>!onlySkip(r,i)); if(!cs.length) continue; all++; if(cs.some(i=>!hasVal(D[r]?.[S.items[i].id]))) left++; }
   const what=S.dir==="col"?S.items[cur.c].name+"、":"";
   return left?`${what}残り ${left}個体、全部で ${all}個体`:`${what}今日の分は全部入っています、${all}個体`;
 }
@@ -2088,7 +2130,7 @@ function doCommand(cmd){
   const M=meas(); if(!M.length) return null;
   if(cmd==="skip"){ addLog(`${cellName(cur)} スキップ`); return "スキップ"+advance(); }
   if(cmd==="next"){
-    if(S.dir==="col"){ const nx=ordMeas().find(i=>i>cur.c); if(nx!==undefined) cur=firstEmptyIn([nx],listLen())||{r:firstRow(),c:nx}; else { note("最後の列です"); return "最後の列です"; } }
+    if(S.dir==="col"){ const nx=ordMeas().find(i=>i>cur.c); if(nx!==undefined) cur=firstEmptyIn([nx],listLen())||onlyFwd({r:firstRow(),c:nx}); else { note("最後の列です"); return "最後の列です"; } }
     else { const g=groupsOf()[Math.max(0,groupIdx(cur.c))]; const gi0=groupIdx(cur.c); cur=nextPos({r:cur.r,c:g[g.length-1]});
       if(groupIdx(cur.c)!==gi0){ addLog(`次のグループへ → ${cellName(cur)}`); return "次、"+groupLabel(cur.c); } }
     addLog(`次へ → ${cellName(cur)}`); return "次、"+(S.dir==="col"?S.items[cur.c].name:rowLabel(cur.r));
@@ -2433,7 +2475,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.9.7（2026-11-22）";
+const APP_VER="Pro 4.9.8（2026-11-23）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -2797,9 +2839,11 @@ function render(){
       const v=D[r]?.[x.id]; const k=r+":"+c, pon=pcOn(x);
       if(pon) pcDs.forEach((d,k2)=>{ h+=`<td class="pv${k2===0&&gStart.has(c)?" gstart":""}" data-p="${c}">${exState(r,d)?"":esc(fmt(valAt(r,x,d),x))}</td>`; });
       const cls=["v"]; if(gStart.has(c)&&!pon) cls.push("gstart"); if(x.role==="id") cls.push("idc"); if(!isNum(x)) cls.push("txt"); if(isEx(r)) cls.push("exc");
+      const osk=x.role!=="id"&&!isEx(r)&&onlySkip(r,c); if(osk) cls.push("osk");
       let tip="";
       if(S.ts&&hasVal(v)&&!isEx(r)){ const a=checkCmp(r,x,v); if(a){ cls.push("al-"+a.level); tip=vsPrev(fmt(a.prev,x),a.date,a.kind,true); } }
       { const o=!isEx(r)&&OLM.get(k); if(o){ cls.push("ol"); tip=(tip?tip+"／":"")+olText(o,true); } }
+      if(osk) tip=(tip?tip+"／":"")+"順番ではとばします（押せば入力できます）";
       if(tip) tip=` title="${esc(tip)}"`;
       if(inSel(r,c)) cls.push("sel");
       if(r===cur.r&&c===cur.c) cls.push("cur"); if(flashCells.has(k)) cls.push("flash"); if(badCells.has(k)) cls.push("badflash");
@@ -3153,7 +3197,7 @@ function ceDraw(){
   $("#ceTitle").textContent=`列の編集：${it.name||"（新しい列）"}`;
   $("#ceSub").textContent=`${i+1}列目／${a.length}列`;
   $("#ceOrder").innerHTML=a.map((x,k)=>`<button type="button" data-k="${k}" class="${k===i?"on":""}${x.role==="id"?" isid":""}${ce.orig.has(x.id)?"":" isnew"}" aria-pressed="${k===i}">${esc(x.name||"（新しい列）")}</button>`).join("");
-  $("#ceItem").innerHTML=itemCard(it,i,S.ts,true);
+  $("#ceItem").innerHTML=itemCard(it,i,S.ts,true,a);
   document.querySelector('#colDlg [data-ce="moveL"]').disabled=i<=0;
   document.querySelector('#colDlg [data-ce="moveR"]').disabled=i>=a.length-1;
   document.querySelector('#colDlg [data-ce="del"]').disabled=a.length<=1;
@@ -3306,8 +3350,9 @@ function inputOrder(){
   const G=groupsOf(), L=listLen(); if(!G.length) return [];
   const R=L?L:lastRow()+1, rows=[];
   for(let r=0;r<R;r++) if(!isEx(r)) rows.push(r);
-  if(L) return G.flatMap(g=>rows.flatMap(r=>g.map(c=>({r,c}))));
-  const g=G[Math.max(0,groupIdx(cur.c))]; return rows.flatMap(r=>g.map(c=>({r,c})));
+  const live=p=>!onlySkip(p.r,p.c);
+  if(L) return G.flatMap(g=>rows.flatMap(r=>g.map(c=>({r,c})))).filter(live);
+  const g=G[Math.max(0,groupIdx(cur.c))]; return rows.flatMap(r=>g.map(c=>({r,c}))).filter(live);
 }
 function shiftCells(){
   if(listening) stopRec();
@@ -3315,6 +3360,7 @@ function shiftCells(){
   const it=S.items[cur.c];
   if(!it||it.role==="id"){ note("「音声で入力」の列のセルを選んでください"); return; }
   if(isEx(cur.r)){ note("除外した個体のセルでは使えません"); return; }
+  if(onlySkip(cur.r,cur.c)){ note("順番でとばすセルでは使えません"); return; }
   const seq=inputOrder(); const k=seq.findIndex(p=>p.r===cur.r&&p.c===cur.c);
   if(k<0){ note("このセルには値がありません"); return; }
   let last=-1; seq.forEach((p,i)=>{ if(hasVal(D[p.r]?.[S.items[p.c].id])) last=i; });
@@ -3449,7 +3495,26 @@ let draft=null;
 const STEPS=[0,0.1,0.2,0.25,0.5,1,5,10];
 const lvSel=(k,v)=>`<select data-k="cmp.${k}" aria-label="前回比 ${KIND_S[k]}">${LEVELS.map(([x,l])=>`<option value="${x}" ${x===v?"selected":""}>${l}</option>`).join("")}</select>`;
 /* 項目の編集欄（4.9〜：設定画面と、表の見出しから開く列の編集で共通）。compact：⠿・＋上・＋下・✕ を出さない */
-function itemCard(it,i,ts,compact){ const c=normCmp(it.cmp); return `
+/* 4.9.8：調べる個体を限る（it.only）の欄。all：同じ調査の項目（事前入力の数値の列を選ぶため）。数値の事前入力の列がなければ出さない */
+function onlyRows(it,all){
+  const ids=(all||[]).filter(x=>x.role==="id"&&isNum(x)), on=Array.isArray(it.only)?it.only.filter(o=>o&&typeof o.by==="string"):[];
+  if(!ids.length&&!on.length) return "";
+  const nv=v=>typeof v==="number"?String(v):"";
+  let h="", lost=false;
+  for(let k=0;k<Math.min(2,on.length+1);k++){ const o=on[k]||{}, gone=!!o.by&&!ids.some(x=>x.id===o.by); if(gone) lost=true;
+    h+=`<div class="irow cmp ionly"><span class="cmpl">${k?"かつ":"調べる個体を限る"}</span>
+      <select data-k="only.by" data-n="${k}" aria-label="${k?"もう1つの条件の列":"個体を限る列"}"><option value="">${k?"（条件を足さない）":"限らない（全部の個体で回る）"}</option>${ids.map(x=>`<option value="${esc(x.id)}" ${x.id===o.by?"selected":""}>${esc(x.name)}</option>`).join("")}${gone?`<option value="${esc(o.by)}" selected>（使えなくなった列）</option>`:""}</select>
+      ${o.by?`<label>が <input type="text" inputmode="decimal" data-k="only.min" data-n="${k}" value="${nv(o.min)}" placeholder="下限" aria-label="下限"> 〜 <input type="text" inputmode="decimal" data-k="only.max" data-n="${k}" value="${nv(o.max)}" placeholder="上限" aria-label="上限"> の個体だけ</label>`:""}</div>`; }
+  if(on.length) h+=`<p class="help" style="margin:.2em 0">${lost?"選んだ列がない（または数値でない）ので、今は全部の個体で回ります。":"範囲の外の個体では、この項目を入力の順番でとばします（表では灰色。セルを押せば入力でき、CSV は空欄のまま）。"}</p>`;
+  return h;
+}
+function onlySet(it,n,key,val){
+  const a=Array.isArray(it.only)?it.only.filter(o=>o&&typeof o.by==="string").map(o=>({...o})):[];
+  if(key==="by"){ if(!val) a.splice(n,1); else if(a[n]) a[n].by=val; else a.push({by:val}); }
+  else if(a[n]){ const x=onlyNum(String(val)); if(x!==null) a[n][key]=x; else delete a[n][key]; }
+  if(a.length) it.only=a.slice(0,2); else delete it.only;
+}
+function itemCard(it,i,ts,compact,all){ const c=normCmp(it.cmp); return `
     <div class="item${it.role==="id"?" isid":""}" data-i="${i}">
       <div class="irow ihead">
         ${compact?"":`<span class="handle" role="button" tabindex="0" aria-label="${esc(it.name||"項目")}の順番を変える（つかんで上下に動かす。キーボードは↑↓）" title="つかんで上下に動かす">⠿</span>`}
@@ -3469,13 +3534,14 @@ function itemCard(it,i,ts,compact){ const c=normCmp(it.cmp); return `
       </div>
       ${it.type==="choice"&&it.role!=="id"&&numericOpts(it)?`<p class="help" style="margin:.2em 0">候補が数字だけです。種類を<b>数値</b>に変えると、候補はそのまま「入力できる値」に移り、同じようにボタン・一覧から選べます。数値として記録するので、前回比（増えた・減った）や集計も使えます。</p>`:""}
       ${it.role!=="id"?`<div class="irow icall"><label class="chk"><input type="checkbox" data-k="call" ${it.call?"checked":""}><span>名前で呼んで入れる（順番では回らない。例「${esc(it.name||"備考")} ○○」）</span></label></div>`:""}
+      ${it.role!=="id"?onlyRows(it,all):""}
       ${ts&&isNum(it)&&it.role!=="id"?`<div class="irow cmp"><span class="cmpl">前回比</span>
         <label>減った${lvSel("dec",c.dec)}</label><label>増えた${lvSel("inc",c.inc)}</label><label>同じ${lvSel("same",c.same)}</label>
         <label>許容±<input type="text" inputmode="decimal" data-k="cmp.tol" value="${c.tol||""}" placeholder="0"></label></div>`:""}
     </div>`; }
 function drawItems(){
   try{ pcDraw(); }catch(e){}
-  $("#sItems").innerHTML=draft.items.map((it,i)=>itemCard(it,i,draft.ts,false)).join("");
+  $("#sItems").innerHTML=draft.items.map((it,i)=>itemCard(it,i,draft.ts,false,draft.items)).join("");
   drawGen(); if(document.querySelector("input[name=dir]:checked")) drawGroupPrev(); if($("#sFzPrev")) drawFzPrev();
   drawAliases();
   if(typeof foldSums==="function") foldSums();
@@ -3596,12 +3662,14 @@ function itemInputApply(it,k,el){
   if(k==="step") it.step=+el.value;
   if(k==="allow") it.allow=el.value;
   if(k==="options") it.options=el.value.split(/[、,，]/).map(s=>s.trim()).filter(Boolean);
+  if(k==="only.min"||k==="only.max") onlySet(it,+el.dataset.n||0,k.slice(5),el.value);
   if(k.startsWith("cmp.")){ it.cmp=normCmp(it.cmp); const sub=k.slice(4); it.cmp[sub]=sub==="tol"?Math.abs(+String(el.value).normalize("NFKC")||0):el.value; }
 }
 /* 入力のしかた・種類を変えたとき（欄を描き直すなら true） */
 function itemChangeApply(it,k,el){
   if(!it) return false;
   if(k==="role"){ it.role=el.value; return true; }
+  if(k==="only.by"){ onlySet(it,+el.dataset.n||0,"by",el.value); return true; }
   if(k==="call"){ if(el.checked) it.call=true; else delete it.call; try{ if(typeof drawGroupPrev==="function"&&document.querySelector("input[name=dir]:checked")) drawGroupPrev(); }catch(e){} return false; }
   if(k==="type"){ const was=it.type; it.type=el.value; if(it.type!=="num") it.step=0; if(it.type==="count") it.dec=0;
     /* 4.9.7：数字だけの候補の選択肢を数値に変えたら、候補を「入力できる値」に引き継ぐ（候補のボタン・一覧はそのまま使える） */
@@ -4229,7 +4297,7 @@ function tplBuild(j,withList){
 }
 function tplCounts(S0,list){
   const its=S0.items||[], ni=its.filter(it=>it.role==="id").length;
-  return {items:its.length,id:ni,meas:its.length-ni,list:(list||[]).length,alias:(S0.aliases||[]).length};
+  return {items:its.length,id:ni,meas:its.length-ni,list:(list||[]).length,alias:(S0.aliases||[]).length,only:its.filter(it=>onlyOf(it)).length};
 }
 /* 文字列 ⇔ リンク用の短い文字列（圧縮して base64url。圧縮できないブラウザはそのまま） */
 const b64u=u8=>{ let s=""; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000)); return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); };
@@ -4265,6 +4333,9 @@ function tplSanitize(o){
     return normItem({id,name:String(x.name??"項目").slice(0,60),type:TYPES.includes(x.type)?x.type:"num",
       dec:Math.max(0,Math.min(4,Math.floor(+x.dec||0))),step:Math.max(0,+x.step||0),role:x.role==="id"?"id":"meas",
       options:Array.isArray(x.options)?x.options.slice(0,200).map(v=>String(v).slice(0,60)):[],allow:String(x.allow??"").slice(0,200),cmp:x.cmp&&typeof x.cmp==="object"?x.cmp:{},call:x.call===true}); });
+  { const raw=src.items.slice(0,200), idm=new Map();
+    raw.forEach((x,i)=>{ const k=x&&typeof x.id==="string"?x.id:null; if(k!==null&&!idm.has(k)&&nS.items[i].role==="id") idm.set(k,nS.items[i].id); });
+    raw.forEach((x,i)=>{ if(nS.items[i].role==="id") return; const on=onlyNorm(x&&x.only,b=>typeof b==="string"?idm.get(b):undefined); if(on) nS.items[i].only=on; }); }
   if(!nS.items.length) nS.items=[normItem({name:"項目1",type:"num",dec:0})];
   nS.aliases=Array.isArray(src.aliases)?src.aliases.slice(0,300).map(a=>({from:String(a?.from??"").slice(0,200),to:String(a?.to??"").slice(0,100),item:String(a?.item??"").slice(0,40)})):[];
   nS.name=String(src.name||o.name||"ひな形").slice(0,80);
@@ -4282,7 +4353,7 @@ function tplSanitize(o){
 async function tplReceive(o,via){
   let r; try{ r=tplSanitize(o); }catch(e){ note(e.message,true); return false; }
   const c=tplCounts(r.nS,r.nD);
-  if(!confirm(`${via}のひな形「${r.nS.name}」から新しい調査を作りますか？\n項目 ${c.items}（音声 ${c.meas}・事前 ${c.id}）、個体リスト ${c.list}個体、言い換え ${c.alias}件\n（今の調査はそのまま残ります。ひな形に測定データは入っていません）`)) { note("ひな形からの作成をやめました"); return false; }
+  if(!confirm(`${via}のひな形「${r.nS.name}」から新しい調査を作りますか？\n項目 ${c.items}（音声 ${c.meas}・事前 ${c.id}）、個体リスト ${c.list}個体、言い換え ${c.alias}件${c.only?`、調べる個体を限る項目 ${c.only}`:""}\n（今の調査はそのまま残ります。ひな形に測定データは入っていません）`)) { note("ひな形からの作成をやめました"); return false; }
   const id=await svCreateRaw(r.nS,r.nD);
   if(!id){ note("この端末に保存できませんでした（容量を超えた可能性があります）。使わない調査を削除してから、もう一度開いてください。",true); return false; }
   await svOpen(id,`ひな形「${r.nS.name}」から新しい調査を作りました（項目 ${c.items}・個体 ${c.list}）。設定で確かめてから使ってください`);
@@ -5035,15 +5106,16 @@ function mgBuild(){
   mgSrc.forEach((src,si)=>{
     const sItems=(src.j.S.items||[]).map(normItem);
     /* 項目の対応 */
-    const map=new Map();
+    const map=new Map(), fresh=[];
     sItems.forEach(s=>{
       let t=S.items.find(x=>x.id===s.id&&(x.role==="id")===(s.role==="id"))||S.items.find(x=>x.name===s.name&&(x.role==="id")===(s.role==="id"));
       if(!t&&s.role!=="id"&&addItems){
         t=newByName.get(s.name);
-        if(!t){ t=normItem({...s,id:S.items.some(x=>x.id===s.id)||P.newItems.some(x=>x.id===s.id)?uid():s.id}); newByName.set(s.name,t); P.newItems.push(t); }
+        if(!t){ t=normItem({...s,id:S.items.some(x=>x.id===s.id)||P.newItems.some(x=>x.id===s.id)?uid():s.id}); newByName.set(s.name,t); P.newItems.push(t); fresh.push(t); }
       }
       if(t) map.set(s.id,t);
     });
+    fresh.forEach(t=>{ if(Array.isArray(t.only)) t.only=t.only.map(o=>{ const m=o&&typeof o.by==="string"?map.get(o.by):null; return m&&m.role==="id"?{...o,by:m.id}:o; }); });
     const kt=tIds.filter(t=>sItems.some(s=>s.role==="id"&&map.get(s.id)===t));
     const keyItemsS=kt.map(t=>sItems.find(s=>s.role==="id"&&map.get(s.id)===t));
     if(!kt.length) P.byRow=true;
@@ -5251,6 +5323,8 @@ const HELP=[
 "<p>入力の画面の表で、見出し（項目名）を押すと選ばれ、✎ の印が出ます。もう一度押すと<b>列の編集</b>が開きます（PCはダブルクリックでも開きます）。設定画面を開かなくても、その場で直せます。</p><ul><li><b>名前・種類・桁・候補・入力できる値・前回比</b>：設定画面の「調査項目」と同じ欄です。種類を変えると、記録済みの値を新しい種類に合わせて直します。</li><li><b>＋ 左に列を追加／＋ 右に列を追加</b>：今の列のすぐ左・右に新しい列を入れます。前の調査日では空欄になります。</li><li><b>← 左へ移動／右へ移動 →</b>：列の並びを入れ替えます。</li></ul><p><b>見出しをつかんで動かす</b>：選んだ見出し（✎ の印）をつかんで左右に動かすと、列ごと浮いて動き、ほかの列はずれて点線の空きができます。離した所に入ります（前の調査日の値の列も一緒に動きます）。PCはどの見出しでもドラッグできます。キーボードは見出しで Alt+← →。直後なら「元に戻す」で戻せます。画面の端に近づけると表が横に送られます。</p><ul><li><b>この列を削除</b>：値が入っている列は確かめてから消します。保存の直後なら「元に戻す」で戻せます。</li><li>上の<b>列の並び</b>を押すと、ほかの列に切り替えて続けて直せます。</li></ul><p>変更は「保存」を押すまで反映されません。開くと聞き取りは止まります（続けるときはマイクを押します）。項目の内部の番号は変えないので、経時調査の前の調査日・データの統合・ひな形はそのまま使えます。固定している列の内側に列を足したときは、固定の範囲も合わせて広げます。</p>"},
 {g:"table",id:"order",t:"入力の進む順番（行・列・グループ）",k:"順番 行単位 列単位 グループ 横 縦 進む方向 じゅんばん ぎょう れつ ぐるーぷ",go:"dir",b:
 "<ul><li><b>行単位</b>：1個体の全項目 → 次の個体</li><li><b>列単位</b>：1項目を全個体 → 次の項目</li><li><b>グループ単位</b>：決めた列数のまとまりごとに 横 → 次の個体。例 <code>2,1</code> なら、左の2列を全個体分、次の1列を全個体分</li></ul><p>列単位・グループ単位で次の列（まとまり）に移るときは、そのまとまりで最初に空いているセルから始めます。前半の個体を調べた後に個体を足して続きを調べるときも、調べ終わった先頭に戻りません。すべて埋まっているときは先頭の個体から始めます。</p>"},
+{g:"table",id:"onlyskip",t:"調べる個体を限る項目（書かない欄をとばす）",k:"とばす 飛ばす 空欄 限る 一部 果実番号 5個 10個 灰色 個体を限る 上限 下限 とばす げんてい くうらん",go:"items",b:
+"<p>同じ表の中で、項目によって調べる個体が違うときに使います（例：果実重は果実番号 1〜10、糖度は 1〜5 だけ）。</p><ol><li>設定の「調査項目」（または表の見出しを2回押して開く列の編集）で、その項目の「調べる個体を限る」に、事前入力の数値の列（例 果実番号）を選びます。</li><li>下限・上限を入れます（例：下限は空、上限 5）。片方だけでもかまいません。</li><li>もう1つ条件を足すと、両方に合う個体だけを回ります（例：樹番号が 1〜2 かつ 果実番号が 1〜5）。</li></ol><ul><li>範囲の外の個体では、その項目を<b>入力の順番でだけ</b>とばします。「次」「戻る」「スキップ」、値を入れた後の移動、「残り」の数、「今日の調査を終える」の空欄の数、「5個 0」「残り全部」「No.3〜8 に 0」のまとめて入力が対象です。</li><li>とばすセルは表で灰色になります。<b>セルを押せば今までどおり入力できます</b>（例外の個体に書くとき）。CSV は変わらず、入れていなければ空欄です。</li><li>選んだ列を削除した・数値でなくしたとき、その個体の値が空のときは、とばさずに回ります。</li><li>この指定をしていない調査の動きは、今までと同じです。</li><li>ひな形にも入ります。4.9.7 までの版で受け取ると、この指定は外れて全部の欄を回ります。</li></ul>"},
 {g:"table",id:"list",t:"個体リスト（事前入力の列）",k:"個体リスト 事前入力 樹番号 処理区 果実番号 組み合わせ Excel 貼り付け こたいりすと じぜんにゅうりょく じゅばんごう しょりく",go:"list",b:
 "<p>事前入力の列（樹番号・処理区など）は、個体リストで先に入れておきます。「組み合わせで個体リストを作る」で、例えば 樹 <code>1-5</code> × 処理区 <code>無処理、遮光</code> × 果実 <code>1-10</code> の全組み合わせを作れます。Excelで事前入力の列を並べてコピーし、貼り付けることもできます。リストを減らすと、外れた行を表から消すか確かめます。</p><p><b>個体ごとに数が違うとき</b>は「＋ 今のリストの最後に付け足す」を使います。例えば 個体名 <code>A</code>・株 <code>1-3</code>・反復 <code>1-2</code> で付け足し、次に 個体名 <code>B</code>・株 <code>1-5</code>・反復は空のまま、で付け足します。空の欄はその列を空けたまま作ります。付け足しは今のリストを変えないので、調査の途中で個体を足すときにも使えます。「付け足しを1つ戻す」で直前の付け足しを取り消せます。</p><p>測定値は行の位置（No.）で持っています。値を入れた後にリストの途中へ行を足したり消したりすると、個体と測定値がずれるので、足すときは最後に付け足してください（途中を変えたときは設定の画面で知らせます）。</p>"},
 {g:"table",id:"freeze",t:"ウインドウ枠の固定",k:"固定 ウインドウ枠 列 行 スクロール 見出し こてい ういんどうわく",go:"freeze",b:
@@ -5351,6 +5425,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.9.8",d:"2026-11-23",a:[["項目ごとに、調べる個体を限れるように（例：糖度は果実番号 1〜5 だけ。範囲の外の個体ではその項目を入力の順番でとばす。表では灰色、押せば入力できる。指定しない調査は今までと同じ）","onlyskip"]]},
 {v:"Pro 4.9.7",d:"2026-11-22",a:[["数値の列で、入力できる値が決まった少数の値（例 0,1,2,3,4,5）のとき、候補のボタン・一覧から選べるように（発病度・障害程度など。数値で記録し、前回比の注意もそのまま使える）","allow"],["iPhone で、マイクを入り切りしたあとなどに読み上げ・復唱が鳴らなくなることへの対策（準備の自動やり直し、復唱ボタンを押したその場で読む、マイク診断に読み上げの記録）","tts"],["備考などの列を「名前で呼んで入れる」列にできるように（順番では回らず、「備考 小玉」「さっきの備考欄に小玉入れて」「5番の備考に小玉」と言うとその列に入る。新しく作る調査の備考は最初からこの列）","callcol"]]},
 {v:"Pro 4.9.5",d:"2026-11-21",a:[["選択肢の列も、候補のボタンを押して入れられるように（押すと次へ進む）","textchoice"],["選択肢の列は、表のセルを押すと候補の一覧から選べるように","textchoice"],["刻み（0.5刻みなど）を決めた項目は、刻みに合わない値を丸めずに「刻みに合いません」と知らせて入れないように","numbers"]]},
 {v:"Pro 4.9.4",d:"2026-11-15",a:[["調査日の予定のカレンダーに祝日（振替休日・国民の休日を含む）を表示","plan"]]},
@@ -5703,7 +5778,7 @@ function endOpen(){
   if(listening||standby) stopRec(); clearPend(); save();
   endDone=false;
   const L=listLen(), R=L||lastRow()+1, M=meas(), blanks=[]; let filled=0, live=0;
-  for(let r=0;r<R;r++){ if(isEx(r)) continue; live++; M.forEach(c=>{ if(hasVal(D[r]?.[S.items[c].id])) filled++; else if(!isCall(c)) blanks.push({r,c}); }); }
+  for(let r=0;r<R;r++){ if(isEx(r)) continue; live++; M.forEach(c=>{ if(hasVal(D[r]?.[S.items[c].id])) filled++; else if(!isCall(c)&&!onlySkip(r,c)) blanks.push({r,c}); }); }
   const ol=[...olCompute(S.curDate).values()].filter(o=>!isEx(o.r)).sort((a,b)=>a.r-b.r||a.c-b.c);
   $("#endSub").textContent=(S.name||"調査")+(S.ts?`・調査日 ${S.curDate}`:"");
   const box=(v,l,bad)=>`<div${bad?' class="bad"':""}><b>${v.toLocaleString()}</b><small>${esc(l)}</small></div>`;
