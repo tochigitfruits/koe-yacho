@@ -2477,7 +2477,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.9.11（2026-11-25）";
+const APP_VER="Pro 4.9.12（2026-11-25）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -4343,6 +4343,50 @@ function metaNorm(m){
   if("made" in o&&!(typeof o.made==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(o.made))) o.made="";
   return Object.keys(o).length?o:null;
 }
+/* 4.9.12：個体リストの作り方（gen。連動の契約 v1 の 5.）を行に広げる。
+   rows：作り方の並び／each：入れ子の繰り返し（先頭が外側。seq＝番号の範囲〔fmt の {n}・{n:k}〕、vals＝値の一覧、cont＝外側が変わっても番号を続ける）／set：その作り方の行すべてに入れる値。
+   事前入力の項目にない id には値を入れない（繰り返しの回数はそのまま）。形が読めないときは null（list を使う）。広げた行が GEN_MAX を超えるときは受け取らない */
+const GEN_MAX=5000;
+function tplGenRows(g,ids){
+  if(!g||typeof g!=="object"||!Array.isArray(g.rows)||!g.rows.length) return null;
+  const idset=new Set(ids), okVal=v=>(typeof v==="number"&&Number.isFinite(v))||(typeof v==="string"&&v.trim()!=="");
+  const cleanVal=v=>typeof v==="number"?v:v.slice(0,100);
+  if(g.rows.length>100000) return null;
+  const groups=[];
+  for(const r of g.rows){   /* ロットごとの対照では、ロット×集団の数だけ並ぶ（数百になることがある） */
+    if(!r||typeof r!=="object"||!Array.isArray(r.each)||!r.each.length||r.each.length>8) return null;
+    const each=[];
+    for(const e of r.each){
+      if(!e||typeof e!=="object"||typeof e.id!=="string") return null;
+      const id=idset.has(e.id)?e.id:null;
+      if(Array.isArray(e.vals)){ if(!e.vals.length||e.vals.length>100000||!e.vals.every(okVal)) return null; each.push({id,vals:e.vals.map(cleanVal)}); continue; }
+      const q=e.seq; if(!q||typeof q!=="object"||!Number.isInteger(q.from)||!Number.isInteger(q.to)||q.from<0||q.to<q.from||q.to>1e7) return null;   /* 行の数の上限は、下で合計を数えて知らせる */
+      let fmt=null, k=0;
+      if(q.fmt!==undefined){ if(typeof q.fmt!=="string"||q.fmt.length>40) return null; const m=q.fmt.match(/\{n(?::(\d))?\}/g); if(!m||m.length!==1) return null;
+        const d=q.fmt.match(/\{n(?::(\d))?\}/); k=d[1]?+d[1]:0; if(d[1]&&(k<1||k>6)) return null; fmt=q.fmt; }
+      each.push({id,from:q.from,to:q.to,fmt,k,cont:q.cont===true});
+    }
+    const set={}; if(r.set!==undefined){ if(!r.set||typeof r.set!=="object"||Array.isArray(r.set)) return null;
+      Object.keys(r.set).forEach(id=>{ if(idset.has(id)&&okVal(r.set[id])) set[id]=cleanVal(r.set[id]); }); }
+    groups.push({each,set});
+  }
+  const total=groups.reduce((a,G)=>a+G.each.reduce((m,e)=>m*(e.vals?e.vals.length:e.to-e.from+1),1),0);
+  if(total>GEN_MAX) throw new Error(`作り方から作ると、個体リストが ${total.toLocaleString()} 行になります。受け取れるのは ${GEN_MAX.toLocaleString()} 行までです。試験設計ナビで集団・ロットなどごとにひな形を分けると、1つずつ受け取れます`);
+  const out=[];
+  const num=(e,n)=>e.fmt===null?n:e.fmt.replace(/\{n(?::\d)?\}/,e.k?String(n).padStart(e.k,"0"):String(n));
+  for(const G of groups){
+    const cnt={};
+    const rec=(i,cur)=>{
+      if(i===G.each.length){ out.push(Object.assign({},cur,G.set)); return; }
+      const e=G.each[i], put=v=>{ const x=Object.assign({},cur); if(e.id) x[e.id]=v; rec(i+1,x); };
+      if(e.vals){ e.vals.forEach(put); return; }
+      if(e.cont){ const key=e.id||("#"+i); if(cnt[key]==null) cnt[key]=e.from; for(let n=e.from;n<=e.to;n++) put(num(e,cnt[key]++)); return; }
+      for(let n=e.from;n<=e.to;n++) put(num(e,n));
+    };
+    rec(0,{});
+  }
+  return out;
+}
 /* 受け取ったひな形を、安全な形に直す（知らない項目は捨て、長さ・数をおさえる） */
 function tplSanitize(o){
   if(!o||o.app!==TPL_APP||!o.S||!Array.isArray(o.S.items)) throw new Error("声で野帳 Pro のひな形ではありません");
@@ -4366,16 +4410,17 @@ function tplSanitize(o){
   nS.sessions={}; nS.curDate=today();
   { const mt=metaNorm(o.meta!=null?o.meta:src.meta); if(mt) nS.meta=mt; else delete nS.meta; }   /* 4.9.9：渡すときは一番上、調査の中では S.meta（契約 v1 の 3.1） */
   const ids=nS.items.filter(it=>it.role==="id").map(it=>it.id);
-  const nD=(Array.isArray(o.list)?o.list.slice(0,5000):[]).map(r=>{ const x={}; ids.forEach(id=>{ const v=r?.[id];
+  const gr=tplGenRows(o.gen,ids);   /* 4.9.12：作り方があれば、それだけから行を作る（list は作り方を知らない古い版のための写し。契約 v1 の 5.） */
+  const nD=(gr||(Array.isArray(o.list)?o.list.slice(0,5000):[])).map(r=>{ const x={}; ids.forEach(id=>{ const v=r?.[id];
     if(typeof v==="number"&&Number.isFinite(v)) x[id]=v; else if(typeof v==="string"&&v.trim()) x[id]=v.slice(0,100); }); return x; });
   while(nD.length&&!Object.keys(nD[nD.length-1]).length) nD.pop();
-  return {nS,nD};
+  return {nS,nD,gen:!!gr};
 }
 /* ひな形から新しい調査を作る（確かめてから） */
 async function tplReceive(o,via){
   let r; try{ r=tplSanitize(o); }catch(e){ note(e.message,true); return false; }
   const c=tplCounts(r.nS,r.nD);
-  if(!confirm(`${via}のひな形「${r.nS.name}」から新しい調査を作りますか？${o.ver?`\n作成：${String(o.ver).slice(0,80)}`:""}\n項目 ${c.items}（音声 ${c.meas}・事前 ${c.id}）、個体リスト ${c.list}個体、言い換え ${c.alias}件${c.only?`、調べる個体を限る項目 ${c.only}`:""}\n（今の調査はそのまま残ります。ひな形に測定データは入っていません）`)) { note("ひな形からの作成をやめました"); return false; }
+  if(!confirm(`${via}のひな形「${r.nS.name}」から新しい調査を作りますか？${o.ver?`\n作成：${String(o.ver).slice(0,80)}`:""}\n項目 ${c.items}（音声 ${c.meas}・事前 ${c.id}）、個体リスト ${c.list}個体${r.gen?"（作り方から）":""}、言い換え ${c.alias}件${c.only?`、調べる個体を限る項目 ${c.only}`:""}\n（今の調査はそのまま残ります。ひな形に測定データは入っていません）`)) { note("ひな形からの作成をやめました"); return false; }
   const id=await svCreateRaw(r.nS,r.nD);
   if(!id){ note("この端末に保存できませんでした（容量を超えた可能性があります）。使わない調査を削除してから、もう一度開いてください。",true); return false; }
   await svOpen(id,`ひな形「${r.nS.name}」から新しい調査を作りました（項目 ${c.items}・個体 ${c.list}）。設定で確かめてから使ってください`);
@@ -5447,6 +5492,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.9.12",d:"2026-11-25",a:[["ひな形の個体リストを「作り方」（例：系統 L-001〜L-150 × 株 1〜3）で受け取れるように。数百〜数千行の個体リストも、短いリンクで渡せる（受け取れるのは 5,000 行まで）","template"]]},
 {v:"Pro 4.9.11",d:"2026-11-25",a:[["設定「Excel・CSVの見出しに項目の id を付ける」（例「糖度 [brix]」。年をまたいで同じ項目を突き合わせるため。初期値はオフで、今までと同じ見出し）。読み込むときは見出しの [id] を外して読む","export"]]},
 {v:"Pro 4.9.10",d:"2026-11-25",a:[["試験設計ナビで作ったひな形の調査は、Excel・CSVのファイル名に設計のID（8桁）が付くように（例「調査名_0a1b2c3d_2026-12-01.csv」。どの設計のデータかを取り違えないため）","export"]]},
 {v:"Pro 4.9.9",d:"2026-11-25",a:[["試験設計ナビなどで作ったひな形の「作った元の情報」（設計のIDなど）を、調査に残してバックアップ・共有でも持ち回るように。受け取るときの確認に、作ったアプリの版を表示","template"]]},
