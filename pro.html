@@ -1066,6 +1066,7 @@ td.cur .pva{color:inherit}
       <div class="toggle"><button type="button" class="ghost" id="sSoundTest">音のテスト</button><span class="ver">表示 → 注意 → 禁止 の順に鳴ります</span></div>
       <label class="toggle" for="sAuto"><span>キーボード音声入力モード<small class="ver" style="display:block">手入力欄に Win+H やキーボードのマイクで話すと、1.2秒の間で自動確定</small></span><input type="checkbox" id="sAuto"></label>
       <label class="toggle" for="sSerial"><span>左端に通し番号（No.）を付ける</span><input type="checkbox" id="sSerial"></label>
+      <label class="toggle" for="sCsvIds"><span>Excel・CSVの見出しに項目の id を付ける（例「糖度 [brix]」）</span><input type="checkbox" id="sCsvIds"></label>
       <label class="toggle" for="sUndoGap"><span>声の「取り消し」を続けるときの間隔<small class="ver" style="display:block">読み上げの声を拾って取り消しが進みすぎるのを防ぎます。この間隔より早い2回目は無視します（ボタンには効きません）</small></span><select id="sUndoGap"><option value="0">なし</option><option value="1.5">1.5秒</option><option value="3">3秒</option><option value="5">5秒</option></select></label>
     </fieldset>
     </details>
@@ -1420,6 +1421,7 @@ function normS(){
   { const g=+S.undoGap; S.undoGap=(S.undoGap!==undefined&&S.undoGap!==null&&[0,1.5,3,5].includes(g))?g:3; }
   if(!["full","short","beep"].includes(S.rbMode)) S.rbMode="full";
   if(typeof S.fastCommit!=="boolean") S.fastCommit=false;
+  if(typeof S.csvIds!=="boolean") S.csvIds=false;   /* 4.9.11 */
   if(typeof S.rbManual!=="boolean") S.rbManual=false;
   if(!["off","low","mid","high"].includes(S.outlier)) S.outlier="mid";
   /* 4.9.6：名前で呼んで入れる列。名前だけで言ったときの個体（cur＝今のセル／last＝さっき値を入れた個体） */
@@ -2475,7 +2477,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.9.10（2026-11-25）";
+const APP_VER="Pro 4.9.11（2026-11-25）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -2945,9 +2947,13 @@ function valAt(r,it,date){
 }
 function lastRowAll(){ let last=lastRow(); Object.values(S.sessions).forEach(rows=>rows.forEach((m,i)=>{ if(Object.keys(m).length) last=Math.max(last,i); })); return last; }
 const cellOut=(v,it,asText)=>!hasVal(v)?"":(asText?fmt(v,it):v);
+/* 4.9.11：項目の列の見出し。設定 csvIds がオンなら、末尾に「半角スペース＋[id]」（連動の契約 v1 の 7.2）。Pro が付ける列（調査日・No.・状態・除外日・理由）には付けない */
+const colHead=(it,tail="")=>it.name+tail+(S.csvIds?` [${it.id}]`:"");
+/* 見出しを名前と id に分ける（読み込み・Excel の書式で使う。id のない見出しは id:null） */
+const headSplit=h=>{ const t=String(h).trim(), m=t.match(/^(.*\S) \[([\w-]{1,40})\]$/); return m?{name:m[1],id:m[2]}:{name:t,id:null}; };
 /* その日の表 */
 function aoaDay(asText){
-  const head=["調査日"].concat(S.serial?["No."]:[],S.items.map(it=>it.name),["状態"]);
+  const head=["調査日"].concat(S.serial?["No."]:[],S.items.map(it=>colHead(it)),["状態"]);
   const out=[head];
   for(let r=0;r<=lastRow();r++){
     out.push([S.curDate].concat(S.serial?[r+1]:[],S.items.map(it=>cellOut(D[r]?.[it.id],it,asText)),[exState(r,S.curDate)]));
@@ -2957,7 +2963,7 @@ function aoaDay(asText){
 /* 縦持ち（R用）：1行＝1個体×1調査日 */
 function aoaLong(asText){
   const ids=idItems(), ms=meas().map(i=>S.items[i]);
-  const out=[["調査日"].concat(ids.map(it=>it.name),ms.map(it=>it.name),["状態"])];
+  const out=[["調査日"].concat(ids.map(it=>colHead(it)),ms.map(it=>colHead(it)),["状態"])];
   const R=lastRowAll();
   allDates().forEach(d=>{
     for(let r=0;r<=R;r++){
@@ -2973,7 +2979,7 @@ function aoaLong(asText){
 /* 野帳型：1行＝1個体、列＝項目_調査日（調査日ごとにまとめて横に並べる） */
 function aoaWide(asText){
   const ids=idItems(), ms=meas().map(i=>S.items[i]), ds=allDates();
-  const head=ids.map(it=>it.name); ds.forEach(d=>ms.forEach(it=>head.push(`${it.name}_${d}`))); head.push("除外日","理由");
+  const head=ids.map(it=>colHead(it)); ds.forEach(d=>ms.forEach(it=>head.push(colHead(it,"_"+d)))); head.push("除外日","理由");
   const out=[head];
   for(let r=0;r<=lastRowAll();r++){
     const row=ids.map(it=>cellOut(D[r]?.[it.id],it,asText));
@@ -2990,7 +2996,7 @@ function sheetFrom(rows){
   const ws=XLSX.utils.aoa_to_sheet(rows);
   const head=rows[0];
   head.forEach((h,c)=>{
-    const it=S.items.find(x=>h===x.name||String(h).startsWith(x.name+"_"));
+    const hs=headSplit(h), it=(hs.id&&S.items.find(x=>x.id===hs.id))||S.items.find(x=>hs.name===x.name||hs.name.startsWith(x.name+"_"));
     if(!it||!isNum(it)) return;
     for(let r=1;r<rows.length;r++){ const ref=XLSX.utils.encode_cell({r,c}); if(ws[ref]&&ws[ref].t==="n") ws[ref].z=it.dec?("0."+"0".repeat(it.dec)):"0"; }
   });
@@ -3839,7 +3845,7 @@ function openSettings(go,then){
   $("#sGroups").value=draft.groups||""; drawGroupPrev();
   document.querySelector(`input[name=mode][value=${draft.mode}]`).checked=true;
   document.querySelector(`input[name=sbm][value=${draft.standbyMode}]`).checked=true;
-  $("#sRead").checked=draft.readback; $("#sSerial").checked=draft.serial; $("#sAuto").checked=!!draft.autoCommit; $("#sSound").checked=!!draft.alertSound;
+  $("#sRead").checked=draft.readback; $("#sSerial").checked=draft.serial; $("#sCsvIds").checked=!!draft.csvIds; $("#sAuto").checked=!!draft.autoCommit; $("#sSound").checked=!!draft.alertSound;
   $("#sUndoGap").value=String(draft.undoGap);
   $("#sCallDef").value=draft.callDef||"cur"; $("#sRbMode").value=draft.rbMode; $("#sFast").checked=!!draft.fastCommit; $("#sOutlier").value=draft.outlier;
   $("#sIosNp").checked=iosNoPause();
@@ -3966,7 +3972,7 @@ $("#sSave").onclick=()=>{
   draft.dir=document.querySelector("input[name=dir]:checked").value; draft.groups=$("#sGroups").value.trim();
   draft.mode=document.querySelector("input[name=mode]:checked").value;
   draft.standbyMode=document.querySelector("input[name=sbm]:checked").value;
-  draft.readback=$("#sRead").checked; draft.serial=$("#sSerial").checked; draft.autoCommit=$("#sAuto").checked; draft.rate=+$("#sRate").value||1.1;
+  draft.readback=$("#sRead").checked; draft.serial=$("#sSerial").checked; draft.csvIds=$("#sCsvIds").checked; draft.autoCommit=$("#sAuto").checked; draft.rate=+$("#sRate").value||1.1;
   draft.alertSound=$("#sSound").checked; draft.undoGap=+$("#sUndoGap").value;
   draft.callDef=$("#sCallDef").value==="last"?"last":"cur"; draft.rbMode=$("#sRbMode").value; draft.fastCommit=$("#sFast").checked; draft.outlier=$("#sOutlier").value;
   try{ if($("#sIosNp").checked) localStorage.setItem(IOS_NP_KEY,"1"); else localStorage.removeItem(IOS_NP_KEY); }catch(e){}
@@ -4232,14 +4238,14 @@ function toDateStr(v){
 }
 function importTable(rows){
   if(rows.length<2){ ioMsg("データの行が見つかりません。"); return; }
-  const head=rows[0].map(h=>String(h).trim());
+  const hsp=rows[0].map(headSplit), head=hsp.map(x=>x.name);   /* 4.9.11：見出しの末尾の [id] を外して名前で読む。id が項目と合えば id で突き合わせる */
   const iDate=head.indexOf("調査日"), iState=head.indexOf("状態");
   const skip=new Set([iDate,iState,head.indexOf("No.")].filter(i=>i>=0));
   /* 列と項目の対応（同じ名前の項目がなければ、値から種類を推定して項目を追加） */
   const items=S.items.map(normItem), colItem={}; const added=[];
   head.forEach((h,c)=>{
     if(skip.has(c)||!h) return;
-    let it=items.find(x=>x.name===h);
+    let it=(hsp[c].id&&items.find(x=>x.id===hsp[c].id))||items.find(x=>x.name===h);
     if(!it){
       const vals=rows.slice(1).map(r=>r[c]).filter(v=>String(v).trim()!=="");
       const nums=vals.every(v=>!isNaN(Number(v)));
@@ -4280,7 +4286,7 @@ function importTable(rows){
    配り方：ファイル（.json）／リンク（pro.html#tpl=…）／QRコード（リンクを載せる）。リンクの # 以降はサーバーへ送られない。
    受け取ると、確かめたうえで新しい調査を作る（今の調査は変えない） */
 const TPL_APP="koe-yacho-v2-template";
-const TPL_KEYS=["name","items","aliases","callDef","ts","outFmt","dir","groups","mode","standbyMode","readback","rbMode","rate","fastCommit","serial","autoCommit","alertSound","undoGap","freezeCols","freezeRows","outlier","plan","prevCols"];
+const TPL_KEYS=["name","items","aliases","callDef","ts","outFmt","dir","groups","mode","standbyMode","readback","rbMode","rate","fastCommit","serial","autoCommit","alertSound","undoGap","freezeCols","freezeRows","outlier","plan","prevCols","csvIds"];
 const TPL_HOME="https://tochigitfruits.github.io/koe-yacho/pro.html";
 const QR_SRC="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
 const QR_SRI="sha384-8FWZA6BGMXhsfO+BLtrJK0We6gg5o1JyO8xQm6peWDEUs17ACA5ziE/NIAkl9z2k";
@@ -4356,7 +4362,7 @@ function tplSanitize(o){
   nS.name=String(src.name||o.name||"ひな形").slice(0,80);
   nS.groups=String(nS.groups??"").slice(0,100); nS.rate=Math.max(0.6,Math.min(2,+nS.rate||1.1));
   if(!["row","col","group"].includes(nS.dir)) nS.dir="row"; if(!["cont","ptt"].includes(nS.mode)) nS.mode="cont";
-  ["ts","readback","fastCommit","serial","autoCommit","alertSound"].forEach(k=>{ if(nS[k]!==undefined) nS[k]=!!nS[k]; });
+  ["ts","readback","fastCommit","serial","autoCommit","alertSound","csvIds"].forEach(k=>{ if(nS[k]!==undefined) nS[k]=!!nS[k]; });
   nS.sessions={}; nS.curDate=today();
   { const mt=metaNorm(o.meta!=null?o.meta:src.meta); if(mt) nS.meta=mt; else delete nS.meta; }   /* 4.9.9：渡すときは一番上、調査の中では S.meta（契約 v1 の 3.1） */
   const ids=nS.items.filter(it=>it.role==="id").map(it=>it.id);
@@ -5441,6 +5447,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.9.11",d:"2026-11-25",a:[["設定「Excel・CSVの見出しに項目の id を付ける」（例「糖度 [brix]」。年をまたいで同じ項目を突き合わせるため。初期値はオフで、今までと同じ見出し）。読み込むときは見出しの [id] を外して読む","export"]]},
 {v:"Pro 4.9.10",d:"2026-11-25",a:[["試験設計ナビで作ったひな形の調査は、Excel・CSVのファイル名に設計のID（8桁）が付くように（例「調査名_0a1b2c3d_2026-12-01.csv」。どの設計のデータかを取り違えないため）","export"]]},
 {v:"Pro 4.9.9",d:"2026-11-25",a:[["試験設計ナビなどで作ったひな形の「作った元の情報」（設計のIDなど）を、調査に残してバックアップ・共有でも持ち回るように。受け取るときの確認に、作ったアプリの版を表示","template"]]},
 {v:"Pro 4.9.8",d:"2026-11-23",a:[["項目ごとに、調べる個体を限れるように（例：糖度は果実番号 1〜5 だけ。範囲の外の個体ではその項目を入力の順番でとばす。表では灰色、押せば入力できる。指定しない調査は今までと同じ）","onlyskip"]]},
