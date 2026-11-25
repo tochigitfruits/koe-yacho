@@ -160,6 +160,11 @@ td.osk{background:color-mix(in srgb,var(--line) 60%,transparent)}
 #tbl tr.fgrow button.fgb .fgc{font-weight:400;color:var(--muted);font-size:.85em}
 #tbl tr.fgrow button.fgb .fgc.done{color:var(--ok,#1b7f3b)}
 #tbl tr.fgrow.hascur td.fgh{box-shadow:inset 3px 0 0 var(--accent)}
+.foldhint{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:0 0 8px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:10px;background:color-mix(in srgb,var(--accent) 7%,var(--surface));font-size:.9rem}
+.foldhint span{flex:1 1 16em;min-width:0}
+.foldhint button{padding:4px 10px}
+.foldsel{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.foldsel select{min-width:9em;max-width:100%}
 td.sel{background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:inset 0 0 0 1px var(--accent)}
 td.cur{background:var(--mark);color:var(--mark-ink);font-weight:700;box-shadow:inset 0 0 0 2px var(--mark-ink)}
 td.flash{animation:flash .6s ease-out}
@@ -683,6 +688,7 @@ td.cur .pva{color:inherit}
     <button type="button" class="ghost" id="newDateGo">この日の調査を始める</button>
     <button type="button" class="ghost" id="newDateCancel">やめる</button>
   </div>
+  <div class="foldhint" id="foldHint" role="status" hidden></div>
   <div class="tablebox" id="tablebox"><table id="tbl"></table><div class="cdph" id="cdPh" hidden></div><div class="cellbar" id="cellBar" hidden><div class="cblist" id="cellList" role="listbox" aria-label="候補から選ぶ" hidden></div><div class="cbrow"><input id="cellIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" aria-label="今のセルに直接入力"><button type="button" id="cellOk">入力</button><button type="button" id="cellX" class="sec" aria-label="直接入力を終える" title="直接入力を終える">✕</button></div><div class="cbmsg" id="cellMsg" hidden><span id="cellMsgT"></span><button type="button" id="cellYes">はい</button><button type="button" id="cellNo" class="sec">やり直し</button></div></div></div>
   <div class="ver" id="ceHint">今のセル（黄色）をもう一度押すと、その場でキーボード入力できます（PCはダブルクリック）</div>
 
@@ -1033,8 +1039,9 @@ td.cur .pva{color:inherit}
         <span class="ver" id="sGroupPrev"></span>
       </div>
       <div class="field">
-        <label for="sFold"><b>行のまとめ方</b>（同じ値が続く行を、事前入力の列でまとめて開く・閉じる。入力の順番は変わりません）</label>
-        <select id="sFold"></select>
+        <b id="sFoldLb">行のまとめ方</b>（同じ値が続く行を、事前入力の列でまとめて開く・閉じる。入力の順番は変わりません）
+        <div class="foldsel" role="group" aria-labelledby="sFoldLb"><label>1段目 <select id="sFold1"></select></label><span aria-hidden="true">→</span><label>2段目 <select id="sFold2"></select></label></div>
+        <div class="hchips" id="sFoldTpl"></div>
         <span class="ver">まとめているときは、上の行の固定（ウインドウ枠の固定の行）は使いません。表の見出しは固定のままです。</span>
       </div>
       <label class="toggle" for="sFoldAuto"><span>入力が次のまとまりに移ったら、前のまとまりを閉じる<small class="ver" style="display:block">自分で開いたまとまりは閉じません</small></span><input type="checkbox" id="sFoldAuto"></label>
@@ -1437,7 +1444,7 @@ function normS(){
   if(typeof S.fastCommit!=="boolean") S.fastCommit=false;
   if(typeof S.csvIds!=="boolean") S.csvIds=false;   /* 4.9.11 */
   { const f=foldNorm(S.fold,S.items); if(f) S.fold=f; else delete S.fold;   /* 4.9.13 */
-    if(!S.foldOpen||typeof S.foldOpen!=="object"||Array.isArray(S.foldOpen)) S.foldOpen={}; if(typeof S.foldAuto!=="boolean") S.foldAuto=true; }
+    if(!S.foldOpen||typeof S.foldOpen!=="object"||Array.isArray(S.foldOpen)) S.foldOpen={}; if(typeof S.foldAuto!=="boolean") S.foldAuto=true; if(typeof S.foldHint!=="boolean") S.foldHint=false; }
   if(typeof S.rbManual!=="boolean") S.rbManual=false;
   if(!["off","low","mid","high"].includes(S.outlier)) S.outlier="mid";
   /* 4.9.6：名前で呼んで入れる列。名前だけで言ったときの個体（cur＝今のセル／last＝さっき値を入れた個体） */
@@ -2493,7 +2500,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.9.13（2026-11-25）";
+const APP_VER="Pro 4.9.14（2026-11-26）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -2853,6 +2860,7 @@ function render(){
   const OLM=olCompute(S.curDate);
   /* 4.9.13：行のまとめ。閉じたまとまりの行は描かない（見出しの行だけ） */
   const FM=S.fold&&!S.fold.off?foldModel(L):null; FOLD=FM?{hidden:[]}:null;
+  foldHintRender(L);
   if(FM) foldFollow(FM);
   const ncol=(S.serial?1:0)+S.items.reduce((a,x)=>a+1+(pcOn(x)?pcDs.length:0),0);
   /* 見出しの行も多すぎると重いので、同じ段のまとまりは今のセルの近くの FOLD_WIN 個だけ出し、残りは「ほかに◯」の1行にする */
@@ -3031,28 +3039,59 @@ function foldHeadRow(g,open,ncol){
 }
 /* 範囲に入る、閉じたまとまりの行の数（選択の表示・クリア・行の削除の確かめに使う） */
 function foldHiddenIn(r1,r2){ if(!FOLD) return 0; let k=0; FOLD.hidden.forEach(([a,b])=>{ const x=Math.max(a,r1), y=Math.min(b,r2); if(y>=x) k+=y-x+1; }); return k; }
-/* 設定の欄：候補＝まとめない／ひな形のまとめ方（by・alt）／事前入力の列1つずつ */
-function foldCands(dr){
-  const ids=dr.items.filter(it=>it.role==="id"), nm=a=>a.map(id=>dr.items.find(it=>it.id===id)?.name||id).join(" → ");
-  const out=[], seen=new Set(), push=a=>{ const k=a.join("\u0001"); if(!a.length||seen.has(k)) return; seen.add(k); out.push(a); };
-  if(dr.fold){ push(dr.fold.by); dr.fold.alt.forEach(push); }
-  ids.forEach(it=>push([it.id]));
-  return out.map(a=>({v:JSON.stringify(a),t:nm(a)}));
-}
+/* 設定の欄（4.9.14）：1段目・2段目に事前入力の列を選ぶ。ひな形のまとめ方（by・alt）は「ひな形の候補」のボタンで2つの欄に入れる */
+let foldTplC=[];
 function foldSetUI(dr){
   const f=foldNorm(dr.fold,dr.items); dr.fold=f||undefined;
-  $("#sFold").innerHTML='<option value="">まとめない</option>'+foldCands(dr).map(o=>`<option value="${esc(o.v)}">${esc(o.t)}</option>`).join("");
-  $("#sFold").value=f&&!f.off?JSON.stringify(f.by):""; $("#sFoldAuto").checked=dr.foldAuto!==false;
+  const ids=dr.items.filter(it=>it.role==="id"), opt=(none)=>`<option value="">${none}</option>`+ids.map(it=>`<option value="${esc(it.id)}">${esc(it.name)}</option>`).join("");
+  $("#sFold1").innerHTML=opt("まとめない"); $("#sFold2").innerHTML=opt("なし");
+  const by=f&&!f.off?f.by:[]; $("#sFold1").value=by[0]||""; $("#sFold2").value=by[1]||""; foldSelSync();
+  const nm=a=>a.map(id=>dr.items.find(it=>it.id===id)?.name||id).join(" → ");
+  foldTplC=f?[f.by,...f.alt]:[];
+  $("#sFoldTpl").innerHTML=foldTplC.length?`<span class="ver">ひな形の候補：</span>`+foldTplC.map((a,i)=>`<button type="button" class="hchip" data-ftpl="${i}">${esc(nm(a))}</button>`).join(""):"";
+  $("#sFoldAuto").checked=dr.foldAuto!==false;
 }
+/* 2段目は、1段目を選んでいるときだけ。同じ列は選べない */
+function foldSelSync(){
+  const a=$("#sFold1").value, s2=$("#sFold2"); s2.disabled=!a;
+  if(!a||s2.value===a) s2.value="";
+  [...s2.options].forEach(o=>{ o.disabled=!!o.value&&o.value===a; });
+}
+$("#sFold1").addEventListener("change",foldSelSync);
+$("#sFoldTpl").addEventListener("click",e=>{ const b=e.target.closest("[data-ftpl]"); if(!b) return; const a=foldTplC[+b.dataset.ftpl]||[]; $("#sFold1").value=a[0]||""; foldSelSync(); $("#sFold2").value=a[1]||""; foldSelSync(); });
 function foldGetUI(dr){
   dr.foldAuto=$("#sFoldAuto").checked;
-  const v=$("#sFold").value; let by=null; try{ by=v?JSON.parse(v):null; }catch(e){}
+  const by=[$("#sFold1").value,$("#sFold2").value].filter(Boolean);
   const old=foldNorm(dr.fold,dr.items);
-  if(!by){ if(old){ dr.fold=Object.assign({},old,{off:true}); } return; }   /* まとめないにしても、ひな形の候補は残す（off） */
+  if(!by.length){ if(old) dr.fold=Object.assign({},old,{off:true}); return; }   /* まとめないにしても、ひな形の候補は残す（off） */
   const same=old&&!old.off&&old.by.join("\u0001")===by.join("\u0001");
-  if(!same){ const alt=old?[old.by,...old.alt]:[]; dr.fold=foldNorm({by,open:old?old.open:"first",alt},dr.items); dr.foldOpen={}; }
-  else if(dr.fold) delete dr.fold.off;
+  if(same) return;
+  const alt=old?[old.by,...old.alt]:[]; dr.fold=foldNorm({by,open:old?old.open:"first",alt},dr.items); dr.foldOpen={}; dr.foldHint=true;
 }
+/* まとめ方の案（4.9.14）：同じ値が平均2行以上続き、まとまりが2つ以上できる事前入力の列を、項目の順に2つまで */
+function foldSuggest(items,rows,L){
+  const out=[];
+  for(const it of items.filter(x=>x.role==="id")){
+    let g=0, prev=null; for(let r=0;r<L;r++){ const v=hasVal(rows[r]?.[it.id])?String(rows[r][it.id]):""; if(r===0||v!==prev) g++; prev=v; }
+    if(g>=2&&L/g>=2) out.push(it.id); if(out.length===2) break;
+  }
+  return out;
+}
+const FOLD_HINT_MIN=100;   /* 表の上に案内を出す個体の数（ツールの目安：表が画面に収まらなくなるくらい） */
+function foldHintRender(L){
+  const el=$("#foldHint"); let show=false, by=[];
+  if(!S.fold&&!S.foldHint&&L>=FOLD_HINT_MIN){ by=foldSuggest(S.items,D,L); show=by.length>0; }
+  el.hidden=!show; if(!show){ el.innerHTML=""; return; }
+  const nm=by.map(id=>S.items.find(it=>it.id===id)?.name||id).join(" → ");
+  el.innerHTML=`<span>個体が ${L.toLocaleString()} 行あります。${esc(nm)}でまとめると、まとまりごとに開け閉めできます（入力の順番・CSVは変わりません）。</span><button type="button" class="ghost" data-fh="apply" data-by="${esc(JSON.stringify(by))}">${esc(nm)}でまとめる</button><button type="button" class="ghost" data-fh="set">設定で選ぶ</button><button type="button" class="ghost" data-fh="close" aria-label="この案内を閉じる">×</button>`;
+}
+$("#foldHint").addEventListener("click",e=>{
+  const b=e.target.closest("[data-fh]"); if(!b) return; const a=b.dataset.fh;
+  S.foldHint=true;
+  if(a==="apply"){ let by=[]; try{ by=JSON.parse(b.dataset.by); }catch(_){} const f=foldNorm({by,open:"first",alt:[]},S.items); if(f){ S.fold=f; S.foldOpen={}; foldLastRow=-1; } save(); render(); note("行をまとめました。設定の「入力の進む順番」で変えられます"); return; }
+  save(); render();
+  if(a==="set") openSettings("dir",()=>{ const el=$("#sFold1"); if(el){ el.scrollIntoView({block:"center"}); el.focus(); } });
+});
 $("#tbl").addEventListener("click",e=>{
   const b=e.target.closest("button.fgb"); if(!b) return;
   if(b.dataset.fw!==undefined){ const wk=b.dataset.fw, w=FOLDW.get(wk), n=+b.dataset.n; if(w){ if(b.dataset.dir==="up") w[0]=Math.max(0,w[0]-FOLD_WIN); else w[1]=Math.min(n-1,w[1]+FOLD_WIN); } render(); return; }
@@ -4804,6 +4843,28 @@ function gdRows(){
   for(const it of ids){ const vals=expandSpec(it.sp); rows=rows.flatMap(r=>vals.map(v=>r.concat(v))); if(rows.length>5000) return null; }
   return rows.every(r=>r.every(v=>v===""))?[]:rows;
 }
+/* 4.9.14：ガイドのまとめ方。個体リストが GD_FOLD_MIN 個体以上のときだけ選ぶ。
+   おまかせ＝いちばん内側（最後）の事前入力の列を除いた外側の列のうち、値が2つ以上あるものを外から2つまで */
+const GD_FOLD_MIN=50;
+function gdFoldAuto(){ const ids=gdSel("id"); return ids.slice(0,-1).filter(x=>expandSpec(x.sp).length>1).slice(0,2).map(x=>x.k); }
+function gdFoldChoices(){
+  const ids=gdSel("id"), out=[];
+  ids.forEach((a,i)=>{ out.push([a.k]); ids.slice(i+1).forEach(b=>out.push([a.k,b.k])); });
+  return out;
+}
+function gdFoldKeys(){
+  const rows=gdRows(); if(!rows||rows.length<GD_FOLD_MIN) return [];
+  const v=GD.fold===undefined?"auto":GD.fold; if(v==="") return [];
+  if(v==="auto") return gdFoldAuto();
+  let a=[]; try{ a=JSON.parse(v); }catch(e){} const ok=new Set(gdSel("id").map(x=>x.k)); return Array.isArray(a)?a.filter(k=>ok.has(k)).slice(0,2):[];
+}
+function gdFoldName(keys){ return keys.map(k=>GD.cands.find(c=>c.k===k)?.n||"").join(" → "); }
+function gdFoldHtml(){
+  const rows=gdRows(); if(!rows||rows.length<GD_FOLD_MIN) return "";
+  const v=GD.fold===undefined?"auto":GD.fold, au=gdFoldAuto();
+  const opts=[["auto",`おまかせ（${au.length?gdFoldName(au):"まとめない"}）`],["","まとめない"],...gdFoldChoices().map(a=>[JSON.stringify(a),gdFoldName(a)])];
+  return `<div class="field"><label for="gdFold"><b>行のまとめ方</b>（${rows.length.toLocaleString()}個体あるので、まとまりごとに開け閉めできるようにします。入力の順番・CSVは変わりません）</label><select id="gdFold">${opts.map(([k,l])=>`<option value="${esc(k)}"${k===v?" selected":""}>${esc(l)}</option>`).join("")}</select></div>`;
+}
 /* ひな形と同じ形式の設定を作る */
 function gdBuild(){
   const its=[...gdSel("id"),...gdSel("meas")];
@@ -4813,6 +4874,7 @@ function gdBuild(){
   if(GD.ts&&GD.pOn) S0.plan={on:true,mode:"every",start:isDate(GD.start)?GD.start:today(),every:GD.every,count:GD.count,until:"",list:[],time:"",alarms:["eve","morn"]};
   const t={app:TPL_APP,v:1,ver:APP_VER,name,S:S0};
   const rows=gdRows()||[], ids=items.filter(it=>it.role==="id");
+  { const fk=gdFoldKeys(); if(fk.length){ const sel=gdSel("id"), by=fk.map(k=>items[sel.findIndex(x=>x.k===k)]?.id).filter(Boolean); if(by.length) t.fold={by,open:"first",alt:[]}; } }   /* 4.9.14 */
   if(rows.length) t.list=rows.map(r=>{ const o={}; ids.forEach((it,i)=>{ const v=r[i]; if(v==="") return; const nv=it.type==="num"?parseNumber(v):NaN; o[it.id]=it.type==="num"&&Number.isFinite(nv)?nv:v; }); return o; });
   return t;
 }
@@ -4841,7 +4903,7 @@ function gdRender(){
     h=`<p class="gdq">調べる項目を選んでください</p><p class="help">声で入力する列になります。順番・名前・桁数は、作った後に「設定」の「調査項目」で変えられます。選択肢・複数選択の候補は、ここで直せます（「、」で区切る）。</p><div class="gdlist">${ms.map(gdItemRow).join("")}</div>${gdAddRow("meas")}<span class="ver">${ms.filter(x=>x.on).length}項目を選んでいます</span>`;
   } else if(st==="ids"){
     const is=GD.cands.filter(x=>x.role==="id"), rows=gdRows();
-    h=`<p class="gdq">個体はどう並びますか</p><p class="help">樹番号・処理区など、先に分かっている列（事前入力の列）を選び、値を入れます。数は <code>1-5</code>、名前は <code>無処理、遮光</code> のように書くと、組み合わせで個体リストを作ります。左の列から順に組み合わせます。</p><div class="gdlist">${is.map(gdItemRow).join("")}</div>${gdAddRow("id")}<span class="ver gdcount">${rows===null?"5,000個体を超えています。値を減らしてください":rows.length?`${rows.length}個体を作ります`:"個体リストを作りません（あとで設定の「個体リスト」で作れます）"}</span>`;
+    h=`<p class="gdq">個体はどう並びますか</p><p class="help">樹番号・処理区など、先に分かっている列（事前入力の列）を選び、値を入れます。数は <code>1-5</code>、名前は <code>無処理、遮光</code> のように書くと、組み合わせで個体リストを作ります。左の列から順に組み合わせます。</p><div class="gdlist">${is.map(gdItemRow).join("")}</div>${gdAddRow("id")}<span class="ver gdcount">${rows===null?"5,000個体を超えています。値を減らしてください":rows.length?`${rows.length}個体を作ります`:"個体リストを作りません（あとで設定の「個体リスト」で作れます）"}</span><div id="gdFoldBox">${gdFoldHtml()}</div>`;
   } else if(st==="time"){
     h=`<p class="gdq">調べ方は？</p><div class="seg gdseg"><label><input type="radio" name="gdT" value="0"${GD.ts?"":" checked"}><span>1回の調査<small>調査日を分けずに記録</small></span></label><label><input type="radio" name="gdT" value="1"${GD.ts?" checked":""}><span>経時調査<small>同じ個体を調査日ごとに記録し、前回の値と比べる</small></span></label></div>`;
     if(GD.ts) h+=`<label class="toggle" for="gdPOn"><span>調査日の予定を使う<small class="ver" style="display:block">開いたときに今日が調査日か、予定を過ぎたかを知らせます。カレンダーにも登録できます</small></span><input type="checkbox" id="gdPOn"${GD.pOn?" checked":""}></label>${GD.pOn?`<div class="pgrid"><label class="field"><b>初回</b><input type="date" id="gdStart" value="${esc(GD.start)}"></label><label class="field"><b>間隔（日ごと）</b><input type="number" id="gdEvery" min="1" max="365" step="1" inputmode="numeric" value="${GD.every}"></label><label class="field"><b>回数</b><input type="number" id="gdCount" min="1" max="200" step="1" inputmode="numeric" value="${GD.count}"></label></div><span class="ver">${esc(gdPlanText())}</span>`:""}`;
@@ -4853,7 +4915,7 @@ function gdRender(){
     const body=(rows.length?rows.slice(0,4):[{}]).map(r=>`<tr>${its.map(it=>`<td class="${it.role==="id"?"idc":""}">${it.role==="id"&&hasVal(r[it.id])?esc(String(r[it.id])):""}</td>`).join("")}</tr>`).join("");
     if(!GD.nameTouched) GD.name=gdDefName();
     h=`<p class="gdq">この内容で作ります</p><div class="field"><label for="gdName"><b>調査名</b></label><input type="text" id="gdName" value="${esc(GD.name)}"></div>
-      <ul class="gdsum"><li>音声で入力する項目 ${ms.length}：${esc(ms.map(it=>it.name).join("、"))||"なし"}</li><li>事前入力の列 ${ids.length}${ids.length?"："+esc(ids.map(it=>it.name).join("、")):""}</li><li>個体リスト ${rows.length?rows.length+"個体":"なし（あとで作れます）"}</li><li>${t.S.ts?"経時調査"+(t.S.plan?`（${esc(gdPlanText())}）`:"（予定なし）"):"1回の調査"}・${t.S.dir==="row"?"行単位":"列単位"}・読み上げ ${{full:"全部",short:"短く",beep:"区切りだけ",off:"なし"}[GD.rb]}</li></ul>
+      <ul class="gdsum"><li>音声で入力する項目 ${ms.length}：${esc(ms.map(it=>it.name).join("、"))||"なし"}</li><li>事前入力の列 ${ids.length}${ids.length?"："+esc(ids.map(it=>it.name).join("、")):""}</li><li>個体リスト ${rows.length?rows.length+"個体":"なし（あとで作れます）"}</li>${t.fold?`<li>行のまとめ方：${esc(t.fold.by.map(id=>its.find(it=>it.id===id)?.name||"").join(" → "))}</li>`:""}<li>${t.S.ts?"経時調査"+(t.S.plan?`（${esc(gdPlanText())}）`:"（予定なし）"):"1回の調査"}・${t.S.dir==="row"?"行単位":"列単位"}・読み上げ ${{full:"全部",short:"短く",beep:"区切りだけ",off:"なし"}[GD.rb]}</li></ul>
       <p class="help">見本（初めの${Math.min(4,rows.length)||1}行）</p><div class="gdprev"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>${rows.length>4?`<span class="ver">…ほか ${rows.length-4}個体</span>`:""}
       ${ms.length?"":`<p class="note">音声で入力する項目がありません。「戻る」で項目を選んでください。</p>`}
       <p class="help">「この内容で作る」で新しい調査を作って開きます（今の調査はそのまま残ります）。同じ設定をほかの人に配るときは「ひな形を保存」か、作った後に調査一覧の「共有」を使います。</p>`;
@@ -4919,6 +4981,7 @@ $("#gdBody").addEventListener("change",e=>{
   if(t.name==="gdT"){ GD.ts=t.value==="1"; gdRender(); return; }
   if(t.name==="gdD"){ GD.dir=t.value; return; }
   if(t.name==="gdR"){ GD.rb=t.value; return; }
+  if(t.id==="gdFold"){ GD.fold=t.value; return; }   /* 4.9.14：まとめ方（"auto"＝おまかせ／""＝まとめない／JSON の列の並び） */
   if(t.id==="gdPOn"){ GD.pOn=t.checked; gdRender(); return; }
   if(t.id==="gdFile"){ const f=t.files[0]; t.value=""; if(f){ $("#gdDlg").close(); importFile(f,true); } return; }
   if(t.dataset.gk){ const x=GD.cands.find(c=>c.k===t.dataset.gk); if(x){ x.on=t.checked; const keep=GD.step; gdRender(); GD.step=keep; const el=$(`#gdBody input[data-gk="${x.k}"]`); if(el) el.focus(); } return; }
@@ -4931,7 +4994,9 @@ $("#gdBody").addEventListener("input",e=>{
     if(t.id==="gdStart") GD.start=t.value; else { const v=Math.floor(+t.value); if(v>=1) GD[t.id==="gdEvery"?"every":"count"]=Math.min(t.id==="gdEvery"?365:200,v); }
     const s=t.closest(".fbody,#gdBody").querySelector(".pgrid+.ver"); if(s) s.textContent=gdPlanText(); return; }
   if(t.dataset.go){ const x=GD.cands.find(c=>c.k===t.dataset.go); if(x) x.o=[...new Set(t.value.normalize("NFKC").split(/[、,，]+/).map(v=>v.trim()).filter(Boolean))].slice(0,200); return; }
-  if(t.dataset.gs){ const x=GD.cands.find(c=>c.k===t.dataset.gs); if(x){ x.sp=t.value; const rows=gdRows(), c=$("#gdBody .gdcount"); if(c) c.textContent=rows===null?"5,000個体を超えています。値を減らしてください":rows.length?`${rows.length}個体を作ります`:"個体リストを作りません（あとで設定の「個体リスト」で作れます）"; gdNextUpd(); } return; }
+  if(t.dataset.gs){ const x=GD.cands.find(c=>c.k===t.dataset.gs); if(x){ x.sp=t.value; const rows=gdRows(), c=$("#gdBody .gdcount"); if(c) c.textContent=rows===null?"5,000個体を超えています。値を減らしてください":rows.length?`${rows.length}個体を作ります`:"個体リストを作りません（あとで設定の「個体リスト」で作れます）"; gdNextUpd();
+      const fb=$("#gdFoldBox"); if(fb){ const h=gdFoldHtml(); if(fb.innerHTML!==h) fb.innerHTML=h; } }   /* 4.9.14：まとめ方の欄だけ書き直す（入力欄は作り直さない） */
+    return; }
 });
 $("#gdBody").addEventListener("click",e=>{
   const b=e.target.closest("[data-gact]"); if(!b) return;
@@ -5522,7 +5587,7 @@ const HELP=[
 {g:"table",id:"celledit",t:"セルに直接入力する（キーボード）",k:"直接入力 セル キーボード 手入力 スクロール ダブルクリック F2 iPhone スマホ ちょくせつにゅうりょく せる きーぼーど てにゅうりょく",b:
 "<p>今のセル（黄色）をもう一度押すと、そのセルの上に入力欄が出て、キーボードでその場に入れられます（PCはダブルクリックか F2）。手入力欄までスクロールする必要はありません。</p><ul><li>「入力」かキーボードの Enter・次へ で入り、入力の進む順番どおりに次のセルへ移って、そのまま続けて入れられます。</li><li>入っている値は選んだ状態で出ます。そのまま打てば置き換え、変えずに「入力」なら次へ進むだけです。空にして「入力」するとその値を消します（直後なら「元に戻す」で戻せます）。</li><li>入力中にほかのセルを押すと、打ちかけの値を入れてから、押したセルへ入力欄が移ります。</li><li>前回比の確認が出たときは、入力欄の下の「はい」「やり直し」で答えます。</li><li>「✕」かキーボードを閉じると終わります。復唱・言い換え・入力できる値の確認は、手入力欄と同じに働きます。</li><li>事前入力の列は、設定の「個体リスト」で直します。</li></ul>"},
 {g:"table",id:"fold",t:"行をまとめて開く・閉じる（系統・ロットなど）",k:"まとめ まとめる 折りたたみ 畳む たたむ 開く 閉じる 系統 ロット 集団 見出し 行が多い 数千 fold まとめかた おりたたみ",b:
-"<p>個体リストが長い調査で、事前入力の列（集団・系統・ロットなど）の値が同じまま続く行をまとめ、まとまりごとに開く・閉じるができます。設定の「入力の進む順番」の<b>行のまとめ方</b>で選びます（試験設計ナビなどのひな形には、まとめ方が入っていることがあります）。</p><ul><li>見出しの行を押すと開く・閉じる。見出しの「4/450」は、入力の済んだ個体の数／個体の数（除外した個体は数えない）</li><li><b>入力の順番は今までどおり</b>です。今のセルが閉じたまとまりに入ると、そのまとまりが自動で開きます。設定の「前のまとまりを閉じる」がオンなら、出たまとまりを閉じます（自分で開いたまとまりは閉じません）</li><li>まとまりが多いときは、今のセルの近くの100個だけ見出しを出し、残りは「前に・後に ◯」の1行にまとめます。押すと100ずつ出します</li><li>CSV・Excel の中身と行の順は変わりません。まとめているときは、上の行の固定は使いません</li><li>範囲を選んでクリア・行の削除をするとき、閉じたまとまりの行が含まれていれば、確かめてから行います</li><li>まとめ方つきのひな形は、個体リストを 20,000 行まで受け取れます（まとめ方がないときは 5,000 行まで）</li></ul>"},
+"<p>個体リストが長い調査で、事前入力の列（集団・系統・ロットなど）の値が同じまま続く行をまとめ、まとまりごとに開く・閉じるができます。設定の「入力の進む順番」の<b>行のまとめ方</b>で、1段目・2段目（例：集団 → 系統）を選びます。試験設計ナビなどのひな形にまとめ方の候補があれば、「ひな形の候補」のボタンで選べます。ガイドで作るときは、個体リストが50個体以上なら最後の手前で選べます（おまかせは、いちばん内側の列を除いた外側の列）。個体リストが100個体以上あるのにまとめていない調査では、表の上に一度だけ案内が出ます（×で閉じると、その調査では出ません）。</p><ul><li>見出しの行を押すと開く・閉じる。見出しの「4/450」は、入力の済んだ個体の数／個体の数（除外した個体は数えない）</li><li><b>入力の順番は今までどおり</b>です。今のセルが閉じたまとまりに入ると、そのまとまりが自動で開きます。設定の「前のまとまりを閉じる」がオンなら、出たまとまりを閉じます（自分で開いたまとまりは閉じません）</li><li>まとまりが多いときは、今のセルの近くの100個だけ見出しを出し、残りは「前に・後に ◯」の1行にまとめます。押すと100ずつ出します</li><li>CSV・Excel の中身と行の順は変わりません。まとめているときは、上の行の固定は使いません</li><li>範囲を選んでクリア・行の削除をするとき、閉じたまとまりの行が含まれていれば、確かめてから行います</li><li>まとめ方つきのひな形は、個体リストを 20,000 行まで受け取れます（まとめ方がないときは 5,000 行まで）</li></ul>"},
 {g:"table",id:"tableops",t:"表の操作（クリア・削除して詰める・行を削除）",k:"クリア 消す 削除 詰める 行を削除 範囲選択 コピー 貼り付け 貼付 元に戻す Ctrl Delete くりあ さくじょ つめる はんいせんたく こぴー はりつけ もとにもどす",b:
 "<ul><li><b>クリア</b>：選んだセル（範囲）の値を消す</li><li><b>削除して詰める</b>：今のセルを消し、後ろの値を1つずつ前へ詰める（2回入ってしまったとき）</li><li><b>行を削除</b>：今の行を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も消える</li><li><b>範囲選択</b>：オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）</li><li><b>コピー</b>・<b>貼付</b>：Excelとの間でも使える（PCは Ctrl+C・Ctrl+V・Delete も可）</li></ul><p>操作のあとは「元に戻す」で戻せます。</p>"},
 {g:"table",id:"coledit",t:"表の見出しから列を編集する（名前・種類・追加・移動・削除）",k:"見出し 項目名 列 編集 追加 挿入 移動 削除 左 右 種類 名前 変える 鉛筆 ドラッグ つかむ 並べ替え みだし れつ へんしゅう ついか いどう さくじょ どらっぐ ならべかえ",go:"items",b:
@@ -5631,6 +5696,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.9.14",d:"2026-11-26",a:[["行のまとめ方を、設定で2段（例：集団 → 系統）まで選べるように。ひな形にまとめ方の候補があれば、ボタンで選べる","fold"],["ガイドで個体リストが50個体以上になるとき、行のまとめ方を選べるように（おまかせは、いちばん内側の列を除いた外側の列）","guide"],["個体リストが100個体以上あるのにまとめていない調査では、表の上に一度だけ、まとめ方の案内を出す","fold"]]},
 {v:"Pro 4.9.13",d:"2026-11-25",a:[["行を「系統」「ロット」などの列でまとめて、まとまりごとに開く・閉じるができるように（見出しに入力の済んだ数。入力の順番は今までどおりで、今のセルが入ったまとまりは自動で開く。設定の「入力の進む順番」で選ぶ）","fold"],["まとめ方つきのひな形（試験設計ナビなど）は、個体リストを 20,000 行まで受け取れるように（閉じたまとまりの行は描かないので軽い）","template"]]},
 {v:"Pro 4.9.12",d:"2026-11-25",a:[["ひな形の個体リストを「作り方」（例：系統 L-001〜L-150 × 株 1〜3）で受け取れるように。数百〜数千行の個体リストも、短いリンクで渡せる（受け取れるのは 5,000 行まで）","template"]]},
 {v:"Pro 4.9.11",d:"2026-11-25",a:[["設定「Excel・CSVの見出しに項目の id を付ける」（例「糖度 [brix]」。年をまたいで同じ項目を突き合わせるため。初期値はオフで、今までと同じ見出し）。読み込むときは見出しの [id] を外して読む","export"]]},
