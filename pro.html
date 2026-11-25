@@ -2475,7 +2475,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.9.9（2026-11-25）";
+const APP_VER="Pro 4.9.10（2026-11-25）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -2935,6 +2935,8 @@ function renderDates(){
 /* ========= 出力 ========= */
 function lastRow(){ let last=listLen()-1; D.forEach((row,i)=>{ if(S.items.some(it=>hasVal(row[it.id]))) last=Math.max(last,i); }); return last; }
 const safeName=()=>(S.name||"調査").replace(/[\\/:*?"<>|]/g,"_");
+/* 4.9.10：Excel・CSVのファイル名。ひな形の meta に設計のIDがあれば、調査の名前のあとに付ける（連動の契約 v1 の 7.3） */
+const outName=()=>{ const d=S.meta&&S.meta.design; return safeName()+(typeof d==="string"&&/^[0-9a-f]{8}$/.test(d)?"_"+d:""); };
 function exState(r,date){ const e=D[r]?._ex; return (e && e<=date)?D[r]._why:""; }
 /* 調査日 date の r 行目の値（現在の調査日なら D、それ以外は保存済みの日） */
 function valAt(r,it,date){
@@ -3005,12 +3007,12 @@ $("#btnXlsx").onclick=()=>{
   }
   if(licNow&&licNow.mailMask) wb.Props={Author:licNow.mailMask};
   const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
-  download(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),`${safeName()}_${S.curDate}.xlsx`);
+  download(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),`${outName()}_${S.curDate}.xlsx`);
 };
 const toCsv=rows=>"﻿"+rows.map(r=>r.map(v=>{ const s=String(v); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(",")).join("\r\n");
-$("#btnCsv").onclick=()=>download(new Blob([toCsv(aoaDay(true))],{type:"text/csv"}),`${safeName()}_${S.curDate}.csv`);
-$("#btnCsvLong").onclick=()=>download(new Blob([toCsv(aoaLong(true))],{type:"text/csv"}),`${safeName()}_全調査日_縦持ち_${today()}.csv`);
-$("#btnCsvWide").onclick=()=>download(new Blob([toCsv(aoaWide(true))],{type:"text/csv"}),`${safeName()}_全調査日_野帳型_${today()}.csv`);
+$("#btnCsv").onclick=()=>download(new Blob([toCsv(aoaDay(true))],{type:"text/csv"}),`${outName()}_${S.curDate}.csv`);
+$("#btnCsvLong").onclick=()=>download(new Blob([toCsv(aoaLong(true))],{type:"text/csv"}),`${outName()}_全調査日_縦持ち_${today()}.csv`);
+$("#btnCsvWide").onclick=()=>download(new Blob([toCsv(aoaWide(true))],{type:"text/csv"}),`${outName()}_全調査日_野帳型_${today()}.csv`);
 
 /* ========= 操作 ========= */
 $("#mic").onclick=()=>{
@@ -5015,7 +5017,7 @@ $("#sumSE").onchange=e=>{ S.sumCfg.se=e.target.checked; save(); sumDraw(); };
 $("#grItem").onchange=e=>{ S.sumCfg.item=e.target.value; save(); grDraw(); };
 $("#grErr").onchange=e=>{ S.sumCfg.err=e.target.value; save(); grDraw(); };
 $("#sumCopy").onclick=async()=>{ const t=sumAoa().map(r=>r.join("\t")).join("\n"); const ok=await writeClip(t); $("#sumOut").textContent=ok?"集計の表をコピーしました（Excelに貼れます）":"コピーできませんでした。CSVで保存してください"; };
-$("#sumCsv").onclick=()=>{ download(new Blob([toCsv(sumAoa())],{type:"text/csv"}),`${safeName()}_集計${S.ts?"_"+sumDate:""}.csv`); $("#sumOut").textContent="CSVで保存しました"; };
+$("#sumCsv").onclick=()=>{ download(new Blob([toCsv(sumAoa())],{type:"text/csv"}),`${outName()}_集計${S.ts?"_"+sumDate:""}.csv`); $("#sumOut").textContent="CSVで保存しました"; };
 $("#grPng").onclick=()=>{
   const cv=document.createElement("canvas"); const g=grPaint(cv,1000,620,"light",true); if(!g.G||!g.G.ser8.length) return;
   cv.toBlob(b=>{ if(b) download(b,`${safeName()}_${g.G.it.name.replace(/[\\/:*?"<>|]/g,"_")}_経時グラフ.png`); });
@@ -5439,6 +5441,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.9.10",d:"2026-11-25",a:[["試験設計ナビで作ったひな形の調査は、Excel・CSVのファイル名に設計のID（8桁）が付くように（例「調査名_0a1b2c3d_2026-12-01.csv」。どの設計のデータかを取り違えないため）","export"]]},
 {v:"Pro 4.9.9",d:"2026-11-25",a:[["試験設計ナビなどで作ったひな形の「作った元の情報」（設計のIDなど）を、調査に残してバックアップ・共有でも持ち回るように。受け取るときの確認に、作ったアプリの版を表示","template"]]},
 {v:"Pro 4.9.8",d:"2026-11-23",a:[["項目ごとに、調べる個体を限れるように（例：糖度は果実番号 1〜5 だけ。範囲の外の個体ではその項目を入力の順番でとばす。表では灰色、押せば入力できる。指定しない調査は今までと同じ）","onlyskip"]]},
 {v:"Pro 4.9.7",d:"2026-11-22",a:[["数値の列で、入力できる値が決まった少数の値（例 0,1,2,3,4,5）のとき、候補のボタン・一覧から選べるように（発病度・障害程度など。数値で記録し、前回比の注意もそのまま使える）","allow"],["iPhone で、マイクを入り切りしたあとなどに読み上げ・復唱が鳴らなくなることへの対策（準備の自動やり直し、復唱ボタンを押したその場で読む、マイク診断に読み上げの記録）","tts"],["備考などの列を「名前で呼んで入れる」列にできるように（順番では回らず、「備考 小玉」「さっきの備考欄に小玉入れて」「5番の備考に小玉」と言うとその列に入る。新しく作る調査の備考は最初からこの列）","callcol"]]},
@@ -5992,7 +5995,7 @@ $("#lsTbl").addEventListener("click",e=>{
   note(`${cellName(cur)}（${d}）に移りました。値を直すときは、そのまま話すか手入力します。`+(isEx(r)?"この個体は除外しています。":""));
 });
 $("#lsCopy").onclick=async()=>{ const t=lsAoa().map(r=>r.join("\t")).join("\n"); const ok=await writeClip(t); $("#lsOut").textContent=ok?"表示している表をコピーしました（Excelに貼れます）":"コピーできませんでした。CSVで保存してください"; };
-$("#lsCsv").onclick=()=>{ download(new Blob([toCsv(lsAoa())],{type:"text/csv"}),`${safeName()}_全調査日一覧_${today()}.csv`); $("#lsOut").textContent="表示している表をCSVで保存しました"; };
+$("#lsCsv").onclick=()=>{ download(new Blob([toCsv(lsAoa())],{type:"text/csv"}),`${outName()}_全調査日一覧_${today()}.csv`); $("#lsOut").textContent="表示している表をCSVで保存しました"; };
 window.addEventListener("resize",()=>{ if($("#lsDlg").open) lsSticky(); });
 
 /* ========= 入力の表に前の調査日の値を並べる（4.8.2〜） =========
