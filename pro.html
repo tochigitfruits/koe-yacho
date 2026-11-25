@@ -2475,7 +2475,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.9.8（2026-11-23）";
+const APP_VER="Pro 4.9.9（2026-11-25）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -4288,6 +4288,7 @@ let tplCur=null, tplSeq=0;
 function tplBuild(j,withList){
   const src=j.S||{}, o={}; TPL_KEYS.forEach(k=>{ if(src[k]!==undefined) o[k]=src[k]; });
   const t={app:TPL_APP,v:1,ver:APP_VER,name:src.name||"調査",S:o};
+  { const mt=metaNorm(src.meta); if(mt) t.meta=mt; }   /* 4.9.9：作った元の情報は S の外（一番上）に出す（連動の契約 v1 の 3.1） */
   if(withList){
     const ids=(src.items||[]).filter(it=>it.role==="id").map(it=>it.id);
     if(ids.length){ const rows=(j.D||[]).map(r=>{ const x={}; ids.forEach(id=>{ if(hasVal(r?.[id])) x[id]=r[id]; }); return x; });
@@ -4322,6 +4323,18 @@ async function tplDecode(code){
   return JSON.parse(txt);
 }
 const tplUrl=code=>(location.protocol==="https:"?location.origin+location.pathname:TPL_HOME)+"#tpl="+code;
+/* 4.9.9：ひな形の meta（作った元の情報。連動の契約 v1 の 3.）。普通のオブジェクトだけ、キーは英字で始まる32字まで・30個まで、
+   値は文字（200字まで）・有限の数・真偽だけ。知らないキーも捨てずに残す。design（8桁の16進）・made（YYYY-MM-DD）は形が違えば空にする */
+const META_KEY=/^[A-Za-z][\w-]{0,31}$/;
+function metaNorm(m){
+  if(!m||typeof m!=="object"||Array.isArray(m)) return null;
+  const o={}; let n=0;
+  for(const k of Object.keys(m)){ if(n>=30) break; if(!META_KEY.test(k)) continue; const v=m[k];
+    if(typeof v==="string") o[k]=v.slice(0,200); else if(typeof v==="number"&&Number.isFinite(v)) o[k]=v; else if(typeof v==="boolean") o[k]=v; else continue; n++; }
+  if("design" in o&&!(typeof o.design==="string"&&/^[0-9a-f]{8}$/.test(o.design))) o.design="";
+  if("made" in o&&!(typeof o.made==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(o.made))) o.made="";
+  return Object.keys(o).length?o:null;
+}
 /* 受け取ったひな形を、安全な形に直す（知らない項目は捨て、長さ・数をおさえる） */
 function tplSanitize(o){
   if(!o||o.app!==TPL_APP||!o.S||!Array.isArray(o.S.items)) throw new Error("声で野帳 Pro のひな形ではありません");
@@ -4343,6 +4356,7 @@ function tplSanitize(o){
   if(!["row","col","group"].includes(nS.dir)) nS.dir="row"; if(!["cont","ptt"].includes(nS.mode)) nS.mode="cont";
   ["ts","readback","fastCommit","serial","autoCommit","alertSound"].forEach(k=>{ if(nS[k]!==undefined) nS[k]=!!nS[k]; });
   nS.sessions={}; nS.curDate=today();
+  { const mt=metaNorm(o.meta!=null?o.meta:src.meta); if(mt) nS.meta=mt; else delete nS.meta; }   /* 4.9.9：渡すときは一番上、調査の中では S.meta（契約 v1 の 3.1） */
   const ids=nS.items.filter(it=>it.role==="id").map(it=>it.id);
   const nD=(Array.isArray(o.list)?o.list.slice(0,5000):[]).map(r=>{ const x={}; ids.forEach(id=>{ const v=r?.[id];
     if(typeof v==="number"&&Number.isFinite(v)) x[id]=v; else if(typeof v==="string"&&v.trim()) x[id]=v.slice(0,100); }); return x; });
@@ -4353,7 +4367,7 @@ function tplSanitize(o){
 async function tplReceive(o,via){
   let r; try{ r=tplSanitize(o); }catch(e){ note(e.message,true); return false; }
   const c=tplCounts(r.nS,r.nD);
-  if(!confirm(`${via}のひな形「${r.nS.name}」から新しい調査を作りますか？\n項目 ${c.items}（音声 ${c.meas}・事前 ${c.id}）、個体リスト ${c.list}個体、言い換え ${c.alias}件${c.only?`、調べる個体を限る項目 ${c.only}`:""}\n（今の調査はそのまま残ります。ひな形に測定データは入っていません）`)) { note("ひな形からの作成をやめました"); return false; }
+  if(!confirm(`${via}のひな形「${r.nS.name}」から新しい調査を作りますか？${o.ver?`\n作成：${String(o.ver).slice(0,80)}`:""}\n項目 ${c.items}（音声 ${c.meas}・事前 ${c.id}）、個体リスト ${c.list}個体、言い換え ${c.alias}件${c.only?`、調べる個体を限る項目 ${c.only}`:""}\n（今の調査はそのまま残ります。ひな形に測定データは入っていません）`)) { note("ひな形からの作成をやめました"); return false; }
   const id=await svCreateRaw(r.nS,r.nD);
   if(!id){ note("この端末に保存できませんでした（容量を超えた可能性があります）。使わない調査を削除してから、もう一度開いてください。",true); return false; }
   await svOpen(id,`ひな形「${r.nS.name}」から新しい調査を作りました（項目 ${c.items}・個体 ${c.list}）。設定で確かめてから使ってください`);
@@ -5425,6 +5439,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.9.9",d:"2026-11-25",a:[["試験設計ナビなどで作ったひな形の「作った元の情報」（設計のIDなど）を、調査に残してバックアップ・共有でも持ち回るように。受け取るときの確認に、作ったアプリの版を表示","template"]]},
 {v:"Pro 4.9.8",d:"2026-11-23",a:[["項目ごとに、調べる個体を限れるように（例：糖度は果実番号 1〜5 だけ。範囲の外の個体ではその項目を入力の順番でとばす。表では灰色、押せば入力できる。指定しない調査は今までと同じ）","onlyskip"]]},
 {v:"Pro 4.9.7",d:"2026-11-22",a:[["数値の列で、入力できる値が決まった少数の値（例 0,1,2,3,4,5）のとき、候補のボタン・一覧から選べるように（発病度・障害程度など。数値で記録し、前回比の注意もそのまま使える）","allow"],["iPhone で、マイクを入り切りしたあとなどに読み上げ・復唱が鳴らなくなることへの対策（準備の自動やり直し、復唱ボタンを押したその場で読む、マイク診断に読み上げの記録）","tts"],["備考などの列を「名前で呼んで入れる」列にできるように（順番では回らず、「備考 小玉」「さっきの備考欄に小玉入れて」「5番の備考に小玉」と言うとその列に入る。新しく作る調査の備考は最初からこの列）","callcol"]]},
 {v:"Pro 4.9.5",d:"2026-11-21",a:[["選択肢の列も、候補のボタンを押して入れられるように（押すと次へ進む）","textchoice"],["選択肢の列は、表のセルを押すと候補の一覧から選べるように","textchoice"],["刻み（0.5刻みなど）を決めた項目は、刻みに合わない値を丸めずに「刻みに合いません」と知らせて入れないように","numbers"]]},
