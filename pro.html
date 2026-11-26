@@ -179,6 +179,11 @@ tr.currow td.no{color:var(--ink);font-weight:700}
 .log{font-size:.8rem;color:var(--muted);font-family:var(--f-num);display:grid;gap:2px}
 .datebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .datebar label{font-weight:700;font-size:.9rem}
+/* 4.9.16：調査日の変更・その日だけの削除 */
+.pcalact{border:1.5px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:8px;margin-top:8px;background:var(--surface)}
+.pcalact .pcalbtns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pcalact input[type=date],#sOneDate{border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface);font-family:var(--f-num)}
+.dfmsg button{margin-left:6px;padding:4px 10px}
 .datebar select,.datebar input{border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface);font-family:var(--f-num)}
 tr.exrow td{color:var(--muted)}
 td.exc{background:repeating-linear-gradient(135deg,transparent 0 6px,color-mix(in srgb,var(--line) 45%,transparent) 6px 8px)}
@@ -681,7 +686,15 @@ td.cur .pva{color:inherit}
     <label for="dateSel">調査日</label>
     <select id="dateSel"></select>
     <button type="button" class="ghost" id="dateAdd">＋ 新しい調査日</button>
+    <button type="button" class="ghost" id="dateOps" aria-expanded="false">この日の操作 ▾</button>
     <span class="ver" id="dateInfo"></span>
+  </div>
+  <div class="datebar" id="dateOpsBox" hidden>
+    <span class="ver" id="dateOpsWhat"></span>
+    <input type="date" id="dateTo" aria-label="正しい調査日">
+    <button type="button" class="ghost" id="dateMoveGo">日付を変更</button>
+    <button type="button" class="danger" id="dateDelGo">この日だけ削除</button>
+    <button type="button" class="ghost" id="dateOpsCancel">やめる</button>
   </div>
   <div class="datebar" id="newDateBox" hidden>
     <input type="date" id="newDate" aria-label="新しい調査日">
@@ -959,7 +972,14 @@ td.cur .pva{color:inherit}
           <option value="long">縦持ち（1行＝1個体×1調査日、R・統計向け）</option>
           <option value="both">両方</option>
         </select>
+        <p class="help">記録した調査日の変更・その日だけの削除は、表の上の「この日の操作」か、下の「調査日の予定・カレンダー」で「調査した日」を押して行います。</p>
         <p class="help">前回比のアラートは、「調査項目」の各項目（数値・音声で入力）の「前回比」で設定します。例：肥大調査なら、横径・縦径・果実重の「減った」を「注意」か「禁止」にします。「許容±」は測定誤差の幅で、この幅以内の差は「同じ」とみなします。</p>
+      </div>
+      <div class="field" id="sOneDateBox">
+        <label for="sOneDate"><b>調査日</b>（Excel・CSVの「調査日」の列に入る日）</label>
+        <div class="datebar"><input type="date" id="sOneDate"><button type="button" class="ghost" id="sOneDateGo">日付を変更</button><button type="button" class="danger" id="sOneDel">記録を消す</button></div>
+        <small class="ver dfmsg" id="sOneMsg" aria-live="polite"></small>
+        <p class="help">日付を間違えたときは、正しい日にして「日付を変更」を押します。「記録を消す」は、練習で入れた値などを消し、個体リスト・項目は残します。どちらも、直後なら「元に戻す」で戻せます。</p>
       </div>
     </fieldset>
     </details>
@@ -978,7 +998,7 @@ td.cur .pva{color:inherit}
           <label class="field"><b>回数</b><input type="number" id="pCount" min="0" max="200" step="1" inputmode="numeric" placeholder="例 8"></label>
           <label class="field"><b>または終わりの日</b><input type="date" id="pUntil"></label>
         </div>
-        <div class="pcal" id="pCal" aria-label="調査日のカレンダー"><div class="pcalhead"><button type="button" class="ghost" id="pCalPrev" aria-label="前の月">‹</button><b id="pCalTitle" aria-live="polite"></b><button type="button" class="ghost" id="pCalNext" aria-label="次の月">›</button><button type="button" class="ghost" id="pCalNow">今月</button></div><div class="pcalgrid" id="pCalGrid"></div><div class="pcalhol" id="pCalHol"></div><div class="pcallegend"><span><i style="background:var(--accent)"></i>予定日</span><span><b style="color:#c0392b">赤</b>＝日曜・祝日</span><span><i style="outline:2px solid var(--ink);outline-offset:-2px"></i>今日</span><span><i style="background:var(--warn);border-radius:50%"></i>調査した日</span></div><small class="ver" id="pCalHelp"></small></div>
+        <div class="pcal" id="pCal" aria-label="調査日のカレンダー"><div class="pcalhead"><button type="button" class="ghost" id="pCalPrev" aria-label="前の月">‹</button><b id="pCalTitle" aria-live="polite"></b><button type="button" class="ghost" id="pCalNext" aria-label="次の月">›</button><button type="button" class="ghost" id="pCalNow">今月</button></div><div class="pcalgrid" id="pCalGrid"></div><div class="pcalact" id="pCalAct" hidden></div><div class="pcalhol" id="pCalHol"></div><div class="pcallegend"><span><i style="background:var(--accent)"></i>予定日</span><span><b style="color:#c0392b">赤</b>＝日曜・祝日</span><span><i style="outline:2px solid var(--ink);outline-offset:-2px"></i>今日</span><span><i style="background:var(--warn);border-radius:50%"></i>調査した日</span></div><small class="ver" id="pCalHelp"></small></div>
         <label class="field" id="pListBox"><b>予定日</b><textarea id="pList" rows="4" spellcheck="false" placeholder="2026-05-10&#10;2026-05-24&#10;2026-06-07"></textarea></label>
         <div class="pgrid">
           <label class="field"><b>時刻</b><input type="time" id="pTime"><small class="ver">空なら終日の予定</small></label>
@@ -1594,6 +1614,68 @@ function switchDate(d){
   undoSnap=null; sel=null;
 }
 if(S.items[cur.c]?.role==="id") cur.c=firstMeas();
+/* ========= 4.9.16：記録した調査日の変更・その日だけの削除 =========
+   変更：その日の測定値を別の日付に付け替える。除外日がその日の個体は、除外日も付け替える。変更先の日に値があるときは止める（上書きしない）
+   削除：その日の測定値と、その日に付けた除外を消す。個体リスト・項目・ほかの日は残す。残る日がなければ、値のない状態（調査日は今日）に戻す */
+const isDay=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||"")&&!isNaN(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d;
+function dayRows(d){ return d===S.curDate?D.map(measOnly):(S.sessions[d]||[]).map(measOnly); }
+function dayCount(d){ let k=0; dayRows(d).forEach(o=>{ k+=Object.keys(o).length; }); return k; }
+function dayExCount(d){ return D.filter(row=>row&&row._ex===d).length; }
+const dateSnap=()=>JSON.stringify({D,sessions:S.sessions,cur,curDate:S.curDate});
+function moveDate(from,to){
+  if(!isDay(to)) return {ok:false,msg:"正しい日付を選ぶと、変更できます"};
+  if(to===from) return {ok:false,msg:"今と同じ日付です。別の日付を選ぶと、変更できます"};
+  if(!allDates().includes(from)) return {ok:false,msg:`${from} の記録が見つかりません`};
+  if(allDates().includes(to)&&dayCount(to)>0) return {ok:false,msg:`${to} にはすでに値が入っているため、上書きしないように止めました。先に ${to} を削除するか、別の日付を選ぶと、変更できます`};
+  const snap=dateSnap();
+  if(listening) stopRec(); clearPend();
+  if(from===S.curDate){ delete S.sessions[to]; S.curDate=to; }
+  else if(to===S.curDate){
+    const rows=S.sessions[from]||[]; delete S.sessions[from];
+    const ids=measIds(); D.forEach(row=>ids.forEach(id=>delete row[id]));
+    rows.forEach((m,r)=>{ ensureRow(r); Object.assign(D[r],m); });
+  } else { S.sessions[to]=S.sessions[from]||[]; delete S.sessions[from]; }
+  let ex=0; D.forEach(row=>{ if(row&&row._ex===from){ row._ex=to; ex++; } });
+  cur={r:firstRow(),c:meas().includes(cur.c)?cur.c:firstMeas()};
+  undoSnap=snap; sel=null; addLog(`調査日を変更：${from} → ${to}`);
+  dateDlgSync(); save(); render();
+  return {ok:true,ex,msg:`調査日を ${from} から ${to} に変更しました`+(ex?`（除外 ${ex}件の日付も変更）`:"")};
+}
+function deleteDate(d){
+  if(!allDates().includes(d)) return {ok:false,msg:`${d} の記録が見つかりません`};
+  const snap=dateSnap(), n0=dayCount(d);
+  if(listening) stopRec(); clearPend();
+  let ex=0; D.forEach(row=>{ if(row&&row._ex===d){ delete row._ex; delete row._why; ex++; } });
+  const others=allDates().filter(x=>x!==d);
+  if(d===S.curDate){
+    if(others.length){ const pv=others.filter(x=>x<d); switchDate(pv.length?pv[pv.length-1]:others[0]); delete S.sessions[d]; }
+    else {
+      const ids=measIds(); D.forEach(row=>ids.forEach(id=>delete row[id]));
+      S.sessions={}; S.curDate=today();
+      while(D.length>listLen()&&!rowHasData(D.length-1)) D.pop();
+    }
+  } else delete S.sessions[d];
+  cur={r:firstRow(),c:meas().includes(cur.c)?cur.c:firstMeas()};
+  undoSnap=snap; sel=null; addLog(`調査日の記録を削除：${d}（値 ${n0}件${ex?`・除外 ${ex}件`:""}）`);
+  dateDlgSync(); save(); render();
+  return {ok:true,ex,msg:`${d} の記録を削除しました（値 ${n0}件${ex?`、除外 ${ex}件`:""}）`+(others.length?`。今は ${S.curDate} を表示しています`:"。個体リストと項目は残っています")};
+}
+/* 削除の前の確かめ。値も除外もない日は聞かない */
+function deleteAsk(d){
+  const n0=dayCount(d), ex=dayExCount(d), last=allDates().filter(x=>x!==d).length===0;
+  if(!n0&&!ex) return true;
+  return confirm(`${d} の記録を削除します（値 ${n0}件${ex?`、この日に付けた除外 ${ex}件`:""}）。\n個体リスト・項目${last?"":"・ほかの日の記録"}は残ります。`+(last?"\n記録はこの日だけなので、値の入っていない状態に戻ります。":"")+"\n（直後なら「元に戻す」で戻せます）");
+}
+/* 設定を開いている間に変えたときは、設定の下書きにも写す（保存で S が下書きに置き換わるため） */
+function dateDlgSync(){
+  try{ if(!draft||!$("#dlg").open) return; draft.sessions=JSON.parse(JSON.stringify(S.sessions)); draft.curDate=S.curDate; pcalDraw(); oneDateFill(); }catch(e){}
+}
+/* 結果の文と「元に戻す」（設定の中に出す分） */
+function dateMsgHtml(el,msg,undo){
+  if(!el) return; el.textContent=msg;
+  if(undo){ const b=document.createElement("button"); b.type="button"; b.className="ghost"; b.textContent="元に戻す"; b.onclick=()=>{ if(undoRestore()) el.textContent="元に戻しました"; }; el.appendChild(b); }
+}
+function oneDateFill(){ try{ $("#sOneDate").value=S.curDate; }catch(e){} }
 /* 入力の進み方：グループ（横に進む列のまとまり）ごとに「横→次の個体」、リストの最後で次のグループへ。
    行単位＝全列で1グループ、列単位＝1列ずつのグループ */
 function groupsFrom(items,dir,spec){
@@ -2540,7 +2622,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.9.15（2026-11-26）";
+const APP_VER="Pro 4.9.16（2026-11-26）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -2986,7 +3068,7 @@ function render(){
   applyFreeze();
   if(!dragging){ const cc=$("#tbl td.cur"); if(cc) cc.scrollIntoView({block:"nearest",inline:"nearest"}); }
   $("#log").innerHTML=logs.map(esc).join("<br>");
-  $("#dateBar").hidden=!S.ts; if(!S.ts) $("#newDateBox").hidden=true;
+  $("#dateBar").hidden=!S.ts; if(!S.ts){ $("#newDateBox").hidden=true; $("#dateOpsBox").hidden=true; }
   $("#btnCsv").textContent=S.ts?"この日のCSV":"CSVで保存";
   $("#btnCsvWide").hidden=!(S.ts&&(S.outFmt==="wide"||S.outFmt==="both"));
   $("#btnList").hidden=!S.ts;
@@ -3350,7 +3432,23 @@ $("#ver").textContent=APP_VER;
 if(!window.isSecureContext) note("https で開かれていないため、マイクが使えません。GitHub Pages の https のURLで開いてください。");
 $("#btnEx").onclick=()=>{ clearPend(); const s=doCommand(isEx(cur.r)?"restore":"ex:除外"); save(); render(); if(s&&S.readback) speak(s); };
 $("#dateSel").onchange=e=>{ if(listening) stopRec(); clearPend(); switchDate(e.target.value); save(); render(); note(`${S.curDate} の記録を表示しています`); };
-$("#dateAdd").onclick=()=>{ $("#newDate").value=today(); $("#newDateBox").hidden=false; };
+$("#dateAdd").onclick=()=>{ $("#newDate").value=today(); $("#newDateBox").hidden=false; $("#dateOpsBox").hidden=true; $("#dateOps").setAttribute("aria-expanded","false"); };
+$("#dateOps").onclick=()=>{
+  const open=$("#dateOpsBox").hidden;
+  $("#dateOpsBox").hidden=!open; $("#dateOps").setAttribute("aria-expanded",String(open));
+  if(open){ $("#newDateBox").hidden=true; $("#dateTo").value=S.curDate; const k=dayCount(S.curDate), ex=dayExCount(S.curDate); $("#dateOpsWhat").textContent=`${S.curDate}（値 ${k}件${ex?`・除外 ${ex}件`:""}）を`; }
+};
+$("#dateOpsCancel").onclick=()=>{ $("#dateOpsBox").hidden=true; $("#dateOps").setAttribute("aria-expanded","false"); };
+$("#dateMoveGo").onclick=()=>{
+  const r=moveDate(S.curDate,$("#dateTo").value);
+  if(!r.ok){ note(r.msg,true); return; }
+  $("#dateOpsBox").hidden=true; $("#dateOps").setAttribute("aria-expanded","false"); offerUndo(r.msg);
+};
+$("#dateDelGo").onclick=()=>{
+  const d=S.curDate; if(!deleteAsk(d)) return;
+  const r=deleteDate(d); $("#dateOpsBox").hidden=true; $("#dateOps").setAttribute("aria-expanded","false");
+  if(r.ok) offerUndo(r.msg); else note(r.msg,true);
+};
 $("#newDateCancel").onclick=()=>{ $("#newDateBox").hidden=true; };
 $("#newDateGo").onclick=()=>{
   const d=$("#newDate").value; if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ note("日付を選んでください"); return; }
@@ -3554,7 +3652,12 @@ function snap(){ undoSnap=JSON.stringify({D,sessions:S.sessions,cur}); }
 function offerUndo(msg){
   note(msg+"。間違えた場合は「元に戻す」を押してください。",true);
   $("#note").insertAdjacentHTML("beforeend",' <button type="button" class="ghost" id="undoBtn" style="padding:4px 10px">元に戻す</button>');
-  $("#undoBtn").onclick=()=>{ if(undoSnap){ const o=JSON.parse(undoSnap); D=o.D; if(o.sessions) S.sessions=o.sessions; if(o.cur) cur=o.cur; undoSnap=null; sel=null; save(); render(); note("元に戻しました"); } };
+  $("#undoBtn").onclick=()=>undoRestore();
+}
+function undoRestore(){
+  if(!undoSnap) return false;
+  const o=JSON.parse(undoSnap); D=o.D; if(o.sessions) S.sessions=o.sessions; if(o.cur) cur=o.cur; if(o.curDate) S.curDate=o.curDate;
+  undoSnap=null; sel=null; save(); render(); dateDlgSync(); note("元に戻しました"); return true;
 }
 /* 行に何か入っているか（個体リスト・測定値・除外、すべての調査日） */
 function rowHasData(r){
@@ -4071,7 +4174,7 @@ $("#sItems").addEventListener("keydown",e=>{
 });
 $("#sAdd").onclick=()=>{ insertItem(draft.items.length,draft.items[draft.items.length-1]); };
 $("#sPreset").onclick=()=>{ draft.items=PRESET_FRUIT(); drawItems(); };
-document.querySelectorAll("input[name=ts]").forEach(r=>r.addEventListener("change",()=>{ draft.ts=document.querySelector("input[name=ts]:checked").value==="1"; $("#sTsBox").hidden=!draft.ts; $("#planFold").hidden=!draft.ts; $("#pcBox").hidden=!draft.ts; drawItems(); }));
+document.querySelectorAll("input[name=ts]").forEach(r=>r.addEventListener("change",()=>{ draft.ts=document.querySelector("input[name=ts]:checked").value==="1"; $("#sTsBox").hidden=!draft.ts; $("#sOneDateBox").hidden=draft.ts||S.ts; $("#planFold").hidden=!draft.ts; $("#pcBox").hidden=!draft.ts; drawItems(); }));
 /* 個体リスト：組み合わせで作る（例 樹 1-5 × 処理区 無処理、遮光 × 果実 1-10） */
 function expandSpec(s){
   s=(s||"").normalize("NFKC").trim(); if(!s) return [""];
@@ -4097,6 +4200,7 @@ function openSettings(go,then){
   draft=JSON.parse(JSON.stringify(S));
   $("#sName").value=draft.name;
   document.querySelector(`input[name=ts][value="${draft.ts?1:0}"]`).checked=true; $("#sTsBox").hidden=!draft.ts;
+  $("#sOneDateBox").hidden=draft.ts||S.ts; oneDateFill(); $("#sOneMsg").textContent=""; pcalAct(null);
   $("#sOutFmt").value=draft.outFmt;
   document.querySelector(`input[name=dir][value=${draft.dir}]`).checked=true;
   $("#sGroups").value=draft.groups||""; drawGroupPrev();
@@ -4137,8 +4241,10 @@ function planFromForm(){
     count:$("#pCount").value,until:$("#pUntil").value,list,time:$("#pTime").value,alarms:[...document.querySelectorAll("input[name=pAl]:checked")].map(x=>x.value)});
 }
 function planFormUi(){
-  const p=planFromForm(); $("#pBox").hidden=!p.on;
-  $("#pEveryBox").hidden=p.mode!=="every"; $("#pListBox").hidden=p.mode!=="list";
+  const p=planFromForm();
+  /* 4.9.16：予定を使わないときも、カレンダーは出す（調査した日の変更・削除のため）。ほかの欄は予定を使うときだけ */
+  $("#pBox").hidden=false; [...$("#pBox").children].forEach(c=>{ if(c.id!=="pCal") c.hidden=!p.on; });
+  $("#pEveryBox").hidden=!p.on||p.mode!=="every"; $("#pListBox").hidden=!p.on||p.mode!=="list";
   const P=planDates(p), bad=p.mode==="list"?$("#pList").value.normalize("NFKC").split(/[\s,、，]+/).filter(Boolean).length-p.list.length:0;
   $("#pPrev").textContent=!p.on?"":P.length?`予定：${P.slice(0,8).map(planMD).join("・")}${P.length>8?"…":""}（全${P.length}回${P.length>1&&p.mode==="every"&&!p.count&&!p.until?"":""}）`+(p.mode==="every"&&!p.count&&!p.until?"。回数か終わりの日を入れると、2回目からの予定も作ります":"")+(bad>0?`。日付として読めない${bad}件は使いません（例 2026-05-10）`:""):(p.mode==="every"?"初回の日を入れてください":"予定日を入れてください");
   $("#pIcs").disabled=!P.length;
@@ -4268,6 +4374,14 @@ $("#sSave").onclick=()=>{
   sel=null; undoSnap=trimmed?before:null;
   save(); render(); $("#dlg").close();
   if(trimmed) offerUndo(`リストから外れた${trimmed}行を表から削除しました`);
+};
+$("#sOneDateGo").onclick=()=>{
+  const r=moveDate(S.curDate,$("#sOneDate").value);
+  dateMsgHtml($("#sOneMsg"),r.msg,r.ok); if(r.ok) offerUndo(r.msg);
+};
+$("#sOneDel").onclick=()=>{
+  const d=S.curDate; if(!deleteAsk(d)) return;
+  const r=deleteDate(d); dateMsgHtml($("#sOneMsg"),r.msg,r.ok); if(r.ok) offerUndo(r.msg);
 };
 $("#sClear").onclick=()=>{
   if(!confirm("すべての調査日の測定データと除外の記録を消去します（個体リストは残ります）。先にExcelかCSVで保存しましたか？")) return;
@@ -5693,6 +5807,7 @@ const HELP=[
 
 {g:"ts",id:"timeseries",t:"経時調査と調査日",k:"経時 調査日 日付 新しい調査日 肥大 継続 繰り返し けいじ ちょうさび ぜんかい ひだい",go:"ts",b:
 "<p>設定の「調査の種類」を「経時調査」にすると、調査日ごとに記録します。表の上の「＋ 新しい調査日」で次の調査を始め、調査日の欄で過去の日に切り替えて見直せます。個体リストと除外の記録は、全調査日で共通です。全調査日の値は「全調査日の一覧」で見比べられ、入力の表に前の調査日の値を並べることもできます。</p>"},
+{g:"ts",id:"datefix",t:"調査日を変更する・その日の記録だけを削除する",k:"調査日 変更 間違えた 日付 直す 削除 消す 練習 その日だけ やり直し ちょうさび へんこう まちがえた さくじょ けす れんしゅう",go:"ts",b: "<p>記録した調査日を間違えたときや、練習で入れた値を消したいときに使います。</p><ul><li><b>表の上</b>：経時調査では、調査日の欄の横の「この日の操作」を押します。正しい日付を選んで「日付を変更」、またはその日の記録を消す「この日だけ削除」を選べます。</li><li><b>カレンダー</b>：設定の「調査日の予定・カレンダー」で、点の付いた日（調査した日）を押すと、その日を表で開く・予定日に足す／外す・日付を変更・この日だけ削除が出ます。点のない日は、これまでどおり押すと予定日に足したり外したりします。</li><li><b>1回の調査</b>：設定の「調査の種類」にある「調査日」で、日付の変更と「記録を消す」ができます。</li></ul><ul><li>変更先の日にすでに値が入っているときは、上書きしないように止めます。</li><li>除外した個体は、除外した日がその日なら、除外の日付も一緒に変わります。削除したときは、その日に付けた除外も消えます。</li><li>個体リスト・項目・ほかの日の記録は残ります。記録が1日分だけの調査で削除すると、値の入っていない状態（調査日は今日）に戻ります。</li><li>直後なら「元に戻す」で戻せます。念のため、先にバックアップを保存しておくと安心です。</li></ul>"},
 {g:"ts",id:"lslist",t:"全調査日の一覧（野帳型の表示）",k:"一覧 全調査日 推移 野帳型 前回 過去 横に並べる 調査日ごと 項目ごと 見比べる いちらん すいい やちょうがた かこ よこにならべる",b:
 "<p>経時調査では、表の下の「全調査日の一覧」で、全調査日の値を1行＝1個体の表で見られます（「集計・グラフ」と同じく別の画面で、ここでは値を変えません）。</p><ul><li><b>並べ方</b>：「項目ごと」は 横径 10/01・10/15・11/01 → 縦径 … の順、「調査日ごと」は 10/01 の全項目 → 10/15 の全項目 …（Excel・CSV の野帳型と同じ順）。</li><li><b>項目</b>・<b>調査日</b>（全部・直近3／5／10回）で絞り込めます。1項目だけにすると、その項目の推移が1行で読めます。選んだ内容は調査ごとに覚えます。</li><li>前回より減った・増えたセルは、前回比の設定と同じ判定で色が付きます。点線の枠は外れ値の候補、灰色は除外した個体（除外した日から。理由を小さく出します）、黄色の見出しは今開いている調査日です。</li><li>セルを押すと、一覧を閉じてその調査日のそのセルに移ります。そのまま声や手入力で直せます。</li><li>「表をコピー」（Excelに貼れます）「表をCSVで保存」は、表示しているとおり（絞り込んだ後）の表です。全項目・全調査日は、これまでどおり「全調査日CSV（野帳型）」やExcelで保存します。</li><li>個体・項目・調査日が多く、セルが2万を超えるときは、初めは1項目だけを表示します。</li></ul><p>日付を列にした1回の調査（「横径_10/01」…の項目）は、前回比・伸び方の外れ値・経時グラフ・縦持ちCSV・予定が働かないので勧めません。経時調査にして、この一覧で見てください。</p>"},
 {g:"ts",id:"prevcols",t:"前の調査日の値を並べる（入力の表）",k:"前の調査日 前回 過去 横に並べる 前の値 直近 薄い 増減 矢印 推移 まえのちょうさび ぜんかい かこ よこにならべる やじるし",go:"freeze",b:
@@ -5786,6 +5901,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.9.16",d:"2026-11-26",a:[["記録した調査日を後から変更できるように（表の上の「この日の操作」、調査日の予定のカレンダーで「調査した日」を押す。変更先の日に記録があるときは上書きせずに止める）","datefix"],["調査を残したまま、その日の記録だけを削除できるように（練習で入れた値も消せる。個体リスト・項目・ほかの日の記録は残る。直後なら「元に戻す」で戻せる）","datefix"],["1回の調査では、設定の「調査の種類」で調査日の変更と記録の消去ができるように","datefix"]]},
 {v:"Pro 4.9.15",d:"2026-11-26",a:[["iPhoneで、続けて入れた値の読み上げが途中で切れないように（読み上げが本当に鳴り終わってから聞き取りを再開。早すぎる読み終わりは1回だけ読み直す）","readback"],["1回の声で2つ以上入れたとき、画面にどのセルに何が入ったかを並べ、「短く」でも値を全部読むように（10件を超えたら最初と最後）","bulk"],["早めに確定したあとの続き（「1と3と2と4」）を入れるように。早めに確定した値の読み上げは、言い終わるまで待つ。待つ時間を 0.3・0.5・0.8 秒から選べるように","readback"],["読み上げの声を選べるように（端末ごとに覚える）","readback"],["入力できる値が1桁だけの項目（0〜4など）で、続けて言った数字（例 1324）を1桁ずつに分けて入れるように（設定でオフにできる）","bulk"],["「環境診断」を「環境診断」に。読み上げ1回ごとの記録（読んだ言葉・鳴っていた時間・最後まで読めたか）を出し、写せるように","mic"]]},
 {v:"Pro 4.9.14",d:"2026-11-26",a:[["行のまとめ方を、設定で2段（例：集団 → 系統）まで選べるように。ひな形にまとめ方の候補があれば、ボタンで選べる","fold"],["ガイドで個体リストが50個体以上になるとき、行のまとめ方を選べるように（おまかせは、いちばん内側の列を除いた外側の列）","guide"],["個体リストが100個体以上あるのにまとめていない調査では、表の上に一度だけ、まとめ方の案内を出す","fold"]]},
 {v:"Pro 4.9.13",d:"2026-11-25",a:[["行を「系統」「ロット」などの列でまとめて、まとまりごとに開く・閉じるができるように（見出しに入力の済んだ数。入力の順番は今までどおりで、今のセルが入ったまとまりは自動で開く。設定の「入力の進む順番」で選ぶ）","fold"],["まとめ方つきのひな形（試験設計ナビなど）は、個体リストを 20,000 行まで受け取れるように（閉じたまとまりの行は描かないので軽い）","template"]]},
@@ -6947,7 +7063,7 @@ function pcalInit(){
 function pcalDraw(){
   if(!$("#pCalGrid")) return;
   if(!pcalYM) pcalInit();
-  const p=planFromForm(), list=p.mode==="list", P=new Set(planDates({...p,on:true}));
+  const p=planFromForm(), list=p.mode==="list", P=new Set(p.on?planDates({...p,on:true}):[]);
   const done=new Set((()=>{ try{ return dataDates(draft&&draft.items?{...S,items:draft.items}:S,D); }catch(e){ return []; } })());
   const [y,m]=pcalYM, first=new Date(y,m-1,1), days=new Date(y,m,0).getDate(), lead=first.getDay(), t=today();
   const inMonth=[...P].filter(d=>d.slice(0,7)===`${y}-${pcalPad(m)}`).length;
@@ -6960,11 +7076,18 @@ function pcalDraw(){
     h+=`<button type="button" class="${cls}" data-d="${k}" aria-pressed="${on}" aria-label="${lab}">${d}</button>`;
   }
   $("#pCalGrid").innerHTML=h;
-  $("#pCalHelp").textContent=list?"日を押すと予定日に足し、もう一度押すと外します。":"間隔で決めた予定日です。日を押すと、この予定を元に「日付を並べる」に切り替えて、日を足したり外したりできます。";
+  $("#pCalHelp").textContent=(!p.on?"予定日を決めるときは、上の「調査日の予定を使う」をオンにします。":list?"日を押すと予定日に足し、もう一度押すと外します。":"間隔で決めた予定日です。日を押すと、この予定を元に「日付を並べる」に切り替えて、日を足したり外したりできます。")+"点の付いた日（調査した日）を押すと、日付の変更・その日だけの削除ができます。";
 }
 $("#pCalGrid").addEventListener("click",e=>{
   const b=e.target.closest("button[data-d]"); if(!b) return;
-  const k=b.dataset.d; let p=planFromForm();
+  const k=b.dataset.d;
+  /* 4.9.16：調査した日（値がある日）を押すと、その日の操作を出す */
+  if(b.classList.contains("done")){ pcalAct(k); return; }
+  pcalAct(null); pcalToggle(k);
+});
+function pcalToggle(k){
+  let p=planFromForm();
+  if(!p.on){ note("予定日を決めるときは、「調査日の予定を使う」をオンにします"); return; }
   if(p.mode!=="list"){
     const P=planDates({...p,on:true});
     document.querySelector("input[name=pMode][value=list]").checked=true;
@@ -6973,6 +7096,41 @@ $("#pCalGrid").addEventListener("click",e=>{
   }
   const s=new Set(p.list); if(s.has(k)) s.delete(k); else { if(s.size>=200){ note("予定日は200日までです"); return; } s.add(k); }
   pcalSetList([...s]); planFormUi();
+}
+/* 4.9.16：カレンダーで押した「調査した日」の操作（開く・予定日・日付の変更・その日だけ削除） */
+function pcalAct(k,msg,undo){
+  const box=$("#pCalAct"); if(!box) return;
+  if(!k){ box.hidden=true; box.dataset.d=""; box.innerHTML=""; if(msg){ box.hidden=false; box.innerHTML='<small class="ver dfmsg" id="pCalActMsg" aria-live="polite"></small><div class="pcalbtns"><button type="button" class="ghost" data-a="close">閉じる</button></div>'; dateMsgHtml($("#pCalActMsg"),msg,undo); } return; }
+  let on=false, pOn=false; try{ const pf=planFromForm(); pOn=!!pf.on; on=pOn&&new Set(planDates({...pf,on:true})).has(k); }catch(e){}
+  const n0=dayCount(k), ex=dayExCount(k), [,m,d]=k.split("-").map(Number), isCur=k===S.curDate;
+  box.dataset.d=k;
+  box.innerHTML=`<div><b>${m}月${d}日</b>　<span class="ver">調査した日（値 ${n0}件${ex?`・除外 ${ex}件`:""}）${isCur?"・表で開いている日":""}</span></div>`
+   +`<div class="pcalbtns"><button type="button" class="ghost" data-a="open"${isCur?" disabled":""}>この日を表で開く</button>${pOn?`<button type="button" class="ghost" data-a="plan">${on?"予定日から外す":"予定日に足す"}</button>`:""}</div>`
+   +`<div class="pcalbtns"><input type="date" id="pCalTo" value="${k}" aria-label="正しい調査日"><button type="button" class="ghost" data-a="move">日付を変更</button></div>`
+   +`<div class="pcalbtns"><button type="button" class="danger" data-a="del">この日だけ削除</button><button type="button" class="ghost" data-a="close">閉じる</button></div>`
+   +`<small class="ver dfmsg" id="pCalActMsg" aria-live="polite"></small>`;
+  box.hidden=false;
+  if(msg) dateMsgHtml($("#pCalActMsg"),msg,undo);
+}
+$("#pCalAct").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-a]"); if(!b||b.disabled) return;
+  const box=$("#pCalAct"), k=box.dataset.d, a=b.dataset.a;
+  if(a==="close"){ pcalAct(null); return; }
+  if(!k) return;
+  if(a==="plan"){ pcalToggle(k); pcalAct(k); return; }
+  if(a==="open"){
+    if(listening) stopRec(); clearPend(); switchDate(k); save(); render(); dateDlgSync();
+    pcalAct(k,"この日を表で開きました。設定を閉じると、この日の表が出ます"); return;
+  }
+  if(a==="move"){
+    const to=$("#pCalTo").value, r=moveDate(k,to);
+    if(!r.ok){ dateMsgHtml($("#pCalActMsg"),r.msg,false); return; }
+    pcalYM=[+to.slice(0,4),+to.slice(5,7)]; pcalDraw(); offerUndo(r.msg); pcalAct(to,r.msg,true); return;
+  }
+  if(a==="del"){
+    if(!deleteAsk(k)) return;
+    const r=deleteDate(k); pcalDraw(); if(r.ok) offerUndo(r.msg); pcalAct(null,r.msg,r.ok); return;
+  }
 });
 $("#pCalPrev").onclick=()=>{ let [y,m]=pcalYM; m--; if(m<1){ m=12; y--; } pcalYM=[y,m]; pcalDraw(); };
 $("#pCalNext").onclick=()=>{ let [y,m]=pcalYM; m++; if(m>12){ m=1; y++; } pcalYM=[y,m]; pcalDraw(); };
