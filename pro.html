@@ -703,10 +703,11 @@ td.cur .pva{color:inherit}
   </div>
   <div class="log" id="log"></div>
   <div class="diag">
-    <button type="button" id="diag" class="ghost">マイク診断</button>
+    <button type="button" id="diag" class="ghost">環境診断</button>
     <span class="ver" id="ver"></span><span class="ver" id="licInfo"></span> <button type="button" id="licChange" class="ghost">利用コードを変更</button>
   </div>
   <pre class="diagout" id="diagOut" hidden></pre>
+  <button type="button" class="ghost" id="diagCopy" hidden>環境診断の結果を写す</button>
   <details class="terms">
     <summary>© 2026 tochigitfruits　利用条件・免責事項</summary>
     <div class="termsbody" id="termsBody">
@@ -1078,10 +1079,13 @@ td.cur .pva{color:inherit}
       <legend>読み上げ・音・その他</legend>
       <label class="toggle" for="sRead"><span>声で入力した値を読み上げる<small class="ver" style="display:block">マイクで話した値の読み上げ。手入力の読み上げは、入力画面の「復唱」ボタンで切り替えます</small></span><input type="checkbox" id="sRead"></label>
       <p class="help">ノギスやはかりから手入力欄に入った値は、入力画面のマイクの横にある「復唱」（話す人のマーク）を押すと、オフにするまで読み上げます。上の設定とは別に働きます。</p>
-      <label class="toggle" for="sRbMode"><span>読み上げの内容<small class="ver" style="display:block">全部：値と次の個体をすべて読む／短く：値と、変わった番号だけを読む（3件以上まとめて言ったときは件数と最後の値）／区切りだけ：ふだんは「ピッ」と鳴らし、次の個体に移るとき・アラートのときだけ話す（復唱オンの手入力は値も読む）。復唱の読み上げにも同じ内容を使います</small></span><select id="sRbMode"><option value="full">全部</option><option value="short">短く</option><option value="beep">区切りだけ</option></select></label>
-      <label class="toggle" for="sFast"><span>早めに確定する（試験的）<small class="ver" style="display:block">話し終わりを待たず、数値として読めた時点（約0.5秒変わらなければ）で入力します。速くなりますが、言いかけの値で確定することがあります。小数の項目は「てん」の後の数字まで聞いてから確定します。PC・Androidでは、読み上げ中に続けて話した声は拾わないため、「区切りだけ」と組み合わせると速さを生かせます</small></span><input type="checkbox" id="sFast"></label>
+      <label class="toggle" for="sRbMode"><span>読み上げの内容<small class="ver" style="display:block">全部：値と次の個体をすべて読む／短く：値と、変わった番号だけを読む（2件以上まとめて言ったときは件数と値。10件を超えたら最初と最後）／区切りだけ：ふだんは「ピッ」と鳴らし、次の個体に移るとき・アラートのときだけ話す（復唱オンの手入力は値も読む）。復唱の読み上げにも同じ内容を使います</small></span><select id="sRbMode"><option value="full">全部</option><option value="short">短く</option><option value="beep">区切りだけ</option></select></label>
+      <label class="toggle" for="sFast"><span>早めに確定する（試験的）<small class="ver" style="display:block">話し終わりを待たず、数値として読めた時点（下の「待つ時間」〔標準 0.5秒〕変わらなければ）で入力します。読み上げは言い終わるまで待ちます。速くなりますが、言いかけの値で確定することがあります。小数の項目は「てん」の後の数字まで聞いてから確定します。PC・Androidでは、読み上げ中に続けて話した声は拾わないため、「区切りだけ」と組み合わせると速さを生かせます</small></span><input type="checkbox" id="sFast"></label>
+      <label class="toggle" for="sFastMs"><span>早めに確定するまで待つ時間<small class="ver" style="display:block">短いほど速く入りますが、言いかけの値で確定しやすくなります</small></span><select id="sFastMs"><option value="300">0.3秒</option><option value="500">0.5秒（標準）</option><option value="800">0.8秒</option></select></label>
+      <label class="toggle" for="sSplitDg"><span>続けて言った数字を1桁ずつに分ける<small class="ver" style="display:block">入力できる値が1桁だけの項目（例 0〜4）で、「1324」のように続けて聞き取られた数字を 1・3・2・4 に分けて入れます。1字ずつならどれも入れられるときだけ分けます</small></span><input type="checkbox" id="sSplitDg"></label>
       <label class="toggle" for="sIosNp"><span>iPhoneでも聞き取りを止めずに読み上げる（試験的）<small class="ver" style="display:block">iPhoneでは、読み上げのたびに聞き取りを止めて、読み終えてから再開します。オンにすると、PC・Androidと同じく止めずに読み上げ、読み上げ中に聞こえた声は無視します。切り替えが減りますが、読み上げの音が小さくなったり、受話口（耳に当てる側）から出たりすることがあります。この端末で覚えます。iPhone以外では働きません</small></span><input type="checkbox" id="sIosNp"></label>
       <label class="toggle" for="sRate"><span>読み上げの速さ <b id="sRateVal"></b><small class="ver" style="display:block">遅い 0.6 〜 2.0 速い（標準 1.1）</small></span><input type="range" id="sRate" min="0.6" max="2" step="0.1"></label>
+      <label class="toggle" for="sVoice"><span>読み上げの声<small class="ver" style="display:block">この端末だけに覚えます。iPhone は「設定 → アクセシビリティ → 読み上げコンテンツ → 声 → 日本語」で「拡張」「高品質」の声をダウンロードすると、選べる声が増えることがあります（Siri の声は選べません）</small></span><select id="sVoice"></select></label>
       <div class="toggle"><button type="button" class="ghost" id="sTest">読み上げテスト</button><span class="ver" id="sTestOut"></span></div>
       <label class="toggle" for="sSound"><span>アラート・待機の音を鳴らす<small class="ver" style="display:block">Androidでは振動もします</small></span><input type="checkbox" id="sSound"></label>
       <div class="toggle"><button type="button" class="ghost" id="sSoundTest">音のテスト</button><span class="ver">表示 → 注意 → 禁止 の順に鳴ります</span></div>
@@ -1442,6 +1446,8 @@ function normS(){
   { const g=+S.undoGap; S.undoGap=(S.undoGap!==undefined&&S.undoGap!==null&&[0,1.5,3,5].includes(g))?g:3; }
   if(!["full","short","beep"].includes(S.rbMode)) S.rbMode="full";
   if(typeof S.fastCommit!=="boolean") S.fastCommit=false;
+  if(![300,500,800].includes(+S.fastMs)) S.fastMs=500; else S.fastMs=+S.fastMs;   /* 4.9.15 */
+  if(typeof S.splitDigits!=="boolean") S.splitDigits=true;   /* 4.9.15 */
   if(typeof S.csvIds!=="boolean") S.csvIds=false;   /* 4.9.11 */
   { const f=foldNorm(S.fold,S.items); if(f) S.fold=f; else delete S.fold;   /* 4.9.13 */
     if(!S.foldOpen||typeof S.foldOpen!=="object"||Array.isArray(S.foldOpen)) S.foldOpen={}; if(typeof S.foldAuto!=="boolean") S.foldAuto=true; if(typeof S.foldHint!=="boolean") S.foldHint=false; }
@@ -1934,9 +1940,25 @@ function advance(){
   return "";
 }
 /* 1回の発話で入れた値の数と最後の値（「短く」で件数にまとめるため） */
-let putCount=0, lastPut=null, alerted=false;
+let putCount=0, lastPut=null, alerted=false, multiPut=[];
+/* 4.9.15：1回の声で入れたセル（まとめての読み上げ・画面の並びに使う）。値の言葉から入れたものだけ（「ゼロ 6個」などは別） */
+function putRec(v){ const r=cur.r, c=cur.c, s=putValue(v), it=S.items[c]; if(it&&hasVal(D[r]?.[it.id])&&!badCells.has(r+":"+c)&&!(pend&&pend.r===r&&pend.c===c)) multiPut.push({r,c}); return s; }
 /* 手入力の復唱：「復唱」ボタンがオンのとき、手入力で入った値も読み上げる */
 let manualRb=false;
+/* 4.9.15：1桁ずつに分けてよいか。入力できる値（数値は allow、選択肢は候補）がすべて 0〜9 の整数で、
+   続けた数字そのものは入れられず、1字ずつならどれも入れられるときだけ */
+function digitOnly(it){
+  if(!it||it.role==="id") return null;
+  if(it.type==="choice"){ const o=it.options.map(x=>String(x).normalize("NFKC").trim()); return o.length&&o.every(x=>/^\d$/.test(x))?new Set(o):null; }
+  if(it.type!=="num"||+it.dec) return null;
+  const ns=numOpts(it); return ns&&ns.length&&ns.every(x=>Number.isInteger(x)&&x>=0&&x<=9)?new Set(ns.map(String)):null;
+}
+function digitSplit(it,t){
+  if(S.splitDigits===false) return false;
+  t=String(t).normalize("NFKC"); if(!/^\d{2,12}$/.test(t)) return false;
+  const ok=digitOnly(it); if(!ok||ok.has(String(+t))) return false;
+  return [...t].every(d=>ok.has(d));
+}
 function roundVal(it,x){ const m=Math.pow(10,it.dec); return Math.round(x*m)/m; }
 function putValue(v){
   const it=S.items[cur.c]; if(!it) return null; const prev0=D[cur.r]?.[it.id];
@@ -2399,7 +2421,7 @@ function handleText(raw, fromVoice, rbNow){
   if(fromVoice && (ECHO_RE.test(clean.replace(/[、,，\s]/g,""))||iosEcho(clean))){ h.className="heard"; h.textContent=`読み上げの声とみなして無視しました：「${raw}」`; if(IS_IOS) iosBump("読み上げの声を拾った"); return; }
   rbNow=!fromVoice&&!!rbNow; manualRb=rbNow;
   voiceCtx=fromVoice?++utterSeq:0; undoBlocked=false;
-  halt=false; sel=null; putCount=0; lastPut=null; alerted=false; aliasHits=[];
+  halt=false; sel=null; putCount=0; lastPut=null; alerted=false; aliasHits=[]; multiPut=fastCarry?fastCarry.slice():[]; fastCarry=null;   /* 早めに確定した分は、続きと合わせて1回の声として数える */
   if(!pend) hideAlert();
   const whole=parseCommand(clean)||(pend?null:cmdAlias(clean));
   /* 確かめるだけのコマンドは、値・確認待ち・取り消しに触れずに答える */
@@ -2427,25 +2449,25 @@ function handleText(raw, fromVoice, rbNow){
     if(whole){ const s=doCommand(whole); if(s) say.push(s); }
     else if(bk!==null){ if(bk) say.push(bk); }
     else {
-      const toks=tokenize(raw);
+      const toks=tokenize(raw); let dgSplit=false;   /* 4.9.15：1桁ずつに分けたら、声の全体での照合はしない */
       for(let i=0;i<toks.length;i++){
         if(halt) break;
         const it=S.items[cur.c]; if(!it) break;
-        if(it.type==="text"){ const w=i===0?clean:toks.slice(i).join(" "); const s=putValue(aliasFor(it,w)??w); if(s) say.push(s); break; }
+        if(it.type==="text"){ const w=i===0?clean:toks.slice(i).join(" "); const s=putRec(aliasFor(it,w)??w); if(s) say.push(s); break; }
         /* 日付・複数選択：まず残りの言葉全体で読む（「11月 5日」「虫害と日焼け」） */
         if(it.type==="date"||it.type==="multi"){
           const w=i===0?clean:toks.slice(i).join(" ");
           const v0=it.type==="date"?dateOf(it,w):multiOf(it,w);
-          if(v0!==null){ const s=putValue(v0); if(s) say.push(s); break; }
+          if(v0!==null){ const s=putRec(v0); if(s) say.push(s); break; }
         }
         const t=toks[i];
         const c=parseCommand(t); if(c){ const s=doCommand(c); if(s) say.push(s); continue; }
-        if(it.type==="date"){ const v=dateOf(it,t); if(v===null) bad.push(t); else { const s=putValue(v); if(s) say.push(s); } continue; }
+        if(it.type==="date"){ const v=dateOf(it,t); if(v===null) bad.push(t); else { const s=putRec(v); if(s) say.push(s); } continue; }
         if(it.type==="multi"){
           /* 次の音声コマンドの手前までを1つの値として読む（「虫害 日焼け 次」） */
           let j=i; const buf=[]; while(j<toks.length&&!parseCommand(toks[j])) buf.push(toks[j++]);
           const w=buf.join(" "), v=multiOf(it,w);
-          if(v===null) bad.push(w); else { const s=putValue(v); if(s) say.push(s); }
+          if(v===null) bad.push(w); else { const s=putRec(v); if(s) say.push(s); }
           i=j-1; continue;
         }
         if(it.type==="count"){
@@ -2457,13 +2479,16 @@ function handleText(raw, fromVoice, rbNow){
           }
         }
         if(it.type==="choice"){
-          const multi=i===0&&toks.length>1;
+          if(digitSplit(it,t)){ toks.splice(i,1,...String(t).normalize("NFKC").split("")); dgSplit=true; i--; continue; }   /* 4.9.15：候補が1桁の数字だけの選択肢（照合で近い候補に寄せる前に分ける） */
+          const multi=i===0&&toks.length>1&&!dgSplit;
           const ac=multi?aliasFor(it,clean):null, mc=ac!==null?matchChoice(ac,it.options):null;
           let m=mc;
           if(m===null){ const at=aliasFor(it,t); m=(at!==null?matchChoice(at,it.options):null)||(multi?matchChoice(clean,it.options):null)||matchChoice(t,it.options); }
-          if(m===null) bad.push(t); else { const s=putValue(m); if(s) say.push(s); if(multi&&(mc!==null||normJ(m)===normJ(clean))) break; }
+          if(m===null) bad.push(t); else { const s=putRec(m); if(s) say.push(s); if(multi&&(mc!==null||normJ(m)===normJ(clean))) break; }
           continue;
         }
+        /* 4.9.15：入力できる値が1桁だけの項目で、続けて言った数字（1324）を1桁ずつに分ける */
+        if(digitSplit(it,t)){ toks.splice(i,1,...String(t).normalize("NFKC").split("")); dgSplit=true; i--; continue; }
         const v=parseNumber(aliasFor(it,t)??t);
         if(v===null||Number.isNaN(v)){
           /* くっついた小数（32.531.2）を、その項目の小数桁で切り分ける */
@@ -2472,7 +2497,7 @@ function handleText(raw, fromVoice, rbNow){
             if(parts&&parts.join("")===t){ toks.splice(i,1,...parts); i--; continue; }
           }
           bad.push(t);
-        } else { const s=putValue(v); if(s) say.push(s); }
+        } else { const s=putRec(v); if(s) say.push(s); }
       }
     }
   }
@@ -2480,14 +2505,29 @@ function handleText(raw, fromVoice, rbNow){
   else if(undoBlocked){ h.className="heard ng"; h.textContent=`「${raw}」→ 続けての取り消しは無視しました（${S.undoGap}秒あけてください）`; }
   else if(!stoppedNow){ h.className="heard ok"; h.textContent=`「${raw}」`+(aliasHits.length?`（言い換え ${[...new Set(aliasHits)].join("・")}）`:"")+(rbNow?"（復唱）":""); }
   stoppedNow=false; voiceCtx=0;
+  if(multiPut.length>=2&&h.classList.contains("ok")) h.textContent+=`　${multiPut.length}件：`+multiList();   /* 4.9.15：どのセルに何が入ったか */
   save(); render();
-  if(fromVoice) speak(sayText(say,bad.length>0));
+  if(fromVoice){ let t=sayText(say,bad.length>0);
+    if(fastHold){ clearTimeout(fastSay?.timer); fastSay={t,puts:multiPut.slice(),timer:setTimeout(fastSayFlush,FAST_SAY_MAX)}; }
+    else { if(fastPrefix&&!(multiPut.length>=2&&S.rbMode!=="full")) t=sayJoin(fastPrefix,t); fastPrefix=null; speak(t); } }
   else if(rbNow) speak(sayText(say,bad.length>0),true);
   manualRb=false;
+}
+/* 4.9.15：1回の声で入れたセルの並び（10件を超えたら最初の5件・…・最後の2件） */
+function multiList(){
+  const f=p=>`${rowLabel(p.r)} ${fmt(D[p.r]?.[S.items[p.c]?.id],S.items[p.c])}`;
+  const L=multiPut.length>10?[...multiPut.slice(0,5).map(f),"…",...multiPut.slice(-2).map(f)]:multiPut.map(f);
+  return L.join("／");
 }
 /* 読み上げる言葉をまとめる。「短く」「区切りだけ」で3件以上を続けて入れたときは件数と最後の値だけにする */
 function sayText(say,hasBad){
   let t=say.filter(Boolean).join("、").replace(/、{2,}/g,"、").replace(/^[、\s]+/,"");
+  /* 4.9.15：1回の声で2つ以上入れたとき、「短く」でも値を全部読む（10件を超えたら最初と最後）。「区切りだけ」は件数だけ */
+  if(multiPut.length>=2&&!alerted&&!hasBad&&S.rbMode!=="full"){
+    const v=p=>fmt(D[p.r]?.[S.items[p.c]?.id],S.items[p.c]).replace(/^-/,"マイナス"), n=multiPut.length;
+    if(S.rbMode==="beep"&&!manualRb) return `${n}件`;
+    return `${n}件、`+(n>10?`最初 ${v(multiPut[0])}、最後 ${v(multiPut[n-1])}`:multiPut.map(v).join("、"))+(lastPut?lastPut.suf:"");
+  }
   if(S.rbMode!=="full"&&putCount>=3&&!alerted&&!hasBad&&lastPut){
     t=`${putCount}件`+(S.rbMode==="short"||manualRb?`、最後 ${lastPut.said}`:"")+lastPut.suf;
   }
@@ -2500,7 +2540,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.9.14（2026-11-26）";
+const APP_VER="Pro 4.9.15（2026-11-26）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -2525,7 +2565,7 @@ function makeRec(){
       if(IS_IOS&&!gestureStart){ IOSQ.denied=true; iosBump("自動の再開を拒否された"); iosNeedTap(); return; }
       listening=false; standby=false; updateMic(); releaseWake();
       if(!gestureStart){ note(`聞き取りが途切れました。もう一度マイクを押してください。（${e.error}／${when}）`); return; }
-      note(`音声認識を開始できませんでした（コード：${e.error}／${when}）。下の「マイク診断」で原因を確認できます。`, true);
+      note(`音声認識を開始できませんでした（コード：${e.error}／${when}）。下の「環境診断」で原因を確認できます。`, true);
     }
     else if(e.error==="network"){ note("音声認識の通信に失敗しました。電波を確認するか、手入力欄を使ってください。"); }
     else if(e.error==="audio-capture"){ listening=false; standby=false; note("マイクが見つかりません。"); updateMic(); }
@@ -2546,6 +2586,11 @@ function makeRec(){
 }
 /* 早めの確定（試験的）：途中結果が数値として読め、0.5秒変わらなければ確定を待たずに入力する */
 let fastTimer=null, fastIdx=-1, fastTxt="";
+/* 4.9.15：早めに確定した値の読み上げは、最後の聞き取りが来るまで（最大 FAST_SAY_MAX ms）ためる。続きがあれば合わせて1回で読む */
+let fastHold=false, fastSay=null, fastPrefix=null, fastCarry=null;
+const FAST_SAY_MAX=1500;
+function fastSayFlush(){ if(!fastSay) return; const t=fastSay.t; clearTimeout(fastSay.timer); fastSay=null; speak(t); }
+const sayJoin=(a,b)=>{ if(!a) return b; if(!b) return a; if(a==="#tick") return b==="#tick"?a:b; if(b==="#tick") return a; return a+"、"+b; };
 const fastDone=new Map();
 const fastNorm=t=>String(t).normalize("NFKC").replace(/[\s。、.,]/g,"");
 function fastCancel(){ clearTimeout(fastTimer); fastTimer=null; fastIdx=-1; fastTxt=""; }
@@ -2566,20 +2611,24 @@ function fastCheck(i,txt){
   clearTimeout(fastTimer); fastIdx=i; fastTxt=txt;
   fastTimer=setTimeout(()=>{
     if(fastIdx!==i||fastTxt!==txt||!listening||processed.has(i)) return;
-    fastDone.set(i,txt); fastCancel(); handleText(txt,true);
-  },500);
+    fastDone.set(i,txt); fastCancel(); fastHold=true; try{ handleText(txt,true); } finally{ fastHold=false; }
+  },+S.fastMs||500);
 }
 /* 早めに確定した結果のあとに最終の聞き取りが来たとき：続きがあれば入れ、違っていれば知らせる */
 function fastFinal(i,fin){
   const pre=fastDone.get(i); fastDone.delete(i);
   const a=fastNorm(pre), b=fastNorm(fin);
-  if(a===b) return;
+  const held=fastSay?fastSay.t:null, heldPuts=fastSay?fastSay.puts:null; if(fastSay){ clearTimeout(fastSay.timer); fastSay=null; }
+  if(a===b){ if(held) speak(held); return; }
   /* 最終の結果が、先に入れた分＋区切り＋続き になっていれば、続きだけを入れる */
   if(b.startsWith(a)){
     const f=fin.normalize("NFKC"); let n=0, k=0;
     while(k<f.length&&n<a.length){ if(!/[\s。、.,]/.test(f[k])) n++; k++; }
-    if(k>=f.length||/[\s、,，]/.test(f[k])){ const rest=f.slice(k).trim(); if(rest) handleText(rest,true); return; }
+    /* 4.9.15：「と」も区切り（「1」のあと「と3と2と4」） */
+    if(k>=f.length||/[\s、,，]/.test(f[k])||(f[k]==="と"&&/^と\s*[\d〇一二三四五六七八九十ゼロぜろマイナス]/.test(f.slice(k)))){ const rest=f.slice(k).replace(/^[\s、,，]*と?\s*/,"").trim();
+      if(rest){ fastPrefix=held; fastCarry=heldPuts; handleText(rest,true); fastPrefix=null; fastCarry=null; } else if(held) speak(held); return; }
   }
+  if(held) speak(held);
   note(`早めの確定「${pre}」と最終の聞き取り「${fin}」が違います。違う値が入っていれば「取り消し」で直してください。`);
   addLog(`早めの確定 ${pre} ／ 最終 ${fin}`);
 }
@@ -2628,12 +2677,37 @@ function releaseWake(){ try{ wake&&wake.release(); }catch(e){} wake=null; }
 /* 読み上げ：iPhoneでは認識を完全に止めてから話す（録音中は音が出ない／小さくなるため） */
 const HAS_TTS="speechSynthesis" in window;
 let jaVoice=null, pendingUtter=null, ttsUnlocked=false;
-/* 4.9.7：iPhone の読み上げの記録（マイク診断に出す）と、準備のやり直し。ttsStale＝次に画面を押したときに準備し直す */
+/* 4.9.7：iPhone の読み上げの記録（環境診断に出す）と、準備のやり直し。ttsStale＝次に画面を押したときに準備し直す */
 const TTSD={ask:0,start:0,miss:0,err:"",missAt:0}; let ttsStale=false, ttsPrimeAt=0;
-function pickVoice(){ try{ const vs=speechSynthesis.getVoices(); jaVoice=vs.find(v=>/^ja(-|_|$)/i.test(v.lang))||null; }catch(_){} }
+/* 4.9.15：読み上げの声。端末ごとに覚える（端末によって声の一覧が違うので、調査・ひな形には入れない）。ない声を覚えていたら標準（最初の日本語の声）に戻す */
+const VOICE_KEY="koe-yacho-v2-voice";
+let voiceMissing="";
+const jaVoices=()=>{ try{ return speechSynthesis.getVoices().filter(v=>/^ja(-|_|$)/i.test(v.lang)); }catch(_){ return []; } };
+function pickVoice(){ try{ const vs=jaVoices(); let want=""; try{ want=localStorage.getItem(VOICE_KEY)||""; }catch(_){}
+  const hit=want?vs.find(v=>v.voiceURI===want)||vs.find(v=>v.name===want):null;
+  voiceMissing=want&&vs.length&&!hit?want:""; jaVoice=hit||vs[0]||null; voiceFill(); }catch(_){} }
+function voiceFill(){
+  const el=document.getElementById("sVoice"); if(!el) return; const vs=jaVoices(); let want=""; try{ want=localStorage.getItem(VOICE_KEY)||""; }catch(_){}
+  el.innerHTML=`<option value="">端末の標準${vs[0]?`（${esc(vs[0].name)}）`:""}</option>`+vs.map(v=>`<option value="${esc(v.voiceURI)}">${esc(v.name)}${v.localService===false?"（通信）":""}</option>`).join("");
+  el.value=vs.some(v=>v.voiceURI===want)?want:"";
+}
 if(HAS_TTS){ pickVoice(); try{ speechSynthesis.addEventListener("voiceschanged",pickVoice); }catch(_){} }
 function utter(text,vol=1){ const u=new SpeechSynthesisUtterance(text); u.lang="ja-JP"; if(jaVoice) u.voice=jaVoice; u.rate=(+S.rate||1.1); u.volume=vol; return u; }
+/* 4.9.15：読み上げ1回ごとの記録（新しい順に 20 回）。環境診断に出す */
+const TTSLOG=[];
+function ttsLogOf(u){
+  const e={at:Date.now(),text:String(u.text||""),st:0,en:0,res:"",er:"",retry:!!u._retry}; u._log=e; TTSLOG.unshift(e); if(TTSLOG.length>20) TTSLOG.length=20;
+  try{ u.addEventListener("start",()=>{ e.st=Date.now(); });
+    u.addEventListener("end",()=>{ e.en=Date.now(); if(!e.res) e.res=(e.st&&e.en-e.st<ttsExpect(e.text)*0.5&&e.text.length>=4)?"短すぎる（切れた？）":"最後まで"; });
+    u.addEventListener("error",ev=>{ e.en=Date.now(); e.er=String(ev&&ev.error||"error"); if(!e.res) e.res=e.st?"途中で止まった":"始まらなかった"; }); }catch(_){}
+  return e;
+}
+function ttsLogText(){
+  const hm=t=>{ const d=new Date(t); return [d.getHours(),d.getMinutes(),d.getSeconds()].map(x=>String(x).padStart(2,"0")).join(":"); };
+  return TTSLOG.map(e=>`${hm(e.at)}　「${e.text.slice(0,40)}」　鳴り始めまで ${e.st?((e.st-e.at)/1000).toFixed(1)+"秒":"—"}・鳴っていた ${e.st&&e.en?((e.en-e.st)/1000).toFixed(1)+"秒":"—"}（見込み ${(ttsExpect(e.text)/1000).toFixed(1)}秒）・${e.res||(e.st?"読み上げ中":"待ち")}${e.retry?"（読み直し）":""}${e.er?`（${e.er}）`:""}`).join("\n");
+}
 function say(u){
+  if(!u._log) ttsLogOf(u);
   TTSD.ask++; try{ if(IS_IOS&&speechSynthesis.paused) speechSynthesis.resume(); }catch(_){}
   if(speechSynthesis.speaking||speechSynthesis.pending){ speechSynthesis.cancel(); setTimeout(()=>speechSynthesis.speak(u),60); }
   else speechSynthesis.speak(u);
@@ -2800,17 +2874,28 @@ function iosJoin(){
   const al=q.slice(0,-1).filter(t=>IOS_ALERT_RE.test(t));
   return [`${q.length}件`,...al,q[q.length-1]].join("、");
 }
-function iosUtter(){
-  const t=iosJoin(); IOSQ.lastSaid=t;
-  const u=utter(t); let done=false, started=false;
-  u.onstart=()=>{ started=true; TTSD.start++; };
+/* 4.9.15：見込みの読み上げ時間（ツールの目安：1字あたり約 0.15 秒 ÷ 速さ）。これの半分未満で終わったら、途中で切れたとみなす */
+const ttsExpect=t=>String(t).length*150/(+S.rate||1.1);
+/* 本当に鳴り終わるまで待つ（onend のあとも speaking が続くことがある）。上限：見込みの 1.5 倍＋1 秒 */
+function ttsQuiet(t,cb){ const t0=Date.now(), lim=ttsExpect(t)*1.5+1000;
+  (function poll(){ let sp=false; try{ sp=speechSynthesis.speaking; }catch(_){} if(!sp||Date.now()-t0>lim) cb(); else setTimeout(poll,100); })(); }
+function iosUtter(again){
+  const t=again||iosJoin(); IOSQ.lastSaid=t;
+  const u=utter(t); let done=false, started=false, t0=0;
+  u._retry=!!again;
+  u.onstart=()=>{ started=true; t0=Date.now(); TTSD.start++; };
   const fin=ev=>{ if(done) return; done=true;
+    /* 4.9.15：早すぎる読み終わり（途中で切れた）は、1回だけ読み直す */
+    if(ev&&ev.type==="end"&&started&&!again&&String(t).length>=4&&Date.now()-t0<ttsExpect(t)*0.5){
+      if(u._log) u._log.res="切れた→読み直し"; TTSD.cut=(TTSD.cut||0)+1; addLog(`iPhone：読み上げが途中で切れたため読み直しました（${t}）`);
+      ttsQuiet(t,()=>say(iosUtter(t))); return; }
+    if(ev&&ev.type==="end"&&again&&started&&Date.now()-t0<ttsExpect(t)*0.5&&u._log) u._log.res="読み直しも切れた";
     { const er=ev&&ev.type==="error"?String(ev.error||"error"):"";
       /* 始まらなかった＝エラー（こちらで取り消した分は除く）か、何の通知も来ないまま時間切れ。通知なしで読み終えた分は数えない */
       if(!started&&(!ev||(er&&!/^(canceled|interrupted)$/.test(er)))) ttsMissed(er||"時間切れ"); }
     if(IOSQ.q.length){ say(iosUtter()); return; }   /* 読んでいる間に来た分を続けて読む（聞き取りは止めたまま） */
-    IOSQ.own=false;
-    if(IOSQ.cycle){ IOSQ.cycle=false; iosResume(); } };
+    /* 4.9.15：聞き取りの再開は、本当に鳴り終わってから */
+    ttsQuiet(t,()=>{ if(IOSQ.q.length){ say(iosUtter()); return; } IOSQ.own=false; if(IOSQ.cycle){ IOSQ.cycle=false; iosResume(); } }); };
   u.onend=fin; u.onerror=fin; setTimeout(()=>fin(null),3000+t.length*300);
   return u;
 }
@@ -3223,6 +3308,7 @@ document.addEventListener("pointerdown",e=>{ audioUnlock(); if(!e.target.closest
 /* 4.9.7：iPhone で、ほかのアプリや画面から戻ったあとは、止まったままの読み上げを片付け、次に押したときに準備し直す */
 document.addEventListener("visibilitychange",()=>{ if(!IS_IOS||!HAS_TTS||document.visibilityState!=="visible") return; ttsStale=true;
   try{ if(!IOSQ.own&&!IOSQ.cycle&&!pendingUtter&&(speechSynthesis.speaking||speechSynthesis.pending)) speechSynthesis.cancel(); }catch(e){} });
+$("#sVoice").addEventListener("change",e=>{ try{ if(e.target.value) localStorage.setItem(VOICE_KEY,e.target.value); else localStorage.removeItem(VOICE_KEY); }catch(_){} pickVoice(); });
 $("#sRate").addEventListener("input",()=>{ $("#sRateVal").textContent="×"+(+$("#sRate").value).toFixed(1); });
 $("#sTest").onclick=()=>{
   if(!HAS_TTS){ $("#sTestOut").textContent="このブラウザは読み上げに対応していません"; return; }
@@ -3234,12 +3320,14 @@ $("#sTest").onclick=()=>{
   say(u);
 };
 $("#sSoundTest").onclick=()=>{ audioUnlock(); beep(SND.info); setTimeout(()=>beep(SND.warn),700); setTimeout(()=>beep(SND.block),1700); };
-/* マイク診断 */
+/* 環境診断 */
 $("#diag").onclick=async()=>{
   const lines=[`アプリ版：${APP_VER}`,`URL：${location.protocol}//${location.host}`,`安全な接続（https）：${window.isSecureContext?"はい":"いいえ"}`,
     `音声認識の機能：${SR?"あり":"なし"}`,`ホーム画面から起動：${(navigator.standalone||matchMedia("(display-mode: standalone)").matches)?"はい":"いいえ"}`];
   try{ lines.push(`読み上げ：頼んだ ${TTSD.ask}回・始まった ${TTSD.start}回・始まらなかった ${TTSD.miss}回${TTSD.err?`（最後の理由 ${TTSD.err}）`:""}`+(IS_IOS?"":"（始まった回数は iPhone だけ数えます）"));
-    lines.push(`音（区切り・アラート音）の状態：${actx?actx.state:"まだ使っていません"}`); }catch(e){}
+    lines.push(`音（区切り・アラート音）の状態：${actx?actx.state:"まだ使っていません"}`);
+    lines.push(`読み上げの声：${jaVoice?jaVoice.name:"（日本語の声が見つかりません）"}${voiceMissing?`（選んだ声「${voiceMissing}」がこの端末にないため、標準の声で読みます）`:""}・この端末の日本語の声 ${jaVoices().length}種類`);
+    if(TTSD.cut) lines.push(`読み上げが途中で切れて読み直した回数：${TTSD.cut}`); }catch(e){}
   if(!navigator.mediaDevices?.getUserMedia){ lines.push("マイク：確認できません（httpsで開いていない可能性）"); }
   else{
     try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); st.getTracks().forEach(t=>t.stop()); lines.push("マイク：使えます → 止められているのは音声認識（Siri・音声入力）側です"); }
@@ -3254,8 +3342,10 @@ $("#diag").onclick=async()=>{
   if(ST.mode!=="idb") lines.push(`大容量の保存領域：使えません${ST.err?"（"+ST.err+"）":""}`);
   try{ if(navigator.storage?.persisted) lines.push(`ブラウザによる自動削除からの保護：${(await navigator.storage.persisted())?"あり":"なし（空き容量が少なくなると消される場合があります）"}`); }catch(e){}
   lines.push(await swStatus());
-  $("#diagOut").textContent=lines.join("\n"); $("#diagOut").hidden=false;
+  if(TTSLOG.length) lines.push("","読み上げの記録（新しい順）：",ttsLogText());
+  $("#diagOut").textContent=lines.join("\n"); $("#diagOut").hidden=false; $("#diagCopy").hidden=false;
 };
+$("#diagCopy").onclick=async()=>{ const ok=await writeClip($("#diagOut").textContent); note(ok?"環境診断の結果を写しました。チャットやメールに貼れます":"写せませんでした。結果を長押しして選んでください"); };
 $("#ver").textContent=APP_VER;
 if(!window.isSecureContext) note("https で開かれていないため、マイクが使えません。GitHub Pages の https のURLで開いてください。");
 $("#btnEx").onclick=()=>{ clearPend(); const s=doCommand(isEx(cur.r)?"restore":"ex:除外"); save(); render(); if(s&&S.readback) speak(s); };
@@ -4014,7 +4104,7 @@ function openSettings(go,then){
   document.querySelector(`input[name=sbm][value=${draft.standbyMode}]`).checked=true;
   $("#sRead").checked=draft.readback; $("#sSerial").checked=draft.serial; $("#sCsvIds").checked=!!draft.csvIds; foldSetUI(draft); $("#sAuto").checked=!!draft.autoCommit; $("#sSound").checked=!!draft.alertSound;
   $("#sUndoGap").value=String(draft.undoGap);
-  $("#sCallDef").value=draft.callDef||"cur"; $("#sRbMode").value=draft.rbMode; $("#sFast").checked=!!draft.fastCommit; $("#sOutlier").value=draft.outlier;
+  voiceFill(); $("#sCallDef").value=draft.callDef||"cur"; $("#sRbMode").value=draft.rbMode; $("#sFast").checked=!!draft.fastCommit; $("#sFastMs").value=String(draft.fastMs||500); $("#sSplitDg").checked=draft.splitDigits!==false; $("#sOutlier").value=draft.outlier;
   $("#sIosNp").checked=iosNoPause();
   planToForm(planNorm(draft.plan)); $("#planFold").hidden=!draft.ts;
   $("#sFzCols").value=draft.freezeCols; $("#sFzRows").value=draft.freezeRows; drawFzPrev();
@@ -4141,7 +4231,7 @@ $("#sSave").onclick=()=>{
   draft.standbyMode=document.querySelector("input[name=sbm]:checked").value;
   draft.readback=$("#sRead").checked; draft.serial=$("#sSerial").checked; draft.csvIds=$("#sCsvIds").checked; foldGetUI(draft); draft.autoCommit=$("#sAuto").checked; draft.rate=+$("#sRate").value||1.1;
   draft.alertSound=$("#sSound").checked; draft.undoGap=+$("#sUndoGap").value;
-  draft.callDef=$("#sCallDef").value==="last"?"last":"cur"; draft.rbMode=$("#sRbMode").value; draft.fastCommit=$("#sFast").checked; draft.outlier=$("#sOutlier").value;
+  draft.callDef=$("#sCallDef").value==="last"?"last":"cur"; draft.rbMode=$("#sRbMode").value; draft.fastCommit=$("#sFast").checked; draft.fastMs=+$("#sFastMs").value||500; draft.splitDigits=$("#sSplitDg").checked; draft.outlier=$("#sOutlier").value;
   try{ if($("#sIosNp").checked) localStorage.setItem(IOS_NP_KEY,"1"); else localStorage.removeItem(IOS_NP_KEY); }catch(e){}
   draft.plan=planFromForm();
   draft.freezeCols=+String($("#sFzCols").value).normalize("NFKC")||0; draft.freezeRows=+String($("#sFzRows").value).normalize("NFKC")||0;
@@ -4453,7 +4543,7 @@ function importTable(rows){
    配り方：ファイル（.json）／リンク（pro.html#tpl=…）／QRコード（リンクを載せる）。リンクの # 以降はサーバーへ送られない。
    受け取ると、確かめたうえで新しい調査を作る（今の調査は変えない） */
 const TPL_APP="koe-yacho-v2-template";
-const TPL_KEYS=["name","items","aliases","callDef","ts","outFmt","dir","groups","mode","standbyMode","readback","rbMode","rate","fastCommit","serial","autoCommit","alertSound","undoGap","freezeCols","freezeRows","outlier","plan","prevCols","csvIds"];
+const TPL_KEYS=["name","items","aliases","callDef","ts","outFmt","dir","groups","mode","standbyMode","readback","rbMode","rate","fastCommit","serial","autoCommit","alertSound","undoGap","freezeCols","freezeRows","outlier","plan","prevCols","csvIds","fastMs","splitDigits"];
 const TPL_HOME="https://tochigitfruits.github.io/koe-yacho/pro.html";
 const QR_SRC="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
 const QR_SRI="sha384-8FWZA6BGMXhsfO+BLtrJK0We6gg5o1JyO8xQm6peWDEUs17ACA5ziE/NIAkl9z2k";
@@ -4582,7 +4672,7 @@ function tplSanitize(o){
   nS.name=String(src.name||o.name||"ひな形").slice(0,80);
   nS.groups=String(nS.groups??"").slice(0,100); nS.rate=Math.max(0.6,Math.min(2,+nS.rate||1.1));
   if(!["row","col","group"].includes(nS.dir)) nS.dir="row"; if(!["cont","ptt"].includes(nS.mode)) nS.mode="cont";
-  ["ts","readback","fastCommit","serial","autoCommit","alertSound","csvIds"].forEach(k=>{ if(nS[k]!==undefined) nS[k]=!!nS[k]; });
+  ["ts","readback","fastCommit","serial","autoCommit","alertSound","csvIds","splitDigits"].forEach(k=>{ if(nS[k]!==undefined) nS[k]=!!nS[k]; }); if(nS.fastMs!==undefined&&![300,500,800].includes(+nS.fastMs)) delete nS.fastMs;
   nS.sessions={}; nS.curDate=today();
   { const mt=metaNorm(o.meta!=null?o.meta:src.meta); if(mt) nS.meta=mt; else delete nS.meta; }   /* 4.9.9：渡すときは一番上、調査の中では S.meta（契約 v1 の 3.1） */
   const ids=nS.items.filter(it=>it.role==="id").map(it=>it.id);
@@ -5542,7 +5632,7 @@ const HELP=[
 {g:"start",id:"template",t:"ひな形を配る・受け取る（ファイル・リンク・QR）",k:"ひな形 テンプレート 共有 配る 受け取る QR QRコード リンク 送る 同じ設定 ほかの人 研究会 ひながた きょうゆう くばる",b:
 "<p>「調査一覧」で調査の「共有」を押すと、その調査の設定（項目・言い換え・入力の順番・読み上げなど）をひな形として配れます。「個体リストも含める」を外すと、項目と設定だけを配ります。<b>測定データ・調査日・除外の記録は含みません。</b></p><ul><li><b>QRコード</b>：受け取る人がカメラで読み取ると、このアプリが開きます。</li><li><b>リンクをコピー</b>：メールやチャットに貼って送ります。</li><li><b>ファイルで保存</b>：受け取る人は「調査一覧」の「ファイルから作る」で読み込みます。</li></ul><p>受け取ると、中身（項目・個体・言い換えの数）を確かめてから新しい調査として作ります。受け取る人の今の調査は変わりません。ひな形の中身はリンクの「#」より後ろに入っていて、サーバーには送られません。</p><p>個体リストが大きいとQRコードに入りきらないことがあります。そのときは個体リストを外すか、ファイルで配ります。iPhoneでホーム画面から使っている場合、QRコードやリンクはSafariで開くため、ホーム画面のアプリとは別の場所に作られます。その場合はファイルで受け取ってください。QRコードを作るときだけ、部品をインターネットから読み込みます。</p>"},
 {g:"start",id:"offline",t:"オフラインで使う・新しい版への切り替え",k:"オフライン 電波 圏外 通信 ネット インターネット 更新 新しい版 アップデート 切り替え おふらいん でんぱ けんがい こうしん",b:
-"<p>一度、電波のある所でこのアプリを開くと、アプリ本体・Excel出力の部品・QRコードの部品・アイコンを端末に保存します。その後は、電波のない畑でもアプリを開けます。</p><ul><li>電波がなくても使えるもの：手入力、ノギス・はかりからの入力、表の操作、集計・グラフ、Excel・CSV・バックアップの保存、利用コードの確認。</li><li>声での入力は、端末の音声認識が通信を使うため、電波がないと使えないことがあります（iPhoneは端末内で認識できる場合があります）。</li></ul><p>アプリは保存しておいた版をすぐに開き、電波があれば裏で新しい版を確かめます。新しい版が届くと画面の上に知らせが出るので、「今すぐ切り替える」を押します（入力したデータはそのまま残ります）。準備の状況は、画面下の「マイク診断」で確かめられます。</p>"},
+"<p>一度、電波のある所でこのアプリを開くと、アプリ本体・Excel出力の部品・QRコードの部品・アイコンを端末に保存します。その後は、電波のない畑でもアプリを開けます。</p><ul><li>電波がなくても使えるもの：手入力、ノギス・はかりからの入力、表の操作、集計・グラフ、Excel・CSV・バックアップの保存、利用コードの確認。</li><li>声での入力は、端末の音声認識が通信を使うため、電波がないと使えないことがあります（iPhoneは端末内で認識できる場合があります）。</li></ul><p>アプリは保存しておいた版をすぐに開き、電波があれば裏で新しい版を確かめます。新しい版が届くと画面の上に知らせが出るので、「今すぐ切り替える」を押します（入力したデータはそのまま残ります）。準備の状況は、画面下の「環境診断」で確かめられます。</p>"},
 {g:"start",id:"history",t:"更新の記録（どの版で何が増えたか）",k:"更新 記録 履歴 版 バージョン 新しい機能 変更点 こうしん きろく りれき ばーじょん",b:
 "<p>この画面の上の「更新の記録」を押すと、どの版でどの機能が加わったかを一覧で見られます。項目を押すと、その機能の説明を開きます。新しい版に切り替わったときは、増えたことを画面の下に知らせます。</p>"},
 {g:"start",id:"settings",t:"設定画面の使い方",k:"設定 見出し 折りたたみ 開く 閉じる すべて開く せってい",b:
@@ -5631,12 +5721,12 @@ const HELP=[
 {g:"save",id:"privacy",t:"データの保存場所",k:"保存場所 端末 プライバシー 送信 容量 消える ブラウザ IndexedDB 移行 大容量 ほぞんばしょ たんまつ そうしん ようりょう",b:
 "<p>入力したデータは、お使いの端末のブラウザの中（大容量の保存領域。4.0から）にだけ保存します。開発者が集めることはありません。話した音声は、文字にするためにApple・Google・Microsoftの音声認識サービスへ送られます。</p><p>ブラウザの閲覧データを削除すると、保存したデータも消えます。調査の後は、Excelかバックアップで保存してください。保存できる容量を超えたときは、警告が出ます。使っている容量は「調査一覧」の下に出ます。</p><p>3.9までの版で入力したデータは、4.0を初めて開いたときに自動で移します。移す前のデータも消さずに残してあります（オフライン版など、前の版はそのデータを使います）。4.0で入力した内容は、前の版には入りません。</p>"},
 
-{g:"trouble",id:"mic",t:"マイクが使えない・聞き取らない",k:"マイク 使えない 許可 聞き取らない 反応しない 診断 https iPhone Android まいく つかえない きょか しんだん",b:
-"<ol><li>画面下の「マイク診断」を押します。マイク自体が止められているのか、音声認識の側が止められているのかが分かります。</li><li>iPhoneはSafari、AndroidはChrome、PCはChromeかEdgeで開きます。</li><li>マイクの使用を、ブラウザと端末の設定で許可します。iPhoneでは、音声入力（Siri・音声入力）が止められていると使えません。</li><li>電波が弱いと聞き取れないことがあります。そのときは手入力欄を使います。</li></ol>"},
+{g:"trouble",id:"mic",t:"マイクが使えない・聞き取らない",k:"マイク 使えない 許可 聞き取らない 反応しない 診断 環境診断 マイク診断 読み上げ 切れる https iPhone Android まいく つかえない きょか しんだん かんきょうしんだん",b:
+"<ol><li>画面下の「環境診断」を押します。マイク自体が止められているのか、音声認識の側が止められているのかが分かります。</li><li>iPhoneはSafari、AndroidはChrome、PCはChromeかEdgeで開きます。</li><li>マイクの使用を、ブラウザと端末の設定で許可します。iPhoneでは、音声入力（Siri・音声入力）が止められていると使えません。</li><li>電波が弱いと聞き取れないことがあります。そのときは手入力欄を使います。</li></ol>"},
 {g:"trouble",id:"iosmic",t:"iPhoneで聞き取りが止まる・不安定なとき",k:"iPhone アイフォン ホーム画面 アプリ Safari サファリ 止まる 途切れる 不安定 再開 消音 マナーモード サイレント 復唱 読み上げ 鳴らない 移す あいふぉん ほーむがめん さふぁり とまる ふあんてい さいかい しょうおん まなーもーど",go:"other",b:
 "<p>iPhoneでは、値を読み上げるたびに聞き取りをいったん止め、読み終えてから再開します（聞き取り中は読み上げの音が出ない・小さくなるため）。4.8.1からは次のように動きます。</p><ul><li>再開がうまくいかない・読み上げの声を拾ったときは、その調査の間、止めてから再開するまでの待ち時間を自動で少し延ばします。うまくいき続けると元に戻します。値の記録は遅れません。</li><li>iPhoneが自動の再開を受け付けなかったときは、赤い「押すと再開します」のボタンが出ます。1回押せば聞き取りに戻ります。入力した値は残っています。</li><li>ノギス・はかりなどで続けて入った値や、まとめて入力した値の読み上げは、まとめて1回で読みます。</li></ul><p><b>ホーム画面のアプリで不安定なとき</b>は、Safari のタブで開くと安定することがあります。ホーム画面のアプリと Safari は保存場所が別なので、次の手順で移します。</p><ol><li>ホーム画面のアプリで、「調査一覧」の「保存」（または設定の「バックアップを保存」）でバックアップを保存します（「ファイル」アプリに保存されます）。</li><li>Safari で Pro のページを開きます。利用コードを入れ直す必要がある場合があります。</li><li>Safari で「調査一覧」→「ファイルから作る」を押し、保存したバックアップを選びます。</li></ol><p>読み上げや音が鳴らないときは、<b>消音スイッチ（マナーモード）</b>がオンになっていないか確かめてください。オンだと鳴らない場合があります。音量も確かめます。</p><p>試験的な設定「iPhoneでも聞き取りを止めずに読み上げる」（設定の「読み上げ・音・その他」）をオンにすると、止めずに読み上げます。切り替えは減りますが、読み上げの音が小さくなったり、受話口から出たりすることがあります。</p>"},
 {g:"trouble",id:"tts",t:"読み上げが聞こえない",k:"聞こえない 音が出ない 読み上げ 消音 音量 テスト きこえない よみあげ おんりょう",go:"other",b:
-"<p>消音スイッチと音量を確かめ、設定の「読み上げテスト」を押します。設定の「声で入力した値を読み上げる」がオフだと、声で入れた値は読みません。手入力の値は「復唱」ボタンがオンのときだけ読みます。</p><p><b>iPhone で読み上げ・復唱が聞こえない・始まらないとき</b></p><ul><li>本体の横の消音スイッチ（マナーモード）と、音量ボタンの音量を確かめます。消音のときは、区切りの音・アラート音は鳴りません。読み上げも鳴らないことがあります。消音を解除した直後は、画面を1回押してから試します。</li><li>iPhone は、聞き取り（マイク）を使ったあとや、ほかのアプリ・画面から戻ったあとに、読み上げが鳴らなくなることがあります。4.9.7 からは、マイクを止めたとき・「復唱」ボタンを押したとき・戻ってから最初に画面を押したときに、読み上げの準備を自動でやり直します。それでも鳴らないときは、「復唱」ボタンを押し直す（オンにするとその場で「復唱します」と読みます）か、設定の「読み上げテスト」を押します。</li><li>聞き取り中は、iPhone の決まりで読み上げの音が出ない・小さくなるため、アプリは聞き取りをいったん止めてから読みます。マイクのボタンを続けて何度も入り切りすると切り替えが追いつかないことがあるので、1〜2秒あけて押します。</li><li>Bluetooth のイヤホン・スピーカーをつないでいると、音はそちらから出ます。</li><li>読み上げが始まらなかったときは、ログに「iPhone：読み上げが始まりませんでした」と残り、画面にも知らせが出ます。「マイク診断」には、読み上げを頼んだ回数・始まった回数・始まらなかった回数が出ます（始まっているのに聞こえないなら、消音・音量・音の出る先が原因です）。</li></ul>"},
+"<p>消音スイッチと音量を確かめ、設定の「読み上げテスト」を押します。設定の「声で入力した値を読み上げる」がオフだと、声で入れた値は読みません。手入力の値は「復唱」ボタンがオンのときだけ読みます。</p><p><b>iPhone で読み上げ・復唱が聞こえない・始まらないとき</b></p><ul><li>本体の横の消音スイッチ（マナーモード）と、音量ボタンの音量を確かめます。消音のときは、区切りの音・アラート音は鳴りません。読み上げも鳴らないことがあります。消音を解除した直後は、画面を1回押してから試します。</li><li>iPhone は、聞き取り（マイク）を使ったあとや、ほかのアプリ・画面から戻ったあとに、読み上げが鳴らなくなることがあります。4.9.7 からは、マイクを止めたとき・「復唱」ボタンを押したとき・戻ってから最初に画面を押したときに、読み上げの準備を自動でやり直します。それでも鳴らないときは、「復唱」ボタンを押し直す（オンにするとその場で「復唱します」と読みます）か、設定の「読み上げテスト」を押します。</li><li>聞き取り中は、iPhone の決まりで読み上げの音が出ない・小さくなるため、アプリは聞き取りをいったん止めてから読みます。マイクのボタンを続けて何度も入り切りすると切り替えが追いつかないことがあるので、1〜2秒あけて押します。</li><li>Bluetooth のイヤホン・スピーカーをつないでいると、音はそちらから出ます。</li><li>読み上げが始まらなかったときは、ログに「iPhone：読み上げが始まりませんでした」と残り、画面にも知らせが出ます。「環境診断」には、読み上げを頼んだ回数・始まった回数・始まらなかった回数が出ます（始まっているのに聞こえないなら、消音・音量・音の出る先が原因です）。</li></ul>"},
 {g:"trouble",id:"mistake",t:"間違えて入れた・取り消しが進みすぎる",k:"間違い 間違えた 取り消し 戻す 進みすぎ 間隔 直す 修正 まちがい とりけし なおす しゅうせい",go:"other",b:
 "<p>直前の値は「取り消し」で消せます。前のセルを直すときは、そのセルをタップして言い直します。表の操作（クリア・削除して詰める）の後は「元に戻す」で戻せます。</p><p>読み上げの声を拾って取り消しが続けて進むときは、設定の「声の『取り消し』を続けるときの間隔」を長くします。</p>"},
 {g:"trouble",id:"home",t:"ホーム画面に追加・複数のタブ",k:"ホーム画面 アイコン インストール アプリ タブ ウインドウ 2か所 読み込みを待って 開き直す ほーむがめん あいこん たぶ",b:
@@ -5696,6 +5786,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.9.15",d:"2026-11-26",a:[["iPhoneで、続けて入れた値の読み上げが途中で切れないように（読み上げが本当に鳴り終わってから聞き取りを再開。早すぎる読み終わりは1回だけ読み直す）","readback"],["1回の声で2つ以上入れたとき、画面にどのセルに何が入ったかを並べ、「短く」でも値を全部読むように（10件を超えたら最初と最後）","bulk"],["早めに確定したあとの続き（「1と3と2と4」）を入れるように。早めに確定した値の読み上げは、言い終わるまで待つ。待つ時間を 0.3・0.5・0.8 秒から選べるように","readback"],["読み上げの声を選べるように（端末ごとに覚える）","readback"],["入力できる値が1桁だけの項目（0〜4など）で、続けて言った数字（例 1324）を1桁ずつに分けて入れるように（設定でオフにできる）","bulk"],["「環境診断」を「環境診断」に。読み上げ1回ごとの記録（読んだ言葉・鳴っていた時間・最後まで読めたか）を出し、写せるように","mic"]]},
 {v:"Pro 4.9.14",d:"2026-11-26",a:[["行のまとめ方を、設定で2段（例：集団 → 系統）まで選べるように。ひな形にまとめ方の候補があれば、ボタンで選べる","fold"],["ガイドで個体リストが50個体以上になるとき、行のまとめ方を選べるように（おまかせは、いちばん内側の列を除いた外側の列）","guide"],["個体リストが100個体以上あるのにまとめていない調査では、表の上に一度だけ、まとめ方の案内を出す","fold"]]},
 {v:"Pro 4.9.13",d:"2026-11-25",a:[["行を「系統」「ロット」などの列でまとめて、まとまりごとに開く・閉じるができるように（見出しに入力の済んだ数。入力の順番は今までどおりで、今のセルが入ったまとまりは自動で開く。設定の「入力の進む順番」で選ぶ）","fold"],["まとめ方つきのひな形（試験設計ナビなど）は、個体リストを 20,000 行まで受け取れるように（閉じたまとまりの行は描かないので軽い）","template"]]},
 {v:"Pro 4.9.12",d:"2026-11-25",a:[["ひな形の個体リストを「作り方」（例：系統 L-001〜L-150 × 株 1〜3）で受け取れるように。数百〜数千行の個体リストも、短いリンクで渡せる（受け取れるのは 5,000 行まで）","template"]]},
@@ -5703,7 +5794,7 @@ const CHANGES=[
 {v:"Pro 4.9.10",d:"2026-11-25",a:[["試験設計ナビで作ったひな形の調査は、Excel・CSVのファイル名に設計のID（8桁）が付くように（例「調査名_0a1b2c3d_2026-12-01.csv」。どの設計のデータかを取り違えないため）","export"]]},
 {v:"Pro 4.9.9",d:"2026-11-25",a:[["試験設計ナビなどで作ったひな形の「作った元の情報」（設計のIDなど）を、調査に残してバックアップ・共有でも持ち回るように。受け取るときの確認に、作ったアプリの版を表示","template"]]},
 {v:"Pro 4.9.8",d:"2026-11-23",a:[["項目ごとに、調べる個体を限れるように（例：糖度は果実番号 1〜5 だけ。範囲の外の個体ではその項目を入力の順番でとばす。表では灰色、押せば入力できる。指定しない調査は今までと同じ）","onlyskip"]]},
-{v:"Pro 4.9.7",d:"2026-11-22",a:[["数値の列で、入力できる値が決まった少数の値（例 0,1,2,3,4,5）のとき、候補のボタン・一覧から選べるように（発病度・障害程度など。数値で記録し、前回比の注意もそのまま使える）","allow"],["iPhone で、マイクを入り切りしたあとなどに読み上げ・復唱が鳴らなくなることへの対策（準備の自動やり直し、復唱ボタンを押したその場で読む、マイク診断に読み上げの記録）","tts"],["備考などの列を「名前で呼んで入れる」列にできるように（順番では回らず、「備考 小玉」「さっきの備考欄に小玉入れて」「5番の備考に小玉」と言うとその列に入る。新しく作る調査の備考は最初からこの列）","callcol"]]},
+{v:"Pro 4.9.7",d:"2026-11-22",a:[["数値の列で、入力できる値が決まった少数の値（例 0,1,2,3,4,5）のとき、候補のボタン・一覧から選べるように（発病度・障害程度など。数値で記録し、前回比の注意もそのまま使える）","allow"],["iPhone で、マイクを入り切りしたあとなどに読み上げ・復唱が鳴らなくなることへの対策（準備の自動やり直し、復唱ボタンを押したその場で読む、環境診断に読み上げの記録）","tts"],["備考などの列を「名前で呼んで入れる」列にできるように（順番では回らず、「備考 小玉」「さっきの備考欄に小玉入れて」「5番の備考に小玉」と言うとその列に入る。新しく作る調査の備考は最初からこの列）","callcol"]]},
 {v:"Pro 4.9.5",d:"2026-11-21",a:[["選択肢の列も、候補のボタンを押して入れられるように（押すと次へ進む）","textchoice"],["選択肢の列は、表のセルを押すと候補の一覧から選べるように","textchoice"],["刻み（0.5刻みなど）を決めた項目は、刻みに合わない値を丸めずに「刻みに合いません」と知らせて入れないように","numbers"]]},
 {v:"Pro 4.9.4",d:"2026-11-15",a:[["調査日の予定のカレンダーに祝日（振替休日・国民の休日を含む）を表示","plan"]]},
 {v:"Pro 4.9.3",d:"2026-11-14",a:[["調査日の予定を、月のカレンダーで日を押して選べるように（日付を並べるとき。間隔で決めた予定も見られる）","plan"]]},
