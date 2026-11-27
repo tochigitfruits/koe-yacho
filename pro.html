@@ -233,6 +233,7 @@ legend{font-weight:700;font-size:.9rem;margin-bottom:6px}
 .ceorder button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
 .ceorder button.isid{border-style:dashed}
 .ceorder button.isnew{box-shadow:inset 0 0 0 2px var(--mark)}
+.fznote{margin:0 0 8px;padding:6px 10px;border-left:3px solid var(--warn);background:color-mix(in srgb,var(--warn) 10%,var(--surface));border-radius:6px;font-size:.85rem;color:var(--ink)}
 .cegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .cegrid button,.ceact button{border:1.5px solid var(--line);border-radius:10px;padding:10px 8px;background:var(--bg);font-weight:700;min-height:44px}
 .cegrid button:disabled{opacity:.4}
@@ -288,7 +289,9 @@ details.fold[open]>summary{border-bottom:1px solid var(--line);border-radius:12p
 details.fold .fbody{position:relative}details.fold legend{position:absolute;left:0;top:0;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 details.fold.flash>summary{animation:flash 1.2s ease-out}
 @media (prefers-reduced-motion:reduce){details.fold>summary::before{transition:none}}
-@media (max-width:340px){.irow.ihead{flex-wrap:wrap}.irow.ihead .iname{flex:1 1 calc(100% - 46px);width:auto}.sheet{padding:12px}}
+@media (max-width:340px){.sheet{padding:12px}}
+/* 4.9.17：スマホでは項目名を1行に取り、＋上・＋下・⧉下・✕ は次の行に（ボタンが増えて名前の欄が狭くなるため） */
+@media (max-width:480px){.irow.ihead{flex-wrap:wrap}.irow.ihead .iname{flex:1 1 calc(100% - 56px);width:auto}.irow.ihead .ins:first-of-type{margin-left:auto}}
 /* 言い換え（3.9.1） */
 .aliases{display:grid;gap:8px}
 .arow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) 36px;gap:6px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px}
@@ -702,6 +705,7 @@ td.cur .pva{color:inherit}
     <button type="button" class="ghost" id="newDateCancel">やめる</button>
   </div>
   <div class="foldhint" id="foldHint" role="status" hidden></div>
+  <div class="ver fznote" id="fzNote" role="status" hidden></div>
   <div class="tablebox" id="tablebox"><table id="tbl"></table><div class="cdph" id="cdPh" hidden></div><div class="cellbar" id="cellBar" hidden><div class="cblist" id="cellList" role="listbox" aria-label="候補から選ぶ" hidden></div><div class="cbrow"><input id="cellIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" aria-label="今のセルに直接入力"><button type="button" id="cellOk">入力</button><button type="button" id="cellX" class="sec" aria-label="直接入力を終える" title="直接入力を終える">✕</button></div><div class="cbmsg" id="cellMsg" hidden><span id="cellMsgT"></span><button type="button" id="cellYes">はい</button><button type="button" id="cellNo" class="sec">やり直し</button></div></div></div>
   <div class="ver" id="ceHint">今のセル（黄色）をもう一度押すと、その場でキーボード入力できます（PCはダブルクリック）</div>
 
@@ -835,11 +839,13 @@ td.cur .pva{color:inherit}
     <div class="cegrid">
       <button type="button" data-ce="addL">＋ 左に列を追加</button>
       <button type="button" data-ce="addR">＋ 右に列を追加</button>
+      <button type="button" data-ce="dupL">⧉ 左に複製</button>
+      <button type="button" data-ce="dupR">⧉ 右に複製</button>
       <button type="button" data-ce="moveL">← 左へ移動</button>
       <button type="button" data-ce="moveR">右へ移動 →</button>
     </div>
     <div class="ceact"><button type="button" class="danger" data-ce="del">この列を削除</button><button type="button" data-ce="settings">設定画面で開く</button></div>
-    <p class="help" id="ceNote">変更は「保存」を押すまで反映されません。途中で足した列は、前の調査日では空欄になります。</p>
+    <p class="help" id="ceNote">変更は「保存」を押すまで反映されません。「複製」は、今の列の種類・桁・候補・入力できる値・前回比などの設定を写した列を入れます（値は写しません）。途中で足した列は、前の調査日では空欄になります。</p>
     <div class="actions"><button type="button" id="ceCancel">キャンセル</button><button type="button" class="primary" id="ceSave">保存</button></div>
   </div>
 </dialog>
@@ -2622,7 +2628,7 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.9.16（2026-11-26）";
+const APP_VER="Pro 4.9.17（2026-11-27）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
@@ -3110,15 +3116,43 @@ function applyFreeze(){
   const W=box.clientWidth, H=box.clientHeight, T=tb.getBoundingClientRect();
   /* 固定を当てる前に、各列の左端・各行の上端を表の左上からの位置で測る（幅の足し算より誤差が出ない） */
   const lefts=[]; let left=0; fzCapped=false;
-  for(let i=0;i<fc;i++){ const R=head.cells[i].getBoundingClientRect(), l=R.left-T.left, rr=R.right-T.left; if(rr>W*0.7&&i>0){ fzCapped=true; break; } lefts.push(l); left=rr; }
+  /* 4.9.17：固定の右端は「横に送れる幅を 72px（だいたい1列）か15%残す」所まで（前は7割で止め、知らせなかった） */
+  const capW=W-Math.max(72,W*0.15), capH=H-Math.max(72,H*0.15);
+  for(let i=0;i<fc;i++){ const R=head.cells[i].getBoundingClientRect(), l=R.left-T.left, rr=R.right-T.left; if(W>0&&rr>capW&&i>0){ fzCapped=true; break; } lefts.push(l); left=rr; }
   const bodyRows=[...tb.tBodies[0].rows].filter(tr=>!tr.classList.contains("fgrow"));
   let top=head.getBoundingClientRect().bottom-T.top; const tops=[];
-  for(let r=0;r<Math.min(fr,bodyRows.length);r++){ const R=bodyRows[r].getBoundingClientRect(), t=R.top-T.top, bb=R.bottom-T.top; if(bb>H*0.7&&r>0){ fzCapped=true; break; } tops.push(t); top=bb; }
+  for(let r=0;r<Math.min(fr,bodyRows.length);r++){ const R=bodyRows[r].getBoundingClientRect(), t=R.top-T.top, bb=R.bottom-T.top; if(H>0&&bb>capH&&r>0){ fzCapped=true; break; } tops.push(t); top=bb; }
   const nc=lefts.length, nr=tops.length;
+  fzNoteSet(fc,nc,fr,nr,head);
   if(nc){ [head,...bodyRows].forEach(row=>{ for(let i=0;i<nc&&i<row.cells.length;i++){ const c=row.cells[i]; c.classList.add("fzc"); c.style.left=lefts[i]+"px"; if(i===nc-1) c.classList.add("fzend"); } }); }
   for(let r=0;r<nr;r++){ [...bodyRows[r].cells].forEach(c=>{ c.classList.add("fzr"); c.style.top=tops[r]+"px"; if(r===nr-1) c.classList.add("fzrend"); }); }
   /* 今のセルが固定部分の下に隠れないよう、スクロールの余白を取る */
   box.style.scrollPaddingLeft=left+"px"; box.style.scrollPaddingTop=top+"px";
+}
+/* 4.9.17：画面に入りきらずに固定を減らしたときは、表の上に知らせる（設定の要約にも出す） */
+let fzGot={c:-1,r:-1,wc:0,wr:0};
+function fzNoteSet(fc,nc,fr,nr,head){
+  fzGot={c:nc,r:nr,wc:fc,wr:fr};
+  const el=$("#fzNote"); if(!el) return;
+  let t="";
+  if(nc<fc||nr<fr){
+    const lc=nc?+(head.cells[nc-1].dataset.lc??(nc-1)):0, want=+S.freezeCols||0, lc0=S.serial?1:0;
+    const nm=nc?(lc<lc0?"No.":(S.items[lc-lc0]?.name||"")):"";
+    const parts=[];
+    if(nc<fc) parts.push(`列は左${want}列のうち${lc+1}列（${nm}まで）`);
+    if(nr<fr) parts.push(`行は上${fr}行のうち${nr}行`);
+    t=`画面に入りきらないため、${parts.join("、")}を固定しています。画面を横向きにする・列の名前を短くすると、指定のとおり固定できるようになります。`;
+  }
+  if(el.textContent!==t) el.textContent=t; el.hidden=!t;
+}
+/* 設定の画面で、今の画面の幅で実際に固定できている数（設定を変えていないときだけ） */
+function fzGotText(fc,fr){
+  if(fzGot.c<0||fc!==(+S.freezeCols||0)||fr!==(FOLD?0:(+S.freezeRows||0))) return "";
+  const head=$("#tbl").tHead?.rows[0]; if(!head) return "";
+  const a=[];
+  if(fzGot.c<fzGot.wc){ const lc=fzGot.c?+(head.cells[fzGot.c-1].dataset.lc??(fzGot.c-1))+1:0; a.push(`左${lc}列`); }
+  if(fzGot.r<fzGot.wr) a.push(`上${fzGot.r}行`);
+  return a.length?`（今の画面の幅では${a.join("・")}まで）`:"";
 }
 let fzTimer=null;
 window.addEventListener("resize",()=>{ clearTimeout(fzTimer); fzTimer=setTimeout(()=>{ if(S.freezeCols||S.freezeRows) render(); },150); });
@@ -3577,6 +3611,12 @@ $("#colDlg").addEventListener("click",e=>{
     const el=$("#ceItem input.iname"); if(el){ el.focus(); }
     return;
   }
+  if(act==="dupL"||act==="dupR"){
+    const at=act==="dupL"?i:i+1; a.splice(at,0,copyItemLike(a[i],a)); ce.i=at; ceDraw();
+    const el=$("#ceItem input.iname"); if(el){ el.focus(); el.select(); }
+    note(`「${a[at===i?i+1:i].name}」の設定を写した列「${a[at].name}」を入れました（値は写していません）`);
+    return;
+  }
   if(act==="moveL"||act==="moveR"){
     const j=act==="moveL"?i-1:i+1; if(j<0||j>=a.length) return;
     const snap=flipSnap([...$("#ceOrder").children]), ids=a.map(x=>x.id);
@@ -3889,6 +3929,7 @@ function itemCard(it,i,ts,compact,all){ const c=normCmp(it.cmp); return `
         <input type="text" value="${esc(it.name)}" data-k="name" aria-label="項目名${i+1}" class="iname" placeholder="新しい項目名">
         ${compact?"":`<button type="button" class="ins" data-a="insUp" aria-label="この上に項目を追加" title="この上に項目を追加">＋上</button>
         <button type="button" class="ins" data-a="insDn" aria-label="この下に項目を追加" title="この下に項目を追加">＋下</button>
+        <button type="button" class="ins" data-a="dupDn" aria-label="この項目を下に複製（設定を写す。値は写さない）" title="この項目の設定を写して、下に複製（値は写しません）">⧉下</button>
         <button type="button" data-a="del" aria-label="削除">✕</button>`}
       </div>
       <div class="irow">
@@ -4070,17 +4111,32 @@ function convTypes(wasType){
   return nconv;
 }
 /* 新しい項目を入れる（at の位置）。種類・入力のしかたは基にした項目に合わせる */
+/* 4.9.17：隣の列の設定（種類・桁・刻み・候補・入力できる値・前回比・調べる個体）を写した新しい列。
+   値と「名前で呼んで入れる」は写さない（呼び名が似て聞き分けにくくなるため）。id は新しく振る。名前は末尾の数字を1つ進める（なければ「2」を付ける）。ほかの列と重ならないようにする */
+function copyName(name,all){
+  const nm=String(name||"項目"), names=new Set((all||[]).map(x=>String(x.name||"")));
+  const m=nm.normalize("NFKC").match(/^(.*?)(\d+)$/);
+  let stem=m?nm.slice(0,nm.length-m[2].length):nm, k=m?+m[2]+1:2;
+  while(names.has(stem+k)) k++;
+  return stem+k;
+}
+function copyItemLike(base,all){
+  const o={name:copyName(base?.name,all)};
+  ["type","dec","step","role","options","allow","cmp","only"].forEach(k=>{ if(base&&base[k]!==undefined) o[k]=JSON.parse(JSON.stringify(base[k])); });
+  return normItem(o);
+}
 const newItemLike=base=>normItem({name:"",role:base?.role||"meas",type:base&&base.type==="text"?"text":"num",dec:base&&isNum(base)?base.dec:0});
-function insertItem(at,base){
-  const ni=newItemLike(base);
+function insertItem(at,base,copy){
+  const ni=copy?copyItemLike(base,draft.items):newItemLike(base);
   draft.items.splice(at,0,ni); drawItems();
   const el=$("#sItems").querySelectorAll(".item")[at];
-  if(el){ el.classList.add("newitem"); el.scrollIntoView({block:"nearest"}); el.querySelector("input.iname").focus(); }
+  if(el){ el.classList.add("newitem"); el.scrollIntoView({block:"nearest"}); const nin=el.querySelector("input.iname"); nin.focus(); if(copy) nin.select(); }
 }
 $("#sItems").addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b) return; const i=+b.closest(".item").dataset.i; const a=draft.items;
   if(b.dataset.a==="insUp"){ insertItem(i,a[i]); return; }
   if(b.dataset.a==="insDn"){ insertItem(i+1,a[i]); return; }
+  if(b.dataset.a==="dupDn"){ insertItem(i+1,a[i],true); return; }
   if(b.dataset.a==="del"){ if(a.length<=1){ note("項目は1つ以上必要です"); return; } a.splice(i,1); }
   drawItems();
 });
@@ -4297,7 +4353,7 @@ function foldSums(){
   put("standby",radio("sbm")==="stop"?"完全に止める":"声で再開できる");
   put("other",`読み上げ ${q("#sRead").checked?"オン":"オフ"}・${{full:"全部",short:"短く",beep:"区切りだけ"}[q("#sRbMode").value]||""}・×${(+q("#sRate").value||1.1).toFixed(1)}・音 ${q("#sSound").checked?"オン":"オフ"}`);
   const fc=Math.max(0,Math.floor(+q("#sFzCols").value||0)), fr=Math.max(0,Math.floor(+q("#sFzRows").value||0));
-  { const pn=draft.ts?pcCfg(draft.prevCols).n:0; put("freeze",(fc||fr?[fc?`左${fc}列`:"",fr?`上${fr}行`:""].filter(Boolean).join("・"):"固定なし")+(pn?`・前の値 ${pn}回`:"")); }
+  { const pn=draft.ts?pcCfg(draft.prevCols).n:0; put("freeze",(fc||fr?[fc?`左${fc}列`:"",fr?`上${fr}行`:""].filter(Boolean).join("・")+fzGotText(fc,fr):"固定なし")+(pn?`・前の値 ${pn}回`:"")); }
   { const all=(draft.aliases||[]).filter(a=>String(a.from).trim()&&String(a.to).trim()), al=all.filter(a=>!isCmdRow(a)), cm=all.length-al.length;
     put("alias",(al.length?`${al.length}件（${al.slice(0,2).map(a=>`${a.from.split(/[、,，]/)[0].trim()}→${a.to.trim()}`).join("、")}${al.length>2?"…":""}）`:"なし")+(cm?`・音声コマンド ${cm}件`:"")); }
   put("outlier",q("#sOutlier").value==="off"?"切":`感度 ${OL_NAME[q("#sOutlier").value]||"中"}`);
@@ -4319,7 +4375,7 @@ function fzColNames(){ return (($("#sSerial").checked)?["No."]:[]).concat(draft.
 function drawFzPrev(){
   const k=Math.max(0,Math.floor(+$("#sFzCols").value||0)), r=Math.max(0,Math.floor(+$("#sFzRows").value||0));
   const names=fzColNames().slice(0,k);
-  $("#sFzPrev").textContent=(k?`列：${names.join("・")}`:"列：固定しない")+"　"+(r?`行：上から${r}行`:"行：項目名だけ");
+  $("#sFzPrev").textContent=(k?`列：${names.join("・")}`:"列：固定しない")+"　"+(r?`行：上から${r}行`:"行：項目名だけ")+fzGotText(k,r);
 }
 ["sFzCols","sFzRows","sSerial"].forEach(id=>$("#"+id).addEventListener("input",drawFzPrev));
 $("#sSerial").addEventListener("change",drawFzPrev);
@@ -5795,7 +5851,7 @@ const HELP=[
 {g:"table",id:"tableops",t:"表の操作（クリア・削除して詰める・行を削除）",k:"クリア 消す 削除 詰める 行を削除 範囲選択 コピー 貼り付け 貼付 元に戻す Ctrl Delete くりあ さくじょ つめる はんいせんたく こぴー はりつけ もとにもどす",b:
 "<ul><li><b>クリア</b>：選んだセル（範囲）の値を消す</li><li><b>削除して詰める</b>：今のセルを消し、後ろの値を1つずつ前へ詰める（2回入ってしまったとき）</li><li><b>行を削除</b>：今の行を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も消える</li><li><b>範囲選択</b>：オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）</li><li><b>コピー</b>・<b>貼付</b>：Excelとの間でも使える（PCは Ctrl+C・Ctrl+V・Delete も可）</li></ul><p>操作のあとは「元に戻す」で戻せます。</p>"},
 {g:"table",id:"coledit",t:"表の見出しから列を編集する（名前・種類・追加・移動・削除）",k:"見出し 項目名 列 編集 追加 挿入 移動 削除 左 右 種類 名前 変える 鉛筆 ドラッグ つかむ 並べ替え みだし れつ へんしゅう ついか いどう さくじょ どらっぐ ならべかえ",go:"items",b:
-"<p>入力の画面の表で、見出し（項目名）を押すと選ばれ、✎ の印が出ます。もう一度押すと<b>列の編集</b>が開きます（PCはダブルクリックでも開きます）。設定画面を開かなくても、その場で直せます。</p><ul><li><b>名前・種類・桁・候補・入力できる値・前回比</b>：設定画面の「調査項目」と同じ欄です。種類を変えると、記録済みの値を新しい種類に合わせて直します。</li><li><b>＋ 左に列を追加／＋ 右に列を追加</b>：今の列のすぐ左・右に新しい列を入れます。前の調査日では空欄になります。</li><li><b>← 左へ移動／右へ移動 →</b>：列の並びを入れ替えます。</li></ul><p><b>見出しをつかんで動かす</b>：選んだ見出し（✎ の印）をつかんで左右に動かすと、列ごと浮いて動き、ほかの列はずれて点線の空きができます。離した所に入ります（前の調査日の値の列も一緒に動きます）。PCはどの見出しでもドラッグできます。キーボードは見出しで Alt+← →。直後なら「元に戻す」で戻せます。画面の端に近づけると表が横に送られます。</p><ul><li><b>この列を削除</b>：値が入っている列は確かめてから消します。保存の直後なら「元に戻す」で戻せます。</li><li>上の<b>列の並び</b>を押すと、ほかの列に切り替えて続けて直せます。</li></ul><p>変更は「保存」を押すまで反映されません。開くと聞き取りは止まります（続けるときはマイクを押します）。項目の内部の番号は変えないので、経時調査の前の調査日・データの統合・ひな形はそのまま使えます。固定している列の内側に列を足したときは、固定の範囲も合わせて広げます。</p>"},
+"<p>入力の画面の表で、見出し（項目名）を押すと選ばれ、✎ の印が出ます。もう一度押すと<b>列の編集</b>が開きます（PCはダブルクリックでも開きます）。設定画面を開かなくても、その場で直せます。</p><ul><li><b>名前・種類・桁・候補・入力できる値・前回比</b>：設定画面の「調査項目」と同じ欄です。種類を変えると、記録済みの値を新しい種類に合わせて直します。</li><li><b>＋ 左に列を追加／＋ 右に列を追加</b>：今の列のすぐ左・右に新しい列を入れます。前の調査日では空欄になります。</li><li><b>⧉ 左に複製／⧉ 右に複製</b>：今の列の設定（種類・桁・刻み・候補・入力できる値・前回比・調べる個体）を写した列を、すぐ左・右に入れます。「名前で呼んで入れる」は写しません（オフで入ります）。名前は末尾の数字を1つ進めます（「横径1」→「横径2」、数字がなければ「2」を付ける）。値は写しません。設定画面の「調査項目」では、各項目の「⧉下」で下に入れられます。</li><li><b>← 左へ移動／右へ移動 →</b>：列の並びを入れ替えます。</li></ul><p><b>見出しをつかんで動かす</b>：選んだ見出し（✎ の印）をつかんで左右に動かすと、列ごと浮いて動き、ほかの列はずれて点線の空きができます。離した所に入ります（前の調査日の値の列も一緒に動きます）。PCはどの見出しでもドラッグできます。キーボードは見出しで Alt+← →。直後なら「元に戻す」で戻せます。画面の端に近づけると表が横に送られます。</p><ul><li><b>この列を削除</b>：値が入っている列は確かめてから消します。保存の直後なら「元に戻す」で戻せます。</li><li>上の<b>列の並び</b>を押すと、ほかの列に切り替えて続けて直せます。</li></ul><p>変更は「保存」を押すまで反映されません。開くと聞き取りは止まります（続けるときはマイクを押します）。項目の内部の番号は変えないので、経時調査の前の調査日・データの統合・ひな形はそのまま使えます。固定している列の内側に列を足したときは、固定の範囲も合わせて広げます。</p>"},
 {g:"table",id:"order",t:"入力の進む順番（行・列・グループ）",k:"順番 行単位 列単位 グループ 横 縦 進む方向 じゅんばん ぎょう れつ ぐるーぷ",go:"dir",b:
 "<ul><li><b>行単位</b>：1個体の全項目 → 次の個体</li><li><b>列単位</b>：1項目を全個体 → 次の項目</li><li><b>グループ単位</b>：決めた列数のまとまりごとに 横 → 次の個体。例 <code>2,1</code> なら、左の2列を全個体分、次の1列を全個体分</li></ul><p>列単位・グループ単位で次の列（まとまり）に移るときは、そのまとまりで最初に空いているセルから始めます。前半の個体を調べた後に個体を足して続きを調べるときも、調べ終わった先頭に戻りません。すべて埋まっているときは先頭の個体から始めます。</p>"},
 {g:"table",id:"onlyskip",t:"調べる個体を限る項目（書かない欄をとばす）",k:"とばす 飛ばす 空欄 限る 一部 果実番号 5個 10個 灰色 個体を限る 上限 下限 とばす げんてい くうらん",go:"items",b:
@@ -5803,7 +5859,7 @@ const HELP=[
 {g:"table",id:"list",t:"個体リスト（事前入力の列）",k:"個体リスト 事前入力 樹番号 処理区 果実番号 組み合わせ Excel 貼り付け こたいりすと じぜんにゅうりょく じゅばんごう しょりく",go:"list",b:
 "<p>事前入力の列（樹番号・処理区など）は、個体リストで先に入れておきます。「組み合わせで個体リストを作る」で、例えば 樹 <code>1-5</code> × 処理区 <code>無処理、遮光</code> × 果実 <code>1-10</code> の全組み合わせを作れます。Excelで事前入力の列を並べてコピーし、貼り付けることもできます。リストを減らすと、外れた行を表から消すか確かめます。</p><p><b>個体ごとに数が違うとき</b>は「＋ 今のリストの最後に付け足す」を使います。例えば 個体名 <code>A</code>・株 <code>1-3</code>・反復 <code>1-2</code> で付け足し、次に 個体名 <code>B</code>・株 <code>1-5</code>・反復は空のまま、で付け足します。空の欄はその列を空けたまま作ります。付け足しは今のリストを変えないので、調査の途中で個体を足すときにも使えます。「付け足しを1つ戻す」で直前の付け足しを取り消せます。</p><p>測定値は行の位置（No.）で持っています。値を入れた後にリストの途中へ行を足したり消したりすると、個体と測定値がずれるので、足すときは最後に付け足してください（途中を変えたときは設定の画面で知らせます）。</p>"},
 {g:"table",id:"freeze",t:"ウインドウ枠の固定",k:"固定 ウインドウ枠 列 行 スクロール 見出し こてい ういんどうわく",go:"freeze",b:
-"<p>表を横や下に動かしても、左の列・上の行が残るようにできます。設定の「表の表示」で、左から固定する列数（No.の列も1列と数える）と上から固定する行数を指定します。「事前入力の列まで固定」で、個体の識別の列までを一度に指定できます。</p>"},
+"<p>表を横や下に動かしても、左の列・上の行が残るようにできます。設定の「表の表示」で、左から固定する列数（No.の列も1列と数える）と上から固定する行数を指定します。「事前入力の列まで固定」で、個体の識別の列までを一度に指定できます。</p><p>固定する列が画面の幅に入りきらないときは、横に送れる所（だいたい1列分）を残せる所まで固定し、表の上に「画面に入りきらないため、列は左◯列のうち◯列（◯◯まで）を固定しています」と出します。設定の「表の表示」の要約にも「今の画面の幅では左◯列まで」と出ます。画面を横向きにする・列の名前を短くすると、指定のとおり固定できるようになります（向きを変えると、すぐに固定し直します）。</p>"},
 
 {g:"ts",id:"timeseries",t:"経時調査と調査日",k:"経時 調査日 日付 新しい調査日 肥大 継続 繰り返し けいじ ちょうさび ぜんかい ひだい",go:"ts",b:
 "<p>設定の「調査の種類」を「経時調査」にすると、調査日ごとに記録します。表の上の「＋ 新しい調査日」で次の調査を始め、調査日の欄で過去の日に切り替えて見直せます。個体リストと除外の記録は、全調査日で共通です。全調査日の値は「全調査日の一覧」で見比べられ、入力の表に前の調査日の値を並べることもできます。</p>"},
@@ -5901,6 +5957,7 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
+{v:"Pro 4.9.17",d:"2026-11-27",a:[["列を複製して足せるように（列の編集の「⧉ 左に複製／右に複製」、設定の調査項目の「⧉下」。設定を写し、値は写さない）","coledit"],["固定する列・行が画面に入りきらないときは、表の上と設定の要約に、実際に固定している範囲を出すように","freeze"]]},
 {v:"Pro 4.9.16",d:"2026-11-26",a:[["記録した調査日を後から変更できるように（表の上の「この日の操作」、調査日の予定のカレンダーで「調査した日」を押す。変更先の日に記録があるときは上書きせずに止める）","datefix"],["調査を残したまま、その日の記録だけを削除できるように（練習で入れた値も消せる。個体リスト・項目・ほかの日の記録は残る。直後なら「元に戻す」で戻せる）","datefix"],["1回の調査では、設定の「調査の種類」で調査日の変更と記録の消去ができるように","datefix"]]},
 {v:"Pro 4.9.15",d:"2026-11-26",a:[["iPhoneで、続けて入れた値の読み上げが途中で切れないように（読み上げが本当に鳴り終わってから聞き取りを再開。早すぎる読み終わりは1回だけ読み直す）","readback"],["1回の声で2つ以上入れたとき、画面にどのセルに何が入ったかを並べ、「短く」でも値を全部読むように（10件を超えたら最初と最後）","bulk"],["早めに確定したあとの続き（「1と3と2と4」）を入れるように。早めに確定した値の読み上げは、言い終わるまで待つ。待つ時間を 0.3・0.5・0.8 秒から選べるように","readback"],["読み上げの声を選べるように（端末ごとに覚える）","readback"],["入力できる値が1桁だけの項目（0〜4など）で、続けて言った数字（例 1324）を1桁ずつに分けて入れるように（設定でオフにできる）","bulk"],["「環境診断」を「環境診断」に。読み上げ1回ごとの記録（読んだ言葉・鳴っていた時間・最後まで読めたか）を出し、写せるように","mic"]]},
 {v:"Pro 4.9.14",d:"2026-11-26",a:[["行のまとめ方を、設定で2段（例：集団 → 系統）まで選べるように。ひな形にまとめ方の候補があれば、ボタンで選べる","fold"],["ガイドで個体リストが50個体以上になるとき、行のまとめ方を選べるように（おまかせは、いちばん内側の列を除いた外側の列）","guide"],["個体リストが100個体以上あるのにまとめていない調査では、表の上に一度だけ、まとめ方の案内を出す","fold"]]},
