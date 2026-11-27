@@ -140,6 +140,15 @@ header small{display:block;color:var(--muted);font-size:.8rem;font-weight:400}
 .celltools button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .celltools button.on span{color:var(--accent-ink)}
 .selinfo{font-size:.8rem;color:var(--muted);min-height:1.2em}
+/* 4.9.18：選んだ範囲にまとめて入れる */
+.selfill{border:1.5px solid var(--accent);border-radius:10px;padding:8px;display:grid;gap:6px;background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.selfill .sfh{font-weight:700;font-size:.9rem}
+.selfill .sfopts{display:flex;flex-wrap:wrap;gap:6px}
+.selfill .sfopts button{min-height:44px;min-width:48px;border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:6px 12px;font-weight:700;font-size:1.1rem;font-family:var(--f-num);touch-action:manipulation}
+.selfill .sfrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.selfill .sfrow input[type=text]{flex:1 1 8em;min-width:0;font-size:16px;padding:8px;border:1.5px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.selfill .sfrow button{min-height:40px;border:1.5px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:6px 14px;font-weight:700}
+.selfill label.sfow{font-size:.8rem;display:flex;gap:6px;align-items:center}
 
 .tablebox{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:auto;max-height:52vh}
 table{border-collapse:collapse;width:100%;font-family:var(--f-num);font-variant-numeric:tabular-nums;-webkit-user-select:none;user-select:none}
@@ -288,6 +297,9 @@ details.fold[open]>summary{border-bottom:1px solid var(--line);border-radius:12p
 .fhelp{display:grid;gap:10px}
 details.fold .fbody{position:relative}details.fold legend{position:absolute;left:0;top:0;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 details.fold.flash>summary{animation:flash 1.2s ease-out}
+.golit{animation:golit 2.4s ease-out;border-radius:8px}
+@keyframes golit{0%,40%{box-shadow:0 0 0 3px var(--accent);background:color-mix(in srgb,var(--accent) 16%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
+.hlog .hgo2{margin:4px 0 2px;padding:4px 10px;font-size:.8rem;display:block;width:fit-content}
 @media (prefers-reduced-motion:reduce){details.fold>summary::before{transition:none}}
 @media (max-width:340px){.sheet{padding:12px}}
 /* 4.9.17：スマホでは項目名を1行に取り、＋上・＋下・⧉下・✕ は次の行に（ボタンが増えて名前の欄が狭くなるため） */
@@ -473,7 +485,9 @@ td.ol{outline:2px dashed var(--warn);outline-offset:-4px}
 .mgopts input{margin:0}
 .mgopt2{display:grid;gap:6px}
 .hlog{margin:0;padding:0;list-style:none;display:grid;gap:6px}
-.hlog li{display:flex;gap:4px;align-items:flex-start}
+.hlog li{display:flex;flex-wrap:wrap;gap:4px;align-items:flex-start}
+.hlog li>.hlink{flex:1 1 0;min-width:0}
+.hlog li>.hgo2{flex:0 0 100%;margin-left:1.2em;width:auto;max-width:calc(100% - 1.2em);justify-self:start}
 .hlog li::before{content:"・";flex:none;color:var(--muted)}
 .hlink{border:0;background:none;padding:0;text-align:left;color:var(--accent);text-decoration:underline;text-underline-offset:3px;font:inherit;cursor:pointer}
 /* 4.8〜：最終バックアップの帯（画面の下）・今日の調査を終える・自動保存 */
@@ -682,6 +696,13 @@ td.cur .pva{color:inherit}
       <button type="button" id="btnCopy">コピー<span>選択した値</span></button>
     </div>
     <div class="selinfo" id="selInfo"></div>
+    <div class="selfill" id="selFill" hidden>
+      <span class="sfh" id="sfHead">選んだ範囲に入れる</span>
+      <div class="sfopts" id="sfOpts"></div>
+      <div class="sfrow"><input type="text" id="sfIn" inputmode="decimal" autocomplete="off" placeholder="入れる値（例 0）" aria-label="選んだ範囲に入れる値"><button type="button" id="sfGo">範囲に入れる</button></div>
+      <label class="sfow" for="sfOver"><input type="checkbox" id="sfOver">入っている値も上書きする（初めは空いているセルだけ）</label>
+      <span class="ver" id="sfInfo"></span>
+    </div>
     <div class="note" id="note" hidden></div>
   </section>
 
@@ -1211,7 +1232,11 @@ const KMAP=[["きゅう","九"],["じゅう","十"],["ひゃく","百"],["びゃ
   ["ぜろ","〇"],["れい","〇"],["まる","〇"],["てん","点"],["に","二"],["ご","五"],["し","四"],["く","九"]];
 function kana2kanji(t){
   let s=t.replace(/[ァ-ン]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60));
-  if(!/^[ぁ-んー]+$/.test(s) || s in KANA) return t;
+  if(!/^[ぁ-んー]+$/.test(s)) return t;
+  /* 4.9.18：伸ばす音（にー・ごー・じゅー）。「ゅー」「ょー」は「う」に、ほかの「ー」は外す */
+  s=s.replace(/([ゅょ])ー/g,"$1う").replace(/ー/g,""); if(!s) return t;
+  /* 4.9.18：カタカナ1語（ニ・ゴ・レイ）も、ひらがなに直したものを返す（前は元のカタカナを返して数値にならなかった） */
+  if(s in KANA) return s;
   let out="";
   while(s){ const m=KMAP.find(([k])=>s.startsWith(k)); if(!m) return t; out+=m[1]; s=s.slice(m[0].length); }
   return out;
@@ -1219,6 +1244,7 @@ function kana2kanji(t){
 /* 1語を数値に。失敗時は null */
 function parseNumber(tok){
   let t=tok.normalize("NFKC").trim();
+  t=t.replace(/(です|でーす|デス|デース)$/,"");   /* 4.9.18：「2です」 */
   t=t.replace(/(ミリメートル|ミリ|mm|センチ|cm|グラム|g|キロ|kg|度|°|パーセント|%|ブリックス|brix|個|本)$/i,"");
   let neg=false;
   if(/^(マイナス|まいなす|-|−)/.test(t)){ neg=true; t=t.replace(/^(マイナス|まいなす|-|−)/,""); }
@@ -1226,11 +1252,12 @@ function parseNumber(tok){
   t=t.replace(/(てん|テン|ポイント|ドット|点)/g,".");
   if(/^\d+(\.\d+)?$/.test(t)) return (neg?-1:1)*parseFloat(t);
   if(/^\.\d+$/.test(t)) return (neg?-1:1)*parseFloat("0"+t);
+  if(t===".") return null;
   const parts=t.split(".");
   if(parts.length>2) return null;
   const ip=parts[0]===""?0:kanjiInt(parts[0]);
   if(!Number.isFinite(ip)) return null;
-  if(parts.length===1) return (neg?-1:1)*ip;
+  if(parts.length===1||parts[1]==="") return (neg?-1:1)*ip;   /* 4.9.18：「2点」は 2 */
   const fp=kanjiFrac(parts[1]);
   if(fp===null) return null;
   return (neg?-1:1)*parseFloat(ip+"."+fp);
@@ -2048,6 +2075,17 @@ function digitSplit(it,t){
   return [...t].every(d=>ok.has(d));
 }
 function roundVal(it,x){ const m=Math.pow(10,it.dec); return Math.round(x*m)/m; }
+/* 4.9.18：よくある聞き違い（「ご」→後・語、「に」→似・荷、「れい」→例・礼 など）。
+   入力できる値が決まった整数の列（発病度 0〜5 など。候補のボタンが出る列）で、数値として読めず、
+   読み替えた値が入力できる値に入っているときだけ使う（横径などのふつうの数値の列は今までどおり） */
+const NUM_HOMO={"例":0,"礼":0,"丸":0,"麗":0,"冷":0,"霊":0,"位置":1,"壱":1,"似":2,"荷":2,"煮":2,"児":2,"兄":2,"参":3,"産":3,"散":3,
+  "死":4,"氏":4,"詩":4,"後":5,"語":5,"誤":5,"碁":5,"午":5,"御":5,"呉":5,"互":5,"苦":9,"区":9,"句":9,"級":9,"球":9,"急":9,"旧":9,"休":9,"重":10,"住":10,"充":10};
+function homoNum(it,t){
+  if(!it||it.type!=="num"||+it.dec) return null;
+  const ns=numOpts(it); if(!ns||!ns.length||!ns.every(Number.isInteger)) return null;
+  const k=String(t??"").normalize("NFKC").trim().replace(/(です|でーす|デス|デース)$/,"").replace(/[。、.,\s]/g,"");
+  if(!(k in NUM_HOMO)) return null; const v=NUM_HOMO[k]; return ns.includes(v)?v:null;
+}
 function putValue(v){
   const it=S.items[cur.c]; if(!it) return null; const prev0=D[cur.r]?.[it.id];
   let val, said;
@@ -2103,7 +2141,7 @@ function putValue(v){
 function valFor(it,txt){
   txt=String(txt||"").trim(); if(!txt) return null;
   const al=aliasFor(it,txt); if(al!==null) txt=al;
-  if(isNum(it)){ const x=parseNumber(txt); return (x===null||Number.isNaN(x))?null:roundVal(it,x); }
+  if(isNum(it)){ let x=parseNumber(txt); if(x===null||Number.isNaN(x)) x=homoNum(it,txt); return (x===null||Number.isNaN(x))?null:roundVal(it,x); }
   if(it.type==="choice") return matchChoice(txt,it.options);
   if(it.type==="multi") return multiOf(it,txt);
   if(it.type==="date") return parseDateVal(txt);
@@ -2534,10 +2572,15 @@ function handleText(raw, fromVoice, rbNow){
   }
   if(!done){
     const bk=whole?null:tryBulk(clean);
+    if(!whole&&bk===null) aliasHits=[];   /* 4.9.18：まとめて入力かを試したときの言い換え（途中の切り方）を、表示に残さない */
     if(whole){ const s=doCommand(whole); if(s) say.push(s); }
     else if(bk!==null){ if(bk) say.push(bk); }
     else {
       const toks=tokenize(raw); let dgSplit=false;   /* 4.9.15：1桁ずつに分けたら、声の全体での照合はしない */
+      /* 4.9.18：数値の列でも、空白を含む言い換え（話した言葉「ご 後」など）は、声の全体で照合する（前は1語ずつしか見ていなかった） */
+      { const it0=S.items[cur.c];
+        if(isNum(it0)&&toks.length>1){ const a=aliasFor(it0,clean); const x=a===null?null:parseNumber(a);
+          if(x!==null&&!Number.isNaN(x)){ const s=putRec(x); if(s) say.push(s); toks.length=0; } else if(a!==null) aliasHits.pop(); } }
       for(let i=0;i<toks.length;i++){
         if(halt) break;
         const it=S.items[cur.c]; if(!it) break;
@@ -2577,7 +2620,8 @@ function handleText(raw, fromVoice, rbNow){
         }
         /* 4.9.15：入力できる値が1桁だけの項目で、続けて言った数字（1324）を1桁ずつに分ける */
         if(digitSplit(it,t)){ toks.splice(i,1,...String(t).normalize("NFKC").split("")); dgSplit=true; i--; continue; }
-        const v=parseNumber(aliasFor(it,t)??t);
+        let v=parseNumber(aliasFor(it,t)??t);
+        if(v===null||Number.isNaN(v)){ const hv=homoNum(it,t); if(hv!==null){ v=hv; aliasHits.push(`${t}→${hv}（聞き違いの読み替え）`); } }
         if(v===null||Number.isNaN(v)){
           /* くっついた小数（32.531.2）を、その項目の小数桁で切り分ける */
           if(isNum(it)&&it.dec>0&&(t.match(/\./g)||[]).length>=2){
@@ -2628,14 +2672,19 @@ let rec=null, listening=false, ttsPause=false, processed=new Set(), wake=null, g
 /* 声の取り消しの間隔：voiceCtx＝処理中の発話の番号（ボタン・手入力は0） */
 let voiceCtx=0, utterSeq=0, lastVoiceUndo=0, undoUtter=-1, undoBlocked=false;
 const ECHO_RE=/^(消しました|けしました|ケシマシタ|まとめて取り消しました|まとめて消しました|聞き取れません|聞き取れませんでした|ききとれません|入力できません|復唱します)$/;
-const APP_VER="Pro 4.9.17（2026-11-27）";
+const APP_VER="Pro 4.9.18（2026-11-27）";
 function makeRec(){
   const r=new SR(); r.lang="ja-JP"; r.interimResults=true; r.maxAlternatives=1;
   r.continuous=(S.mode==="cont");
   r.onresult=e=>{
     let interim="";
     if(!listening||(IS_IOS&&r!==rec)) return;
-    if(Date.now()<ignoreUntil){ for(let i=e.resultIndex;i<e.results.length;i++) if(e.results[i].isFinal){ processed.add(i); fastDone.delete(i); } fastCancel(); return; }
+    if(Date.now()<ignoreUntil){ let ig=""; for(let i=e.resultIndex;i<e.results.length;i++) if(e.results[i].isFinal){ if(!processed.has(i)) ig+=e.results[i][0].transcript; processed.add(i); fastDone.delete(i); } fastCancel();
+      /* 4.9.18：PC・Android で、読み上げ中に聞こえて使わなかった声を画面に出す（捨て方は変えない。iPhone は今までどおり） */
+      if(!IS_IOS&&ig.trim()&&!standby){ const nz=x=>normJ(x).replace(/ー/g,""), a=nz(ig), b=nz(ttsLastSaid);
+        /* 読み上げの声そのもの（読んだ言葉に含まれる）は出さない。ちがう言葉のときだけ、使わなかったことを知らせる */
+        if(a&&!(b&&(b.includes(a)||a.includes(b)))){ const h=$("#heard"); h.className="heard ng"; h.textContent=`読み上げ中の声は使いませんでした：「${ig.trim()}」（読み上げが終わってから言うと入ります）`; } }
+      return; }
     if(IS_IOS) iosHeard();
     for(let i=e.resultIndex;i<e.results.length;i++){
       const res=e.results[i];
@@ -2819,7 +2868,7 @@ function ttsMissed(why){
 }
 function flushSpeak(){ if(pendingUtter){ const u=pendingUtter; pendingUtter=null; say(u); } }
 const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
-let ignoreUntil=0;
+let ignoreUntil=0, ttsLastSaid="";
 /* force：「声で入力した値を読み上げる」がオフでも読む（手入力の復唱）。now：iPhone で、まとめる時間を待たずにすぐ読む（ボタンを押したその場で鳴らすため） */
 function speak(text,force,now){
   if(!text) return;
@@ -2829,6 +2878,7 @@ function speak(text,force,now){
   if(!on||!HAS_TTS) return;
   /* iPhone（4.8.1〜）：続けて入った値はまとめて1回で読み、聞き取りの止め・再開を減らす */
   if(IS_IOS&&!(listening&&rec&&iosNoPause())){ iosSay(text,now); return; }
+  ttsLastSaid=text;   /* 4.9.18：読み上げ中に聞こえた声が、この読み上げそのものかを見分けるため（表示だけに使う） */
   const u=utter(text);
   if(listening && rec && (!IS_IOS||iosNoPause())){
     /* PC・Android：認識は止めずに、読み上げ中に聞こえた声だけを無視する（止めると再開のたびに許可を聞かれるため） */
@@ -3163,7 +3213,80 @@ function renderSel(){
   if(sel){ t=`選択中：${sel.r2-sel.r1+1}行 × ${sel.c2-sel.c1+1}列（${cellName({r:sel.r1,c:sel.c1})} 〜 ${cellName({r:sel.r2,c:sel.c2})}）`; const fh=foldHiddenIn(sel.r1,sel.r2); if(fh) t+=`（閉じたまとまりの ${fh}行を含む）`; }
   else if(rangeMode){ t=`範囲選択：${cellName(cur)} から、範囲の終わりのセルをタップしてください`; }
   $("#selInfo").textContent=t;
+  renderSelFill();
 }
+/* ========= 4.9.18：選んだ範囲にまとめて入れる =========
+   範囲を選ぶと表の下に出る。候補（入力できる値・選択肢）のボタンか、値を書いて「範囲に入れる」。
+   初めは空いているセルだけ（「上書きする」で入っている値も）。除外した個体・順番でとばすセル・事前入力の列には入れない。
+   入力できる値・刻み・前回比の「禁止」は、声のまとめて入力（ゼロ 6個）と同じに止める。直後なら「元に戻す」 */
+let sfKey="";
+function sfCells(){
+  if(!sel) return {cells:[],full:0,ex:0,osk:0,cols:[]};
+  const cols=meas().filter(c=>c>=sel.c1&&c<=sel.c2), over=$("#sfOver").checked, cells=[]; let full=0, ex=0, osk=0;
+  for(let r=sel.r1;r<=sel.r2;r++){
+    if(isEx(r)){ ex+=cols.length; continue; }
+    cols.forEach(c=>{ if(onlySkip(r,c)){ osk++; return; } if(!over&&hasVal(D[r]?.[S.items[c].id])){ full++; return; } cells.push({r,c}); });
+  }
+  return {cells,full,ex,osk,cols};
+}
+function renderSelFill(){
+  const box=$("#selFill"); if(!box) return;
+  const cols=sel?meas().filter(c=>c>=sel.c1&&c<=sel.c2):[];
+  box.hidden=!cols.length; if(!cols.length){ sfKey=""; return; }
+  $("#quickBar").hidden=true;   /* 範囲を選んでいる間は、今のセルに入れる候補のボタンを隠す（取り違えないように） */
+  /* 候補のボタン：選んだ列の候補（入力できる値・選択肢）がどの列でも同じときだけ出す */
+  const optsOf=it=>it.type==="choice"?it.options:(it.type==="num"?(pickOpts(it)||null):null);
+  const o0=optsOf(S.items[cols[0]]), same=o0&&cols.every(c=>JSON.stringify(optsOf(S.items[c]))===JSON.stringify(o0));
+  const key=cols.map(c=>S.items[c].id).join(",")+"|"+(same?o0.join(","):"");
+  if(key!==sfKey){ sfKey=key;   /* 入力欄は作り直さない（書きかけ・変換中を壊さない）。候補のボタンだけ、列が変わったときに出し直す */
+    $("#sfOpts").innerHTML=same?o0.slice(0,24).map((o,i)=>`<button type="button" data-sf="${i}">${esc(o)}</button>`).join(""):"";
+    $("#sfOpts").hidden=!same;
+    const allNum=cols.every(c=>isNum(S.items[c]));
+    $("#sfIn").setAttribute("inputmode",allNum?"decimal":"text");
+  }
+  const nm=cols.length===1?S.items[cols[0]].name:`${cols.length}列`;
+  $("#sfHead").textContent=`選んだ範囲（${nm}）に入れる`;
+  const k=sfCells(); const x=[];
+  if(k.full) x.push(`値の入ったセル ${k.full}個`); if(k.ex) x.push(`除外 ${k.ex}個`); if(k.osk) x.push(`順番でとばすセル ${k.osk}個`);
+  $("#sfInfo").textContent=`入れるセル：${k.cells.length}個`+(x.length?`（${x.join("・")}には入れません）`:"");
+}
+function fillSel(raw){
+  raw=String(raw??"").trim(); if(!sel||!raw){ if(!raw) note("入れる値を書くか、候補のボタンを押してください"); return; }
+  if(listening) stopRec(); clearPend();
+  const k=sfCells();
+  if(!k.cells.length){ note(k.full?"選んだ範囲の空いているセルはありません（入っている値も変えるときは「上書きする」に印を付けます）":"選んだ範囲に入れられるセルがありません"); return; }
+  { const fh=foldHiddenIn(sel.r1,sel.r2); if(fh&&!confirm(`選んだ範囲には、閉じたまとまりの ${fh}行が含まれます。その行にも入れますか？`)){ note("入れるのをやめました"); return; } }
+  const plan=[]; let bad=0, block=0, warn=0;
+  k.cells.forEach(p=>{
+    const it=S.items[p.c];
+    const v=it.type==="text"?(aliasFor(it,raw)??raw):valFor(it,raw);
+    if(v===null||(typeof v==="number"&&Number.isNaN(v))){ bad++; return; }
+    if(isNum(it)&&!allowOk(it,v)){ block++; badCells.add(p.r+":"+p.c); return; }
+    const a=checkCmp(p.r,it,v);
+    if(a&&a.level==="block"){ block++; badCells.add(p.r+":"+p.c); return; }
+    if(a&&a.level==="warn") warn++;
+    plan.push([p,it,v]);
+  });
+  aliasHits=[];
+  if(!plan.length){
+    const it=S.items[k.cells[0].c];
+    note(block?`「${raw}」は入力できる値（${isNum(it)?allowText(it):"候補"}）の外か、前回比の「禁止」になるため、入れませんでした`:`「${raw}」は選んだ列の値にできませんでした`);
+    render(); return;
+  }
+  snap();
+  plan.forEach(([p,it,v])=>{ ensureRow(p.r); D[p.r][it.id]=v; flashCells.add(p.r+":"+p.c); });
+  const last=plan[plan.length-1][0]; markCommit(last.r,last.c); bulkSnap=null;
+  const it0=plan[0][1], vs=plan.every(x=>x[2]===plan[0][2])?fmt(plan[0][2],it0):raw;
+  addLog(`範囲 ${cellName({r:sel.r1,c:sel.c1})}〜${cellName({r:sel.r2,c:sel.c2})} ← ${vs} を${plan.length}件`+(block?`（禁止 ${block}件は入れない）`:""));
+  $("#sfIn").value="";
+  save(); render();
+  if(warn) { alerted=true; sound("warn"); }
+  offerUndo(`選んだ範囲に ${vs} を${plan.length}件入れました`+(warn?`（前回比の「注意」${warn}件。表の色で確かめられます）`:"")+(block?`（入力できる値の外・前回比の「禁止」の${block}件は入れていません）`:"")+(bad?`（値にできない列の${bad}件は入れていません）`:""));
+}
+$("#sfOpts").addEventListener("click",e=>{ const b=e.target.closest("button[data-sf]"); if(b) fillSel(b.textContent); });
+$("#sfGo").onclick=()=>fillSel($("#sfIn").value);
+$("#sfIn").addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.isComposing){ e.preventDefault(); fillSel($("#sfIn").value); } });
+$("#sfOver").addEventListener("change",()=>renderSelFill());
 function renderDates(){
   const ds=allDates();
   $("#dateSel").innerHTML=ds.map(d=>`<option value="${d}" ${d===S.curDate?"selected":""}>${d}</option>`).join("");
@@ -5799,7 +5922,7 @@ const HELP=[
 "<p>「調査一覧」の「ガイドで作る」で、質問に答えていくと新しい調査ができます。今の調査はそのまま残ります。</p><ol><li><b>何を調べるか</b>：果実・収穫物の品質、生育調査、収量調査、病害虫・障害の発生、開花・生育ステージ、土壌・サンプルの採取記録、そのほか。</li><li><b>作物・分野</b>：果樹・果菜類・葉茎菜・根菜類・水稲・麦・大豆・花き、または作物を決めない。作物名は調査名に使います。</li><li><b>調べる項目</b>：調べることと作物に合う項目の候補から選びます。日付・複数選択・カウンターの列も候補に入っています。選択肢の候補はここで直せ、候補にない項目も足せます。</li><li><b>個体の構成</b>：処理区・反復・樹番号・株番号などの事前入力の列を選び、<code>1-5</code> や <code>無処理、遮光</code> のように値を入れると、組み合わせで個体リストを作ります（5,000個体まで）。</li><li><b>調べ方</b>：1回の調査か経時調査か。経時調査では、初回の日・間隔・回数で調査日の予定も作れます。</li><li><b>入力のしかた</b>：進む順番（行単位・列単位）と読み上げ。</li><li><b>見本で確かめる</b>：調査名を決め、表の見本を見てから「この内容で作る」を押します。「ひな形を保存」で、同じ設定をファイルにしてほかの人に配れます。</li></ol><p>最初の画面の「手元の調査・ひな形から作る」では、これまでの調査の設定と個体リストを使って、測定データが空の調査を作れます。受け取ったひな形のファイルからも作れます。</p><p>作った後の項目の順番・名前・桁数・前回比などは、「設定」の「調査項目」で変えられます。</p>"},
 {g:"start",id:"startup",t:"アプリを開いたときの画面",k:"起動 開いたとき 最初の画面 前回の調査 調査一覧 ガイド きどう さいしょ",act:"list",b:
 "<p>「調査一覧」のいちばん下の「アプリを開いたときの画面」で選びます。</p><ul><li><b>前回の調査</b>（標準）：前に開いていた調査をそのまま開きます。</li><li><b>調査一覧</b>：調査を選んでから始めます。いくつもの調査を並行しているときに。</li><li><b>ガイド</b>：毎回、新しい調査を作るところから始めます。</li></ul><p>この端末のブラウザで覚えます（調査ごとではありません）。ひな形のリンクやQRコードで開いたときは、ひな形の受け取りを先に行います。</p>"},
-{g:"start",id:"template",t:"ひな形を配る・受け取る（ファイル・リンク・QR）",k:"ひな形 テンプレート 共有 配る 受け取る QR QRコード リンク 送る 同じ設定 ほかの人 研究会 ひながた きょうゆう くばる",b:
+{g:"start",id:"template",t:"ひな形を配る・受け取る（ファイル・リンク・QR）",act:"list",k:"ひな形 テンプレート 共有 配る 受け取る QR QRコード リンク 送る 同じ設定 ほかの人 研究会 ひながた きょうゆう くばる",b:
 "<p>「調査一覧」で調査の「共有」を押すと、その調査の設定（項目・言い換え・入力の順番・読み上げなど）をひな形として配れます。「個体リストも含める」を外すと、項目と設定だけを配ります。<b>測定データ・調査日・除外の記録は含みません。</b></p><ul><li><b>QRコード</b>：受け取る人がカメラで読み取ると、このアプリが開きます。</li><li><b>リンクをコピー</b>：メールやチャットに貼って送ります。</li><li><b>ファイルで保存</b>：受け取る人は「調査一覧」の「ファイルから作る」で読み込みます。</li></ul><p>受け取ると、中身（項目・個体・言い換えの数）を確かめてから新しい調査として作ります。受け取る人の今の調査は変わりません。ひな形の中身はリンクの「#」より後ろに入っていて、サーバーには送られません。</p><p>個体リストが大きいとQRコードに入りきらないことがあります。そのときは個体リストを外すか、ファイルで配ります。iPhoneでホーム画面から使っている場合、QRコードやリンクはSafariで開くため、ホーム画面のアプリとは別の場所に作られます。その場合はファイルで受け取ってください。QRコードを作るときだけ、部品をインターネットから読み込みます。</p>"},
 {g:"start",id:"offline",t:"オフラインで使う・新しい版への切り替え",k:"オフライン 電波 圏外 通信 ネット インターネット 更新 新しい版 アップデート 切り替え おふらいん でんぱ けんがい こうしん",b:
 "<p>一度、電波のある所でこのアプリを開くと、アプリ本体・Excel出力の部品・QRコードの部品・アイコンを端末に保存します。その後は、電波のない畑でもアプリを開けます。</p><ul><li>電波がなくても使えるもの：手入力、ノギス・はかりからの入力、表の操作、集計・グラフ、Excel・CSV・バックアップの保存、利用コードの確認。</li><li>声での入力は、端末の音声認識が通信を使うため、電波がないと使えないことがあります（iPhoneは端末内で認識できる場合があります）。</li></ul><p>アプリは保存しておいた版をすぐに開き、電波があれば裏で新しい版を確かめます。新しい版が届くと画面の上に知らせが出るので、「今すぐ切り替える」を押します（入力したデータはそのまま残ります）。準備の状況は、画面下の「環境診断」で確かめられます。</p>"},
@@ -5814,7 +5937,7 @@ const HELP=[
 {g:"input",id:"voice",t:"声で入力する（マイク）",k:"マイク 音声 話す 開始 停止 連続認識 1回ずつ 聞き取り方 セルをタップ まいく おんせい れんぞく",go:"listen",b:
 "<p>マイクを押して話すと、黄色のセルに値が入り、次のセルへ進みます。聞き取った言葉は「次に入るセル」の下に出ます。</p><ul><li><b>連続認識</b>：止めるまで聞き続けます。</li><li><b>1回ずつ</b>：押すたびに1回だけ聞きます。</li></ul><p>表のセルをタップすると、そのセルから入力を続けます。</p>"},
 {g:"input",id:"numbers",t:"数値の言い方",k:"数字 小数 てん 点 マイナス 単位 ミリ グラム 続けて 刻み 桁 丸め すうじ しょうすう てん まいなす たんい",go:"items",b:
-"<p>小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。負の値は「マイナス」を付けます。ミリ・センチ・グラム・度などの単位は付けても無視します。</p><p><code>32.5 31.2 30.8</code> のように続けて言うと、今のセルから順に入ります（値の間に少し間を置くか「と」を挟みます）。くっついて聞き取られた数値（32.531.2）は、その項目の小数の桁で切り分けます。値は項目ごとの小数の桁数に合わせて丸めます。刻み（0.5刻みなど）を決めた項目では、刻みに合わない値（0.5刻みで 3.2 など）は丸めずに入れず、「刻みに合いません」と知らせます。</p>"},
+"<p>小数点は「てん」と言います（例「さんじゅうにてんご」→ 32.5）。負の値は「マイナス」を付けます。ミリ・センチ・グラム・度などの単位は付けても無視します。</p><p><code>32.5 31.2 30.8</code> のように続けて言うと、今のセルから順に入ります（値の間に少し間を置くか「と」を挟みます）。くっついて聞き取られた数値（32.531.2）は、その項目の小数の桁で切り分けます。値は項目ごとの小数の桁数に合わせて丸めます。刻み（0.5刻みなど）を決めた項目では、刻みに合わない値（0.5刻みで 3.2 など）は丸めずに入れず、「刻みに合いません」と知らせます。</p><p><b>短い数字（0・2・5 など）が入りにくいとき</b>：音声認識は1音の言葉を聞き落としたり、別の字（「ご」→後・語、「に」→似・荷）にしたりします。少し長い言い方にすると入りやすくなります：<code>れい</code>・<code>まる</code>（0）、<code>にい</code>（2）、<code>ごう</code>（5）、<code>よん</code>（4）、<code>なな</code>（7）、<code>2です</code>、<code>2.0</code>（にてんぜろ）。カタカナで聞き取られた数字（ニ・ゴ・ゼロー）も数値として読みます。発病度のように<b>入力できる値が決まった整数の項目</b>（候補のボタンが出る項目）では、よくある聞き違い（後・語・碁→5、似・荷→2、例・丸→0 など）も、その値が入力できるときは数値として読みます（画面に「聞き違いの読み替え」と出ます）。ほかの聞き違いは「言い換え」に登録すると入るようになります。</p><p>PC・Androidでは、読み上げ中と読み終わった直後の声は、アプリ自身の声を拾わないために使いません。そのとき言った値は画面に「読み上げ中の声は使いませんでした」と出るので、読み上げが終わってから言い直すと入ります。0 が続くところは、「範囲選択」で選んで「選んだ範囲に入れる」か、<code>残り全部ゼロ</code>・<code>ゼロ 6個</code> を使うと早く入れられます。</p>"},
 {g:"input",id:"callcol",t:"名前で呼んで入れる列（備考など）",k:"名前で呼ぶ 備考 たまに スキップ 飛ばす さっき 欄 入れて メモ なまえでよぶ びこう",go:"items",b:
 "<p>備考のように、たまにしか値が入らない列は、設定の「調査項目」でその列の<b>名前で呼んで入れる</b>に印を付けます。印を付けた列は入力の順番では回らないので、ふだんは止まりません。</p><p>入れたいときは、どの列を入力中でも、<b>列の名前を先に言います</b>。今のセル（黄色）は動かないので、そのまま続けて元の項目に入力できます。</p><ul><li><code>備考 小玉</code>・<code>備考に小玉</code>・<code>備考欄に小玉入れて</code>：名前だけで言ったときの個体（設定で選ぶ。標準は今のセルの個体）</li><li><code>さっきの備考欄に小玉入れて</code>・<code>直前の備考 小玉</code>：さっき値を入れた個体</li><li><code>今の備考に小玉</code>：今のセルの個体</li><li><code>5番の備考に小玉</code>・<code>No.5の備考 小玉</code>：No.5 の個体</li></ul><p>「入れて」「を入れて」「入力して」「お願いします」は付けても付けなくてもかまいません。読み上げで「（個体） 備考 小玉」と、どの個体に入ったかを返します。</p><ul><li>文字の列は、すでに値があれば「、」でつないで足します（上書きしません）。言った言葉がそのまま入り、数値への変換や言い換えはしません。</li><li>選択肢・数値・日付の列にも使えます（例 <code>障害 日焼け</code>）。この場合は置き換えます（複数選択は足します）。</li><li>間違えたら、すぐに「取り消し」で入れる前に戻せます。</li><li>手入力欄に「備考 小玉」と打っても同じです。表のその列のセルを押して入れることもでき、入れた後は押す前のセルに戻ります。</li><li>ガイドで作る・果実品質調査のひな形で作る調査の「備考」には、最初から印が付いています（今までの調査は変わりません。外すこともできます）。</li><li>列の名前は聞き取りやすい言葉にします。グループ単位の数（例 <code>5,1</code>）には、この列を数えません。「調査を終える」の空欄にも数えません。</li></ul>"},
 {g:"input",id:"textchoice",t:"文字・選択肢の列",k:"文字 備考 選択肢 候補 品種 テキスト もじ びこう せんたくし",go:"items",b:
@@ -5826,7 +5949,7 @@ const HELP=[
 {g:"input",id:"count",t:"カウンターの列（数を数える）",k:"カウンター 数える 計数 個数 花数 果数 虫の数 プラス 足す 追加 かうんたー かぞえる",go:"items",b:
 "<p>見ながら1つずつ数えるための列です（例 花そう数・着果数・虫の数）。値は整数で、集計・外れ値・前回比の対象になります。</p><ul><li><b>声</b>：「プラス」「追加」「カウント」で1つ足し、「プラス3」で3つ足します。「マイナス」で1つ引きます。足し引きしている間は次へ進みません。数え終わったら「次」と言います。</li><li>数を言う（例「12」）と、その数にして次へ進みます。空欄のまま「プラス」と言うと 0 から数えます。</li><li><b>ボタン</b>：手入力欄の下の「＋1」「−1」。手入力欄に「+1」「-1」「+5」と入れても同じです。</li><li>「取り消し」は、直前の足し引き（1回分）だけを戻します。</li><li>「入力できる値」（例 0〜50）を決めておくと、外れた数にはなりません。</li></ul>"},
 {g:"input",id:"alias",t:"言い換え（聞き違い・略語の登録）",k:"言い換え 置き換え 略語 聞き違い 誤変換 登録 虫害 音声コマンド コマンド 言い方 待機 大樹 いいかえ ききちがい りゃくご とうろく",go:"alias",b:
-"<p>よく聞き違える言葉や、短く言いたい言葉を登録しておくと、決めた値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>、<code>びょう</code> → <code>病害</code>。左は「、」で区切って複数書けます。</p><ul><li>話した言葉が登録した言葉と<b>そのまま同じ</b>ときだけ置き換えます（言葉の一部は置き換えません）。</li><li>ひらがな・カタカナ、全角・半角の違いは気にしません。</li><li>対象は「すべての列」か、特定の列だけを選べます。文字・選択肢・数値のどの列にも使えます。選択肢の列では、置き換えた値が候補にあるときだけ入ります。</li><li>手入力・まとめて入力・貼り付けにも効きます。</li><li>「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。</li></ul><p><b>音声コマンドの言い方</b>（同じ見出しの下の欄）：音声コマンドとして受け付ける言葉を足せます。左に言葉、右で操作（待機・再開・停止・次・戻る・取り消し・どこ など）を選びます。例：<code>大樹、大気</code> → 待機。iPhone の音声認識が「たいき」を「大樹」と返すような聞き違いに使います。どの列にいるときでも効き、待機中の「再開」「停止」にも効きます。発話全体が登録した言葉と同じときだけ操作になります。</p><p>iPhone で「たいき」が「大樹」「大気」「待期」になるときは、登録しなくても待機になります（4.6.1〜）。</p><p>置き換えたときは、聞き取った言葉の横に（言い換え むし→虫害）と出ます。言い換えは調査ごとの設定で、「今の調査の設定を使う」で作った調査とバックアップにも引き継がれます。</p>"},
+"<p>よく聞き違える言葉や、短く言いたい言葉を登録しておくと、決めた値に置き換えて入れます。例：<code>むし、虫</code> → <code>虫害</code>、<code>びょう</code> → <code>病害</code>。左は「、」で区切って複数書けます。</p><ul><li>話した言葉が登録した言葉と<b>そのまま同じ</b>ときだけ置き換えます（言葉の一部は置き換えません）。空白をはさんで聞き取られる言葉（例「ご 後」）も、そのまま登録すれば当たります。</li><li>対象が「すべての列」の言い換えは、文字の列（備考など）にも効きます。数値だけに使いたいときは、対象を数値の列にします。</li><li>ひらがな・カタカナ、全角・半角の違いは気にしません。</li><li>対象は「すべての列」か、特定の列だけを選べます。文字・選択肢・数値のどの列にも使えます。選択肢の列では、置き換えた値が候補にあるときだけ入ります。</li><li>手入力・まとめて入力・貼り付けにも効きます。</li><li>「取り消し」「次」などの音声コマンドの言葉は、言い換えより操作が優先されます。</li></ul><p><b>音声コマンドの言い方</b>（同じ見出しの下の欄）：音声コマンドとして受け付ける言葉を足せます。左に言葉、右で操作（待機・再開・停止・次・戻る・取り消し・どこ など）を選びます。例：<code>大樹、大気</code> → 待機。iPhone の音声認識が「たいき」を「大樹」と返すような聞き違いに使います。どの列にいるときでも効き、待機中の「再開」「停止」にも効きます。発話全体が登録した言葉と同じときだけ操作になります。</p><p>iPhone で「たいき」が「大樹」「大気」「待期」になるときは、登録しなくても待機になります（4.6.1〜）。</p><p>置き換えたときは、聞き取った言葉の横に（言い換え むし→虫害）と出ます。言い換えは調査ごとの設定で、「今の調査の設定を使う」で作った調査とバックアップにも引き継がれます。</p>"},
 {g:"input",id:"allow",t:"入力できる値（範囲外の防止）",k:"範囲 範囲外 入力できる値 指数 0〜3 制限 はんい はんいがい しすう",go:"items",b:
 "<p>数値の項目に「入力できる値」（例 <code>0,1,2,3</code>、<code>0〜3</code>）を入れると、それ以外の値は入れずに「範囲外です」と知らせます。病害の指数などは、選択肢ではなくこちらを使うと数値のまま記録できます。</p><p><b>候補から選ぶ（発病度・障害程度など）</b>：入力できる値が、決まった少数の値（<code>0,1,2,3,4,5</code>、<code>0〜5</code>、<code>0〜3</code> で0.5刻み など。24個まで）のときは、選択肢の列と同じように、表の下にその値のボタンが並び、今のセル（黄色）をもう一度押すとセルの所に一覧が出ます。押すと入れて次へ進みます。声・手入力・ノギスなどからの入力もそのまま使えます。</p><p>値は数値として記録するので、経時調査では<b>前回比</b>（前回より増えた・減った・同じのときの表示・注意・禁止）がふつうの数値の列と同じに働き、集計・グラフ・外れ値の対象にもなります。たとえば発病度が前回より減ったら「注意（確認）」にしておくと、ボタンで選んだときも確認を求めます。</p><p>すでに選択肢の列（候補が数字だけ）で作ってあるときは、種類を「数値」に変えると、候補が「入力できる値」に移り、記録済みの値も数値に直ります。</p>"},
 {g:"input",id:"outlier",t:"外れ値のお知らせ",k:"外れ値 外れ 異常値 おかしい値 言い間違い 測り間違い 桁 感度 中央値 伸び方 はずれち いじょうち かんど",go:"outlier",b:
@@ -5836,7 +5959,7 @@ const HELP=[
 {g:"input",id:"where",t:"声で確かめる（どこ・さっき・前回・残り）",k:"どこ 今どこ 現在地 さっき 直前 前回 前回値 前の値 経時 残り あと何個 確認 確かめる 画面を見ない いまどこ げんざいち ぜんかい ちょくぜん のこり たしかめる かくにん",go:"alias",b:
 "<p>画面を見られないとき（両手がふさがっている、日差しで見えない）に、声で今の状態を聞けます。</p><ul><li><code>どこ</code>（今どこ・ここどこ・現在地）：今の個体（事前入力の列の値）、何個体中の何番目か、項目、入っている値（なければ「まだ空です」）</li><li><code>さっき</code>（さっきの値・直前）：この調査日で最後に確定した個体・項目・値。その後に消したときは「今は空です」</li><li><code>前回</code>（前回値・前回の値・前回は）：経時調査で、今のセルの個体・項目の前回の値と調査日。今回の値が入っていれば「今回 ◯」も続けます。前回比のアラートの設定とは関係なく使えます。答えたあとはそのまま入力を続けられます。</li><li><code>残り</code>（あと何個・残りいくつ）：今日まだ入っていない個体の数。列単位では今の項目について、行単位ではいずれかの項目が空の個体を数えます。除外した個体は数えません。</li></ul><p>この4つは値を入れず、今のセルも動かしません。「読み上げ」がオフでも読み上げ、待機中でも答えます（待機は続きます）。手入力の欄に書いて送ると、画面に答えが出ます（「復唱」がオンなら読み上げます）。</p><p>よく聞き違える言い方は、<b>言い換え</b>で右に <code>どこ</code> などのコマンドの言葉を書くと足せます（例：<code>ここは</code> → <code>どこ</code>）。</p>"},
 {g:"input",id:"bulk",t:"まとめて入力（ゼロ 6個・残り全部）",k:"まとめて 一括 ゼロ 個 残り 全部 範囲 から まとめて いっかつ ぜろ のこり ぜんぶ",b:
-"<ul><li><code>ゼロ 6個</code>（0を6つ）：今の列の今の個体から6個体分</li><li><code>残り全部ゼロ</code>（残りゼロ）：今の列の最後の個体まで</li><li><code>5から10 ゼロ</code>：今の列の No.5〜10</li></ul><p>除外した個体は飛ばします。前回比で「禁止」になるセルには入れず、「注意」のセルは入れたうえで件数を知らせます。直後に「取り消し」と言うか「元に戻す」を押すと、まとめて入れた分をすべて戻せます。</p>"},
+"<ul><li><code>ゼロ 6個</code>（0を6つ）：今の列の今の個体から6個体分</li><li><code>残り全部ゼロ</code>（残りゼロ）：今の列の最後の個体まで</li><li><code>5から10 ゼロ</code>：今の列の No.5〜10</li></ul><p>画面で範囲を選んで入れることもできます：表の下の「範囲選択」を押して、範囲の終わりのセルをタップすると（PCはドラッグ）、色の付いた範囲の下に<b>「選んだ範囲に入れる」</b>が出ます。候補のボタン（0〜5 など）を押すか、値を書いて「範囲に入れる」を押すと、範囲の<b>空いているセル</b>にまとめて入ります（「入っている値も上書きする」に印を付けると、入っている値も変えます）。複数の列を選べば、まとめて入ります。</p><p>除外した個体は飛ばします。前回比で「禁止」になるセルには入れず、「注意」のセルは入れたうえで件数を知らせます。直後に「取り消し」と言うか「元に戻す」を押すと、まとめて入れた分をすべて戻せます。</p>"},
 {g:"input",id:"standby",t:"待機・再開・停止",k:"待機 休憩 一時停止 再開 停止 ストップ 休む たいき きゅうけい さいかい ていし",go:"standby",b:
 "<p>「待機」と言うか「待機」ボタンで、聞き取りを休みます。</p><ul><li><b>声で再開できる</b>：聞き取りは続け、「再開」「停止」以外の声は記録しません。</li><li><b>完全に止める</b>：マイクを切ります。再開はボタンで行います。</li></ul><p>「停止」は聞き取りを止めます。続けるときはマイクを押します。</p>"},
 {g:"input",id:"readback",t:"読み上げ（確認の声）",k:"読み上げ 復唱 声 速さ 短く 区切りだけ ピッ 早めに確定 よみあげ ふくしょう はやさ",go:"other",b:
@@ -5846,10 +5969,10 @@ const HELP=[
 
 {g:"table",id:"celledit",t:"セルに直接入力する（キーボード）",k:"直接入力 セル キーボード 手入力 スクロール ダブルクリック F2 iPhone スマホ ちょくせつにゅうりょく せる きーぼーど てにゅうりょく",b:
 "<p>今のセル（黄色）をもう一度押すと、そのセルの上に入力欄が出て、キーボードでその場に入れられます（PCはダブルクリックか F2）。手入力欄までスクロールする必要はありません。</p><ul><li>「入力」かキーボードの Enter・次へ で入り、入力の進む順番どおりに次のセルへ移って、そのまま続けて入れられます。</li><li>入っている値は選んだ状態で出ます。そのまま打てば置き換え、変えずに「入力」なら次へ進むだけです。空にして「入力」するとその値を消します（直後なら「元に戻す」で戻せます）。</li><li>入力中にほかのセルを押すと、打ちかけの値を入れてから、押したセルへ入力欄が移ります。</li><li>前回比の確認が出たときは、入力欄の下の「はい」「やり直し」で答えます。</li><li>「✕」かキーボードを閉じると終わります。復唱・言い換え・入力できる値の確認は、手入力欄と同じに働きます。</li><li>事前入力の列は、設定の「個体リスト」で直します。</li></ul>"},
-{g:"table",id:"fold",t:"行をまとめて開く・閉じる（系統・ロットなど）",k:"まとめ まとめる 折りたたみ 畳む たたむ 開く 閉じる 系統 ロット 集団 見出し 行が多い 数千 fold まとめかた おりたたみ",b:
+{g:"table",id:"fold",t:"行をまとめて開く・閉じる（系統・ロットなど）",go:"dir",k:"まとめ まとめる 折りたたみ 畳む たたむ 開く 閉じる 系統 ロット 集団 見出し 行が多い 数千 fold まとめかた おりたたみ",b:
 "<p>個体リストが長い調査で、事前入力の列（集団・系統・ロットなど）の値が同じまま続く行をまとめ、まとまりごとに開く・閉じるができます。設定の「入力の進む順番」の<b>行のまとめ方</b>で、1段目・2段目（例：集団 → 系統）を選びます。試験設計ナビなどのひな形にまとめ方の候補があれば、「ひな形の候補」のボタンで選べます。ガイドで作るときは、個体リストが50個体以上なら最後の手前で選べます（おまかせは、いちばん内側の列を除いた外側の列）。個体リストが100個体以上あるのにまとめていない調査では、表の上に一度だけ案内が出ます（×で閉じると、その調査では出ません）。</p><ul><li>見出しの行を押すと開く・閉じる。見出しの「4/450」は、入力の済んだ個体の数／個体の数（除外した個体は数えない）</li><li><b>入力の順番は今までどおり</b>です。今のセルが閉じたまとまりに入ると、そのまとまりが自動で開きます。設定の「前のまとまりを閉じる」がオンなら、出たまとまりを閉じます（自分で開いたまとまりは閉じません）</li><li>まとまりが多いときは、今のセルの近くの100個だけ見出しを出し、残りは「前に・後に ◯」の1行にまとめます。押すと100ずつ出します</li><li>CSV・Excel の中身と行の順は変わりません。まとめているときは、上の行の固定は使いません</li><li>範囲を選んでクリア・行の削除をするとき、閉じたまとまりの行が含まれていれば、確かめてから行います</li><li>まとめ方つきのひな形は、個体リストを 20,000 行まで受け取れます（まとめ方がないときは 5,000 行まで）</li></ul>"},
 {g:"table",id:"tableops",t:"表の操作（クリア・削除して詰める・行を削除）",k:"クリア 消す 削除 詰める 行を削除 範囲選択 コピー 貼り付け 貼付 元に戻す Ctrl Delete くりあ さくじょ つめる はんいせんたく こぴー はりつけ もとにもどす",b:
-"<ul><li><b>クリア</b>：選んだセル（範囲）の値を消す</li><li><b>削除して詰める</b>：今のセルを消し、後ろの値を1つずつ前へ詰める（2回入ってしまったとき）</li><li><b>行を削除</b>：今の行を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も消える</li><li><b>範囲選択</b>：オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）</li><li><b>コピー</b>・<b>貼付</b>：Excelとの間でも使える（PCは Ctrl+C・Ctrl+V・Delete も可）</li></ul><p>操作のあとは「元に戻す」で戻せます。</p>"},
+"<ul><li><b>クリア</b>：選んだセル（範囲）の値を消す</li><li><b>削除して詰める</b>：今のセルを消し、後ろの値を1つずつ前へ詰める（2回入ってしまったとき）</li><li><b>行を削除</b>：今の行を表から消し、下の行を上に詰める。個体リストの行と、すべての調査日の値も消える</li><li><b>範囲選択</b>：オンにしてセルをタップすると、今のセルからの範囲を選ぶ（PCはドラッグかShift+クリック）。選んだ範囲には、下に出る「選んだ範囲に入れる」で同じ値をまとめて入れられる</li><li><b>コピー</b>・<b>貼付</b>：Excelとの間でも使える（PCは Ctrl+C・Ctrl+V・Delete も可）</li></ul><p>操作のあとは「元に戻す」で戻せます。</p>"},
 {g:"table",id:"coledit",t:"表の見出しから列を編集する（名前・種類・追加・移動・削除）",k:"見出し 項目名 列 編集 追加 挿入 移動 削除 左 右 種類 名前 変える 鉛筆 ドラッグ つかむ 並べ替え みだし れつ へんしゅう ついか いどう さくじょ どらっぐ ならべかえ",go:"items",b:
 "<p>入力の画面の表で、見出し（項目名）を押すと選ばれ、✎ の印が出ます。もう一度押すと<b>列の編集</b>が開きます（PCはダブルクリックでも開きます）。設定画面を開かなくても、その場で直せます。</p><ul><li><b>名前・種類・桁・候補・入力できる値・前回比</b>：設定画面の「調査項目」と同じ欄です。種類を変えると、記録済みの値を新しい種類に合わせて直します。</li><li><b>＋ 左に列を追加／＋ 右に列を追加</b>：今の列のすぐ左・右に新しい列を入れます。前の調査日では空欄になります。</li><li><b>⧉ 左に複製／⧉ 右に複製</b>：今の列の設定（種類・桁・刻み・候補・入力できる値・前回比・調べる個体）を写した列を、すぐ左・右に入れます。「名前で呼んで入れる」は写しません（オフで入ります）。名前は末尾の数字を1つ進めます（「横径1」→「横径2」、数字がなければ「2」を付ける）。値は写しません。設定画面の「調査項目」では、各項目の「⧉下」で下に入れられます。</li><li><b>← 左へ移動／右へ移動 →</b>：列の並びを入れ替えます。</li></ul><p><b>見出しをつかんで動かす</b>：選んだ見出し（✎ の印）をつかんで左右に動かすと、列ごと浮いて動き、ほかの列はずれて点線の空きができます。離した所に入ります（前の調査日の値の列も一緒に動きます）。PCはどの見出しでもドラッグできます。キーボードは見出しで Alt+← →。直後なら「元に戻す」で戻せます。画面の端に近づけると表が横に送られます。</p><ul><li><b>この列を削除</b>：値が入っている列は確かめてから消します。保存の直後なら「元に戻す」で戻せます。</li><li>上の<b>列の並び</b>を押すと、ほかの列に切り替えて続けて直せます。</li></ul><p>変更は「保存」を押すまで反映されません。開くと聞き取りは止まります（続けるときはマイクを押します）。項目の内部の番号は変えないので、経時調査の前の調査日・データの統合・ひな形はそのまま使えます。固定している列の内側に列を足したときは、固定の範囲も合わせて広げます。</p>"},
 {g:"table",id:"order",t:"入力の進む順番（行・列・グループ）",k:"順番 行単位 列単位 グループ 横 縦 進む方向 じゅんばん ぎょう れつ ぐるーぷ",go:"dir",b:
@@ -5957,23 +6080,24 @@ $("#helpQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#helpQ").val
    v：版、d：日付（分かっているものだけ）、a：[説明、関係する説明書の id]
    載せるのは機能だけ（著作権・利用条件・利用コード・アイコンは載せない）。不具合の直しは「その他の不具合の修正」とだけ書く */
 const CHANGES=[
-{v:"Pro 4.9.17",d:"2026-11-27",a:[["列を複製して足せるように（列の編集の「⧉ 左に複製／右に複製」、設定の調査項目の「⧉下」。設定を写し、値は写さない）","coledit"],["固定する列・行が画面に入りきらないときは、表の上と設定の要約に、実際に固定している範囲を出すように","freeze"]]},
-{v:"Pro 4.9.16",d:"2026-11-26",a:[["記録した調査日を後から変更できるように（表の上の「この日の操作」、調査日の予定のカレンダーで「調査した日」を押す。変更先の日に記録があるときは上書きせずに止める）","datefix"],["調査を残したまま、その日の記録だけを削除できるように（練習で入れた値も消せる。個体リスト・項目・ほかの日の記録は残る。直後なら「元に戻す」で戻せる）","datefix"],["1回の調査では、設定の「調査の種類」で調査日の変更と記録の消去ができるように","datefix"]]},
-{v:"Pro 4.9.15",d:"2026-11-26",a:[["iPhoneで、続けて入れた値の読み上げが途中で切れないように（読み上げが本当に鳴り終わってから聞き取りを再開。早すぎる読み終わりは1回だけ読み直す）","readback"],["1回の声で2つ以上入れたとき、画面にどのセルに何が入ったかを並べ、「短く」でも値を全部読むように（10件を超えたら最初と最後）","bulk"],["早めに確定したあとの続き（「1と3と2と4」）を入れるように。早めに確定した値の読み上げは、言い終わるまで待つ。待つ時間を 0.3・0.5・0.8 秒から選べるように","readback"],["読み上げの声を選べるように（端末ごとに覚える）","readback"],["入力できる値が1桁だけの項目（0〜4など）で、続けて言った数字（例 1324）を1桁ずつに分けて入れるように（設定でオフにできる）","bulk"],["「環境診断」を「環境診断」に。読み上げ1回ごとの記録（読んだ言葉・鳴っていた時間・最後まで読めたか）を出し、写せるように","mic"]]},
-{v:"Pro 4.9.14",d:"2026-11-26",a:[["行のまとめ方を、設定で2段（例：集団 → 系統）まで選べるように。ひな形にまとめ方の候補があれば、ボタンで選べる","fold"],["ガイドで個体リストが50個体以上になるとき、行のまとめ方を選べるように（おまかせは、いちばん内側の列を除いた外側の列）","guide"],["個体リストが100個体以上あるのにまとめていない調査では、表の上に一度だけ、まとめ方の案内を出す","fold"]]},
-{v:"Pro 4.9.13",d:"2026-11-25",a:[["行を「系統」「ロット」などの列でまとめて、まとまりごとに開く・閉じるができるように（見出しに入力の済んだ数。入力の順番は今までどおりで、今のセルが入ったまとまりは自動で開く。設定の「入力の進む順番」で選ぶ）","fold"],["まとめ方つきのひな形（試験設計ナビなど）は、個体リストを 20,000 行まで受け取れるように（閉じたまとまりの行は描かないので軽い）","template"]]},
+{v:"Pro 4.9.18",d:"2026-11-27",a:[["表で範囲を選ぶと、その範囲にまとめて値を入れられるように（候補のボタンか値を書いて「範囲に入れる」。初めは空いているセルだけ。0 の多い発病度の調査などに）","bulk"],["短い数字が入りやすいように（カタカナの数字・のばす音・「2です」「2点」を読む。入力できる値が決まった整数の項目では、よくある聞き違い（後→5、似→2 など）も読む）","numbers","items#sItems"],["PC・Androidで、読み上げ中に言って使わなかった声を画面に出すように","numbers","other#sRead"],["更新の記録から、その設定の場所を開けるように","history"],["その他の不具合の修正",""]]},
+{v:"Pro 4.9.17",d:"2026-11-27",a:[["列を複製して足せるように（列の編集の「⧉ 左に複製／右に複製」、設定の調査項目の「⧉下」。設定を写し、値は写さない）","coledit","items#sItems"],["固定する列・行が画面に入りきらないときは、表の上と設定の要約に、実際に固定している範囲を出すように","freeze","freeze#sFzCols"]]},
+{v:"Pro 4.9.16",d:"2026-11-26",a:[["記録した調査日を後から変更できるように（表の上の「この日の操作」、調査日の予定のカレンダーで「調査した日」を押す。変更先の日に記録があるときは上書きせずに止める）","datefix","plan"],["調査を残したまま、その日の記録だけを削除できるように（練習で入れた値も消せる。個体リスト・項目・ほかの日の記録は残る。直後なら「元に戻す」で戻せる）","datefix"],["1回の調査では、設定の「調査の種類」で調査日の変更と記録の消去ができるように","datefix","ts#sOneDateBox"]]},
+{v:"Pro 4.9.15",d:"2026-11-26",a:[["iPhoneで、続けて入れた値の読み上げが途中で切れないように（読み上げが本当に鳴り終わってから聞き取りを再開。早すぎる読み終わりは1回だけ読み直す）","readback"],["1回の声で2つ以上入れたとき、画面にどのセルに何が入ったかを並べ、「短く」でも値を全部読むように（10件を超えたら最初と最後）","bulk","other#sRbMode"],["早めに確定したあとの続き（「1と3と2と4」）を入れるように。早めに確定した値の読み上げは、言い終わるまで待つ。待つ時間を 0.3・0.5・0.8 秒から選べるように","readback","other#sFastMs"],["読み上げの声を選べるように（端末ごとに覚える）","readback","other#sVoice"],["入力できる値が1桁だけの項目（0〜4など）で、続けて言った数字（例 1324）を1桁ずつに分けて入れるように（設定でオフにできる）","bulk","other#sSplitDg"],["「マイク診断」を「環境診断」に。読み上げ1回ごとの記録（読んだ言葉・鳴っていた時間・最後まで読めたか）を出し、写せるように","mic","#diag"]]},
+{v:"Pro 4.9.14",d:"2026-11-26",a:[["行のまとめ方を、設定で2段（例：集団 → 系統）まで選べるように。ひな形にまとめ方の候補があれば、ボタンで選べる","fold","dir#sFold1"],["ガイドで個体リストが50個体以上になるとき、行のまとめ方を選べるように（おまかせは、いちばん内側の列を除いた外側の列）","guide"],["個体リストが100個体以上あるのにまとめていない調査では、表の上に一度だけ、まとめ方の案内を出す","fold","dir#sFold1"]]},
+{v:"Pro 4.9.13",d:"2026-11-25",a:[["行を「系統」「ロット」などの列でまとめて、まとまりごとに開く・閉じるができるように（見出しに入力の済んだ数。入力の順番は今までどおりで、今のセルが入ったまとまりは自動で開く。設定の「入力の進む順番」で選ぶ）","fold","dir#sFold1"],["まとめ方つきのひな形（試験設計ナビなど）は、個体リストを 20,000 行まで受け取れるように（閉じたまとまりの行は描かないので軽い）","template"]]},
 {v:"Pro 4.9.12",d:"2026-11-25",a:[["ひな形の個体リストを「作り方」（例：系統 L-001〜L-150 × 株 1〜3）で受け取れるように。数百〜数千行の個体リストも、短いリンクで渡せる（受け取れるのは 5,000 行まで）","template"]]},
-{v:"Pro 4.9.11",d:"2026-11-25",a:[["設定「Excel・CSVの見出しに項目の id を付ける」（例「糖度 [brix]」。年をまたいで同じ項目を突き合わせるため。初期値はオフで、今までと同じ見出し）。読み込むときは見出しの [id] を外して読む","export"]]},
+{v:"Pro 4.9.11",d:"2026-11-25",a:[["設定「Excel・CSVの見出しに項目の id を付ける」（例「糖度 [brix]」。年をまたいで同じ項目を突き合わせるため。初期値はオフで、今までと同じ見出し）。読み込むときは見出しの [id] を外して読む","export","other#sCsvIds"]]},
 {v:"Pro 4.9.10",d:"2026-11-25",a:[["試験設計ナビで作ったひな形の調査は、Excel・CSVのファイル名に設計のID（8桁）が付くように（例「調査名_0a1b2c3d_2026-12-01.csv」。どの設計のデータかを取り違えないため）","export"]]},
 {v:"Pro 4.9.9",d:"2026-11-25",a:[["試験設計ナビなどで作ったひな形の「作った元の情報」（設計のIDなど）を、調査に残してバックアップ・共有でも持ち回るように。受け取るときの確認に、作ったアプリの版を表示","template"]]},
-{v:"Pro 4.9.8",d:"2026-11-23",a:[["項目ごとに、調べる個体を限れるように（例：糖度は果実番号 1〜5 だけ。範囲の外の個体ではその項目を入力の順番でとばす。表では灰色、押せば入力できる。指定しない調査は今までと同じ）","onlyskip"]]},
-{v:"Pro 4.9.7",d:"2026-11-22",a:[["数値の列で、入力できる値が決まった少数の値（例 0,1,2,3,4,5）のとき、候補のボタン・一覧から選べるように（発病度・障害程度など。数値で記録し、前回比の注意もそのまま使える）","allow"],["iPhone で、マイクを入り切りしたあとなどに読み上げ・復唱が鳴らなくなることへの対策（準備の自動やり直し、復唱ボタンを押したその場で読む、環境診断に読み上げの記録）","tts"],["備考などの列を「名前で呼んで入れる」列にできるように（順番では回らず、「備考 小玉」「さっきの備考欄に小玉入れて」「5番の備考に小玉」と言うとその列に入る。新しく作る調査の備考は最初からこの列）","callcol"]]},
-{v:"Pro 4.9.5",d:"2026-11-21",a:[["選択肢の列も、候補のボタンを押して入れられるように（押すと次へ進む）","textchoice"],["選択肢の列は、表のセルを押すと候補の一覧から選べるように","textchoice"],["刻み（0.5刻みなど）を決めた項目は、刻みに合わない値を丸めずに「刻みに合いません」と知らせて入れないように","numbers"]]},
-{v:"Pro 4.9.4",d:"2026-11-15",a:[["調査日の予定のカレンダーに祝日（振替休日・国民の休日を含む）を表示","plan"]]},
-{v:"Pro 4.9.3",d:"2026-11-14",a:[["調査日の予定を、月のカレンダーで日を押して選べるように（日付を並べるとき。間隔で決めた予定も見られる）","plan"]]},
+{v:"Pro 4.9.8",d:"2026-11-23",a:[["項目ごとに、調べる個体を限れるように（例：糖度は果実番号 1〜5 だけ。範囲の外の個体ではその項目を入力の順番でとばす。表では灰色、押せば入力できる。指定しない調査は今までと同じ）","onlyskip","items#sItems"]]},
+{v:"Pro 4.9.7",d:"2026-11-22",a:[["数値の列で、入力できる値が決まった少数の値（例 0,1,2,3,4,5）のとき、候補のボタン・一覧から選べるように（発病度・障害程度など。数値で記録し、前回比の注意もそのまま使える）","allow","items#sItems"],["iPhone で、マイクを入り切りしたあとなどに読み上げ・復唱が鳴らなくなることへの対策（準備の自動やり直し、復唱ボタンを押したその場で読む、環境診断に読み上げの記録）","tts","other#sTest"],["備考などの列を「名前で呼んで入れる」列にできるように（順番では回らず、「備考 小玉」「さっきの備考欄に小玉入れて」「5番の備考に小玉」と言うとその列に入る。新しく作る調査の備考は最初からこの列）","callcol","items#sItems"]]},
+{v:"Pro 4.9.5",d:"2026-11-21",a:[["選択肢の列も、候補のボタンを押して入れられるように（押すと次へ進む）","textchoice"],["選択肢の列は、表のセルを押すと候補の一覧から選べるように","textchoice"],["刻み（0.5刻みなど）を決めた項目は、刻みに合わない値を丸めずに「刻みに合いません」と知らせて入れないように","numbers","items#sItems"]]},
+{v:"Pro 4.9.4",d:"2026-11-15",a:[["調査日の予定のカレンダーに祝日（振替休日・国民の休日を含む）を表示","plan","plan"]]},
+{v:"Pro 4.9.3",d:"2026-11-14",a:[["調査日の予定を、月のカレンダーで日を押して選べるように（日付を並べるとき。間隔で決めた予定も見られる）","plan","plan"]]},
 {v:"Pro 4.9.2",d:"2026-11-14",a:[["表の見出しをつかんで、列を左右に動かせるように（列ごと浮いて動く。PCはドラッグ、キーボードは Alt+←→）","coledit"]]},
 {v:"Pro 4.9",d:"2026-11-10",a:[["表の見出しから列を編集（名前・種類の変更、左・右への列の追加、移動、削除）","coledit"],["設定の調査項目の並べ替えを、つかんで滑らかに動かせるように","settings"]]},
-{v:"Pro 4.8.4",d:"2026-11-12",a:[["表のセルに直接入力（今のセルをもう一度押すと、その場でキーボード入力。PCはダブルクリック・F2）","celledit"],["個体リストを少しずつ付け足して作る（個体ごとに株・反復の数が違ってもよい。空の欄も可）","list"]]},
+{v:"Pro 4.8.4",d:"2026-11-12",a:[["表のセルに直接入力（今のセルをもう一度押すと、その場でキーボード入力。PCはダブルクリック・F2）","celledit"],["個体リストを少しずつ付け足して作る（個体ごとに株・反復の数が違ってもよい。空の欄も可）","list","list#sGen"]]},
 {v:"Pro 4.8.2",d:"2026-11-05",a:[["全調査日の一覧（1行＝1個体。項目ごと／調査日ごと、絞り込み、前回比の色・外れ値・除外の表示、押すとそのセルへ）","lslist"],["入力の表に前の調査日の値を並べる（1〜3回、前回からの増減の矢印）","prevcols"]]},
 {v:"Pro 4.8.1",d:"2026-11-05",a:[["iPhone の聞き取りと読み上げの安定化（止まったときの「再開」ボタン、続けて入った値の読み上げをまとめる、試験的な設定「iPhoneでも聞き取りを止めずに読み上げる」）","iosmic"],["その他の不具合の修正",""]]},
 {v:"Pro 4.8",d:"2026-11-05",a:[["今日の調査を終える（空欄・外れ値の確認、次回も続ける／完了、中身を確かめたバックアップ）","end"],["画面の下に最終バックアップの日時（しばらく取っていないときは色を変えて知らせる）","autosave"],["PCでは選んだフォルダーへ自動で保存（Googleドライブなどの同期フォルダーを選べばクラウドにも入る）","autosave"],["調査一覧に完了の印とバックアップの日時","surveys"]]},
@@ -6001,9 +6125,18 @@ const CHANGES=[
 ];
 const SEEN_KEY="koe-yacho-v2-seenver";
 let helpLogMode=false;
+/* 4.9.18：更新の記録の各行に、その設定の欄を開くボタン。行き先は CHANGES の3つ目（"見出し#欄のid"、"#画面の要素のid"）、
+   なければ説明の項目の go（設定の見出し） */
+function histGo(id,go){
+  if(!go){ const h=HELP.find(x=>x.id===id); go=h&&h.go; }
+  if(!go) return "";
+  const [k,el]=go.split("#");
+  const lb=k?`設定の「${HELP_GO[k]||k}」を開く`:(el==="diag"?"画面の「環境診断」へ":"その場所へ");
+  return ` <button type="button" class="ghost hgo hgo2" data-go="${esc(k)}" data-el="${esc(el||"")}">${esc(lb)}</button>`;
+}
 function drawHistory(){
   const ids=new Set(HELP.map(h=>h.id));
-  $("#helpList").innerHTML=`<p class="help">どの版で、どの機能が加わったかの記録です。押すと、その機能の説明を開きます。</p>`+CHANGES.map((c,i)=>`<details class="fold htopic"${i<3?" open":""}><summary><span class="ftitle">${esc(c.v)}</span><span class="fsum">${esc(c.d||"")}</span></summary><div class="fbody hbody"><ul class="hlog">${c.a.map(([t,id])=>`<li>${ids.has(id)?`<button type="button" class="hlink" data-topic="${id}">${esc(t)}</button>`:esc(t)}</li>`).join("")}</ul></div></details>`).join("");
+  $("#helpList").innerHTML=`<p class="help">どの版で、どの機能が加わったかの記録です。押すと、その機能の説明を開きます。「設定の『…』を開く」を押すと、その設定の場所へ移ります。</p>`+CHANGES.map((c,i)=>`<details class="fold htopic"${i<3?" open":""}><summary><span class="ftitle">${esc(c.v)}</span><span class="fsum">${esc(c.d||"")}</span></summary><div class="fbody hbody"><ul class="hlog">${c.a.map(([t,id,go])=>`<li>${ids.has(id)?`<button type="button" class="hlink" data-topic="${id}">${esc(t)}</button>`:esc(t)}${histGo(id,go)}</li>`).join("")}</ul></div></details>`).join("");
   $("#helpCount").textContent=`${CHANGES.length}件の版`;
 }
 function setHelpLog(on){
@@ -6039,8 +6172,11 @@ $("#helpClose").onclick=()=>$("#helpDlg").close();
 $("#helpList").addEventListener("click",e=>{
   const b=e.target.closest(".hgo"); if(!b) return;
   if(b.dataset.act){ $("#helpDlg").close(); if($("#dlg").open) $("#dlg").close(); if(b.dataset.act==="guide") gdOpen(); else $("#btnSurveys").click(); return; }
-  const key=b.dataset.go; $("#helpDlg").close();
-  if($("#dlg").open) foldGo(key); else openSettings(key);
+  const key=b.dataset.go, el=b.dataset.el||""; $("#helpDlg").close();
+  /* 4.9.18：欄（el）まで動かして光らせる。見出しがない（#diag など）ときは、入力の画面のその場所へ */
+  const lit=()=>{ document.querySelectorAll(".golit").forEach(x=>x.classList.remove("golit")); const t=el&&document.getElementById(el); if(!t) return; const box=t.closest("label,.item,.foldsel,div,button")||t; box.scrollIntoView({block:"center"}); box.classList.remove("golit"); void box.offsetWidth; box.classList.add("golit"); };
+  if(!key){ if($("#dlg").open) $("#dlg").close(); lit(); return; }
+  if($("#dlg").open){ foldGo(key); lit(); } else openSettings(key,lit);
 });
 
 if(!SR) note("このブラウザは音声認識に対応していません。AndroidはChrome、iPhoneはSafariで開いてください。");
